@@ -3,3 +3,8 @@ voice/clips/
 voice/tmp.wav
 __pycache__/
 .DS_Store
+.env
+voice/clips-*/
+infra/.terraform/
+infra/*.tfstate*
+infra/.terraform.tfstate.lock.info

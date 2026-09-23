@@ -1,4 +1,4 @@
-/* ============ Pip's voice: natural recorded narration, sentence by sentence ============ */
+/* ============ Pip's voice: recorded narration (whole messages, with short pieces for dynamic lines) ============ */
 const VOICE_MAP = __VOICE_MAP__; // filled in by build.py from voice/manifest.json
 function plainText(h) { return h.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\([^)]*\)/g, '').replace(/&amp;/g, '&').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim(); }
 function splitSentences(t) { return (t.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || []).map(s => s.trim()).filter(Boolean); }
@@ -55,12 +55,17 @@ const Voice = {
     if (!Sound.ensure()) return;
     this.setSpeaking(true);
     await this.load();
-    for (const s of splitSentences(plainText(html))) {
+    // play the longest recorded run of sentences each time, so whole messages keep their natural flow
+    const S = splitSentences(plainText(html));
+    for (let i = 0; i < S.length;) {
       if (my !== this.token) return;
-      const k = this.keyFor(s), audio = k ? await this.clip(k) : null;
+      let k = null, j = S.length - 1;
+      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (VOICE_MAP[kk]) { k = kk; break; } }
+      if (!k) { j = i; k = this.keyFor(S[i]); }
+      const audio = k ? await this.clip(k) : null;
       if (my !== this.token) return;
-      if (audio) await this.play(audio, my); else await this.browser(s, my);
-      await new Promise(r => setTimeout(r, 140));
+      if (audio) await this.play(audio, my); else await this.browser(S.slice(i, j + 1).join(' '), my);
+      i = j + 1; if (i < S.length) await new Promise(r => setTimeout(r, 120));
     }
     if (my === this.token) this.setSpeaking(false);
   }

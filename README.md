@@ -1,6 +1,6 @@
 # Wonder Lab
 
-A playful learning web app for a 3rd grader. Each class topic becomes a set of hands-on activities drawn entirely in JavaScript (Canvas 2D), with sound effects, a guide character (Pip the bean seed), stars and badges.
+A playful learning web app for a 3rd grader, live at https://wonderlab.camp. Each class topic becomes a set of hands-on activities drawn entirely in JavaScript (Canvas 2D), with sound effects, a guide character (Pip the bean seed), stars and badges.
 
 Live version (private Claude artifact): https://claude.ai/artifact/SG45qnd4mhnkxyjtpB3f1N
 
@@ -35,7 +35,9 @@ src/               page source, concatenated in file-name order
   08_voice.js      Pip's voice: plays pre-recorded sentences, falls back to the device's best voice
   09_app.js        TOPICS list, Pip, stars, badges, tabs, controls
 build.py           builds dist/index.html (full page) and dist/artifact.html (for publishing as a Claude artifact)
-voice/             narration pipeline: lines.py, synth.py, lines.json (every sentence), manifest.json (clip offsets)
+deploy.sh          builds and uploads to S3/CloudFront
+infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records
+voice/             narration pipeline: lines.py, synth_openai.py, lines.json (every message), manifest.json (clip offsets)
 dist/              built page + dist/voice/pip-voice.mp3
 ```
 
@@ -45,18 +47,31 @@ Each activity is an object `{ id, name, icon, badge, stars[], intro, mount(host,
 To add a topic: write new activity objects, add an entry to `TOPICS` in `09_app.js`, and drop the "coming soon" option from the dropdown.
 
 ## Pip's voice
-Narration is recorded ahead of time with the open-source [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) neural voice (`af_heart`), one clip per sentence. All clips are packed into one mp3 with a byte-offset index, so any message plays sentence by sentence. Sentences without a recording (for example a new topic before re-recording) fall back to the device's built-in voice.
+Narration is recorded ahead of time with OpenAI's `gpt-4o-mini-tts` model in the **Marin** voice, steered to sound like a warm, playful teacher. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. All clips are packed into `dist/voice/pip-voice.mp3` with a byte-offset index (`voice/manifest.json`). Anything without a recording falls back to the device's built-in voice.
 
-After adding or changing text, re-record:
+After adding or changing text, re-record (only new or changed lines cost anything):
 ```
-pip install kokoro-onnx soundfile numpy      # plus ffmpeg on your PATH
-mkdir -p voice/models && cd voice/models
-curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
-curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
-cd ../..
-python3 voice/lines.py && python3 voice/synth.py && python3 build.py
+# .env at the repo root holds OPENAI_API_KEY=sk-...   (git-ignored)
+python3 voice/lines.py && python3 voice/synth_openai.py && python3 build.py
 ```
-Templated lines (quiz hints, badge names, greetings) are added in the `extra` list in `voice/lines.py`.
+Templated lines (quiz feedback, badge messages, greetings) are built in `voice/lines.py`.
+
+## Deploy (AWS + Terraform)
+The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records. All of it is defined in `infra/`.
+
+First time:
+```
+infra/bootstrap.sh                     # creates the S3 bucket for Terraform state, prints the init command
+cd infra
+terraform init -backend-config="bucket=<state bucket from bootstrap>"
+terraform apply
+cd ..
+```
+Every release:
+```
+./deploy.sh                            # build, upload to S3, refresh CloudFront
+```
+Needs the AWS CLI and credentials for the account that owns the wonderlab.camp hosted zone.
 
 ## Progress
 Stars, badges, the explorer name and sound settings are saved in the browser's localStorage, on that device only.

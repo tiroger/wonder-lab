@@ -1,4 +1,5 @@
-"""Collect every sentence Pip can say from the app source -> voice/lines.json.
+"""Collect every message Pip can say from the app source -> voice/lines.json.
+Whole messages are recorded in one take so the intonation flows; a few short pieces cover dynamic lines.
 Run from the repo root: python3 voice/lines.py"""
 import re, json, glob
 code = ''.join(open(f).read() for f in sorted(glob.glob('src/*.js')) if not f.endswith('_voice.js'))
@@ -28,10 +29,15 @@ extra = ['Okay!', "I'll read everything out loud for you.", 'Yes!', 'You got it!
 extra += ['Hint: ' + h.replace("\\'", "'") for h in quiz]
 for name in re.findall(r"badge: \{ id: '[^']+', name: '([^']+)'", code) + ['Botanist']:
     extra.append(f'You earned the {name} badge!')
+# templated messages, recorded whole
+whys = [w.replace("\\'", "'") for w in re.findall(r"why: '((?:[^'\\]|\\.)*)'", code)]
+combos = [f'Yes! {w}' for w in whys] + [f'You got it! {w}' for w in whys] + [f'Not quite. Hint: {h}' for h in [q.replace("\\'", "'") for q in quiz]]
+descs = dict(re.findall(r"badge: \{ id: '[^']+', name: '([^']+)', desc: '((?:[^'\\]|\\.)*)'", code))
+descs['Botanist'] = re.search(r"name: 'Botanist', icon: 'trophy', desc: '((?:[^'\\]|\\.)*)'", code).group(1)
+combos += [f'You earned the {n} badge! ' + d.replace("\\'", "'") for n, d in descs.items()]
 out = {}
-for s in cands + extra:
-    for sen in sentences(plain(s)):
-        if len(sen) < 2: continue
-        out.setdefault(vkey(sen), sen)
+for s in cands + extra + combos:
+    t = ' '.join(sentences(plain(s)))
+    if len(t) > 1: out.setdefault(vkey(t), t)
 json.dump(out, open('voice/lines.json','w'), indent=1)
-print(len(out), 'sentences')
+print(len(out), 'messages')
