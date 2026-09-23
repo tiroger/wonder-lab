@@ -16,9 +16,7 @@ Live version (private Claude artifact): https://claude.ai/artifact/SG45qnd4mhnkx
 The page loads `voice/pip-voice.mp3` with `fetch`, so open it through a small web server (not by double-clicking the file):
 
 ```
-python3 build.py
-cd dist && python3 -m http.server 8000
-# open http://localhost:8000
+./serve.sh        # builds, serves at localhost:8000 and opens your browser (Ctrl+C to stop)
 ```
 
 ## Layout
