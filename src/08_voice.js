@@ -6,7 +6,7 @@ function vkey(s) { s = s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); let h
 const Voice = {
   auto: true, buf: null, loading: null, cache: new Map(), src: null, token: 0, speaking: false,
   load() {
-    if (!this.loading) this.loading = fetch('voice/pip-voice.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(b => { this.buf = b; }).catch(() => { this.buf = null; });
+    if (!this.loading) this.loading = fetch('__VOICE_FILE__').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(b => { this.buf = b; }).catch(() => { this.buf = null; });
     return this.loading;
   },
   keyFor(s) {

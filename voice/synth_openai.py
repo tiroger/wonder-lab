@@ -1,5 +1,5 @@
 """Record every message in voice/lines.json with OpenAI's gpt-4o-mini-tts (voice: marin),
-then pack all clips into dist/voice/pip-voice.mp3 plus voice/manifest.json (byte offsets).
+then pack all clips into voice/pip-voice.mp3 plus voice/manifest.json (byte offsets).
 Needs an OpenAI API key in .env at the repo root (OPENAI_API_KEY=sk-... or just the key).
 Run from the repo root: python3 voice/synth_openai.py   (only new or changed lines are recorded)"""
 import json, os, re, subprocess, time, urllib.request, urllib.error
@@ -11,7 +11,7 @@ INSTR = ("You are Pip, a friendly little bean seed who guides a curious 8-year-o
          "with real wonder at the cool facts. Clear pronunciation, relaxed moderate pace, natural pauses. Friendly, not cartoonish or over the top.")
 KEY = re.search(r'(sk-[A-Za-z0-9_\-]+)', open('.env').read()).group(1)
 CLIPS = f'voice/clips-{VOICE}'
-os.makedirs(CLIPS, exist_ok=True); os.makedirs('dist/voice', exist_ok=True)
+os.makedirs(CLIPS, exist_ok=True)
 lines = json.load(open('voice/lines.json'))
 
 def record(item):
@@ -35,6 +35,6 @@ with ThreadPoolExecutor(4) as ex: res = list(ex.map(record, lines.items()))
 man, blob = {}, bytearray()
 for key in lines:
     b = open(f'{CLIPS}/{key}.mp3', 'rb').read(); man[key] = [len(blob), len(b)]; blob += b
-open('dist/voice/pip-voice.mp3', 'wb').write(blob)
+open('voice/pip-voice.mp3', 'wb').write(blob)
 json.dump(man, open('voice/manifest.json', 'w'), separators=(',', ':'))
 print(sum(r[1] == 'new' for r in res), 'recorded,', len(man), 'clips,', len(blob) // 1024, 'KB')

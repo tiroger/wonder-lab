@@ -13,7 +13,7 @@ Live version (private Claude artifact): https://claude.ai/artifact/SG45qnd4mhnkx
 6. **Plant Quiz**: 12 questions, 8 per round, stars for first-try answers.
 
 ## Run it
-The page loads `voice/pip-voice.mp3` with `fetch`, so open it through a small web server (not by double-clicking the file):
+The page loads its voice file with `fetch`, so open it through a small web server (not by double-clicking the file):
 
 ```
 ./serve.sh        # builds, serves at localhost:8000 and opens your browser (Ctrl+C to stop)
@@ -36,7 +36,7 @@ build.py           builds dist/index.html (full page) and dist/artifact.html (fo
 deploy.sh          builds and uploads to S3/CloudFront
 infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records
 voice/             narration pipeline: lines.py, synth_openai.py, lines.json (every message), manifest.json (clip offsets)
-dist/              built page + dist/voice/pip-voice.mp3
+dist/              built page + hashed voice file
 ```
 
 ## How an activity works
@@ -45,13 +45,14 @@ Each activity is an object `{ id, name, icon, badge, stars[], intro, mount(host,
 To add a topic: write new activity objects, add an entry to `TOPICS` in `09_app.js`, and drop the "coming soon" option from the dropdown.
 
 ## Pip's voice
-Narration is recorded ahead of time with OpenAI's `gpt-4o-mini-tts` model in the **Marin** voice, steered to sound like a warm, playful teacher. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. All clips are packed into `dist/voice/pip-voice.mp3` with a byte-offset index (`voice/manifest.json`). Anything without a recording falls back to the device's built-in voice.
+Narration is recorded ahead of time with OpenAI's `gpt-4o-mini-tts` model in the **Marin** voice, steered to sound like a warm, playful teacher. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. All clips are packed into `voice/pip-voice.mp3` with a byte-offset index (`voice/manifest.json`). `build.py` publishes it as `dist/voice/pip-voice.<hash>.mp3`, so a new recording never mixes with an old cached one. Anything without a recording falls back to the device's built-in voice.
 
 After adding or changing text, re-record (only new or changed lines cost anything):
 ```
 # .env at the repo root holds OPENAI_API_KEY=sk-...   (git-ignored)
-python3 voice/lines.py && python3 voice/synth_openai.py && python3 build.py
+python3 voice/lines.py && python3 voice/synth_openai.py && python3 voice/check.py && python3 build.py
 ```
+`voice/check.py` transcribes every clip and lists any that don't match the script. Delete a bad clip from `voice/clips-marin/` and run `synth_openai.py` again to re-record just that one.
 Templated lines (quiz feedback, badge messages, greetings) are built in `voice/lines.py`.
 
 ## Deploy (AWS + Terraform)
