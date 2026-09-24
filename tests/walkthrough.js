@@ -7,6 +7,7 @@
 const { chromium } = require('playwright');
 const URL = process.env.WL_URL || 'http://localhost:8799/';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
 
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -21,6 +22,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     window.__said = []; window.__cutoffs = [];
     const orig = window.say;
     window.say = (html, opts) => { const r = orig(html, opts); if (r !== false) window.__said.push(html); return r; };
+    window.__clips = 0; const play = Voice.play.bind(Voice); Voice.play = (a, my) => { if (my === Voice.token) window.__clips++; return play(a, my); };
     const speak = Voice.speak.bind(Voice);
     Voice.speak = html => { if (Voice.speaking) window.__cutoffs.push({ was: plainText(App.current_prev || ''), now: plainText(html) }); App.current_prev = html; return speak(html); };
   });
@@ -36,10 +38,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const setVoiceAuto = on => page.evaluate(v => { Voice.auto = v; Voice.stop(); }, on);
 
   // ---------- Meet the Plant ----------
-  await setVoiceAuto(false); await tab('parts');
+  await setVoiceAuto(false); await tab('seed'); await tab('parts'); // remount so the recorder sees every line
   const P = await page.evaluate(() => { const c = document.createElement('canvas').getContext('2d'); const p = drawPlant(c, Loop.t, {}); return { leaf: p.leafCenters[2], flower: p.flowerC, pod: p.podCenter, stem: bez(...p.stemCurve, .3) }; });
   await tap(400, 470); await tap(P.stem[0], P.stem[1] - 6); await tap(...P.leaf); await tap(...P.flower); await tap(...P.pod);
   report.parts = await stars('parts.');
+  // rapid taps: tapping the same part again and again, or several parts quickly, should start just one line
+  await setVoiceAuto(true); await sleep(300);
+  let c0 = await page.evaluate(() => window.__clips);
+  for (let i = 0; i < 5; i++) { await page.mouse.click(...await at(400, 470)); await sleep(120); }
+  await sleep(1500); const sameTapClips = (await page.evaluate(() => window.__clips)) - c0;
+  await closeToasts(); await page.evaluate(() => { Voice.stop(); App.sayQ.length = 0; }); await sleep(300); c0 = await page.evaluate(() => window.__clips);
+  for (const p of [[400, 470], [P.stem[0], P.stem[1] - 6], P.leaf]) { await page.mouse.click(...await at(...p)); await sleep(150); }
+  await sleep(1500); const quickTapClips = (await page.evaluate(() => window.__clips)) - c0;
+  const lastSaid = await page.evaluate(() => window.__said.filter(h => !h.includes('badge')).pop() || '');
+  report.rapidTaps = { sameTapClips, quickTapClips, lastSaid: plainText0(lastSaid), newestWins: lastSaid.includes('food factories') };
+  await setVoiceAuto(false);
 
   // ---------- Open a Seed ----------
   await tab('seed');
@@ -78,7 +91,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     if (done) break;
   }
   await page.evaluate(() => { Loop.speed = 1; });
-  report.grow = { stagesInOrder: stagesSeen, final: await stars('grow.'), seconds: Math.round((Date.now() - t0) / 1000), narrationCutoffs: await page.evaluate(() => window.__cutoffs) };
+  // reminders: a sprouted plant with dry soil, left alone for 26 s. Pip should ask for water once, not over and over
+  await page.click('text=Plant a new seed'); await sleep(500);
+  await page.evaluate(() => { const s = App.inst.state(); Object.assign(s, { g: 2.5, stage: 2, water: 0, sunM: 100, told: {} }); });
+  const r0 = await page.evaluate(() => window.__said.filter(h => h.includes('thirsty')).length);
+  await sleep(26000);
+  const thirstyLines = (await page.evaluate(() => window.__said.filter(h => h.includes('thirsty')).length)) - r0;
+  report.grow = { stagesInOrder: stagesSeen, final: await stars('grow.'), thirstyReminders: thirstyLines, seconds: Math.round((Date.now() - t0) / 1000), narrationCutoffs: await page.evaluate(() => window.__cutoffs) };
   await setVoiceAuto(false);
 
   // ---------- Seed Travel ----------
@@ -136,6 +155,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     'Flower Lab: withered parts stay quiet': report.flower.witheredStamensStillTalk === false,
     'Flower Lab: fruit can be tapped': report.flower.fruitTapWorks,
     'Grow a Bean: 6 stars': report.grow.final.length === 6,
+    'Grow a Bean: one thirsty reminder, not a stream': report.grow.thirstyReminders === 1,
+    'Rapid taps on one part start one line': report.rapidTaps.sameTapClips <= 1,
+    'Quick taps on several parts: only the last one speaks': report.rapidTaps.quickTapClips <= 1 && report.rapidTaps.newestWins,
     'Grow a Bean: stages in order': JSON.stringify(stages) === JSON.stringify(['Seed', 'Germination', 'Sprout', 'Seedling', 'Adult plant', 'Flowers', 'Fruit & seeds']),
     'Seed Travel: 4 stars': report.travel.length === 4,
     'Plant Quiz: 12 stars': report.quiz === '12 of 12',

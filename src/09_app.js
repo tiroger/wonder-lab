@@ -81,6 +81,8 @@ function readTime(html) { return Math.max(4, plainText(html || '').split(' ').le
 function say(html, { polite = false, queue = false } = {}) {
   if (queue && (Voice.speaking || App.sayQ.length)) { App.sayQ.push(html); return true; }
   if (polite && (Voice.speaking || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
+  // tapping the same thing again while Pip is still saying it doesn't restart the line
+  if (html === App.current && Voice.speaking) { const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); return true; }
   App.sayT = Loop.t;
   const p = $('#say'); p.innerHTML = html; App.current = html; const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   const words = html.replace(/<[^>]+>/g, '').split(/\s+/).length; Pip.talkUntil = Loop.t + Math.min(3.5, .6 + words * .12);

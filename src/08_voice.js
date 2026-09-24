@@ -14,7 +14,7 @@ const Voice = {
   auto: true, name: 'marin', volume: 1, bufs: {}, loading: {}, cache: new Map(), src: null, gain: null, token: 0, speaking: false,
   get map() { return (VOICE_PACKS[this.name] || {}).map || {}; },
   setVoice(name) { if (VOICE_PACKS[name]) { this.stop(); this.name = name; this.load(); } },
-  setVolume(v) { this.volume = v; if (this.gain) this.gain.gain.value = 1.25 * v; },
+  setVolume(v) { this.volume = v; if (this.gain && this.src) this.gain.gain.value = 1.25 * v; },
   load(name = this.name) {
     const pack = VOICE_PACKS[name]; if (!pack) return Promise.resolve();
     if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
@@ -38,23 +38,32 @@ const Voice = {
   play(audio, my) {
     return new Promise(res => {
       if (my !== this.token) return res();
-      const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(); src.buffer = audio; g.gain.value = 1.25 * this.volume; this.gain = g;
-      src.connect(g).connect(c.destination); src.onended = () => res(); this.src = src; src.start();
+      const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(), t = c.currentTime; src.buffer = audio; this.gain = g;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1.25 * this.volume, t + .03); // no click at the start
+      src.connect(g).connect(c.destination); src.onended = () => { if (this.src === src) this.src = null; res(); }; this.src = src; src.start(t);
       Pip.talkUntil = Loop.t + audio.duration;
     });
   },
-  stop() {
-    this.token++; if (this.src) { try { this.src.stop(); } catch (e) {} this.src = null; }
-        this.setSpeaking(false);
+  // fade the current clip out instead of cutting it mid-word
+  fadeOut() {
+    const src = this.src, g = this.gain; if (!src) return false; this.src = null;
+    try { const t = Sound.ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + .18); src.stop(t + .2); } catch (e) {}
+    return true;
   },
+  stop() { this.token++; this.fadeOut(); this.setSpeaking(false); },
   setSpeaking(on) {
     this.speaking = on; const b = $('#readBtn'); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
     Sound.levels(on); // duck effects + music under the voice
   },
   async speak(html) {
-    this.stop(); const my = this.token; Sound.unlocked = true;
+    // The newest request wins. A short settle pause means rapid taps don't each start a line and
+    // get chopped: only the last one speaks, and whatever was playing fades out first.
+    const my = ++this.token; Sound.unlocked = true;
     if (!Sound.ensure()) return;
+    const wasTalking = this.fadeOut();
     this.setSpeaking(true);
+    await new Promise(r => setTimeout(r, wasTalking ? 350 : 260));
+    if (my !== this.token) return;
     await this.load();
     // play the longest recorded run of sentences each time, so whole messages keep their natural flow
     const S = splitSentences(plainText(html));

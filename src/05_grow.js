@@ -18,7 +18,7 @@ const A_grow = {
       '<b>Fruit and seeds!</b> After pollination, the flowers turned into bean pods. Inside each pod are new seeds.'
     ];
     let s, chips = null;
-    function reset() { s = { g: 0, water: 0, sunM: 70, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, nagT: Loop.t, factQ: [], cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
+    function reset() { s = { g: 0, water: 0, sunM: 45, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, dryT: 0, told: {}, spokeT: -99, factQ: [], cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
     function paintChips() { if (!chips) return; chips.innerHTML = STAGES.map((n, i) => `<span class="${i <= s.stage ? 'on' : ''}">${n}</span>`).join('<i>›</i>'); }
     const canTip = () => { const e = st.t - s.pourT; if (e > 1.6) return 0; return e < .3 ? ease(e / .3) : e < 1.25 ? 1 : 1 - ease((e - 1.25) / .35); };
     function water(x, y) { if (st.t - s.pourT < 1.6) return; s.pourT = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
@@ -45,8 +45,9 @@ const A_grow = {
       c.strokeStyle = C.ink; c.lineWidth = 6; c.beginPath(); c.arc(-40, -8, 26, PI * .6, PI * 1.45); c.stroke();
       c.fillStyle = '#fff'; c.beginPath(); c.arc(-6, 0, 12, 0, TAU); c.fill(); c.fillStyle = C.water; c.beginPath(); c.moveTo(-6, -8); c.quadraticCurveTo(2, 2, -6, 6); c.quadraticCurveTo(-14, 2, -6, -8); c.fill();
       c.restore();
-      if (k > .7 && st.t - s.pourT < 1.3) { const sx = x + Math.cos(rot) * 92 + Math.sin(rot) * 38, sy = y - Math.sin(rot) * 92 - Math.cos(rot) * 38 + 30; for (let i = 0; i < 2; i++) s.drops.push({ x: sx + rand(-8, 8), y: sy, vx: rand(50, 130), vy: rand(-20, 40) }); s.water = Math.min(100, s.water + 42 * dt); }
-      if (!k) label(c, 'Tap me!', CAN[0], CAN[1] - 60, { size: 18, color: C.carrot });
+      if (k > .7 && st.t - s.pourT < 1.3) { const sx = x + Math.cos(rot) * 92 + Math.sin(rot) * 38, sy = y - Math.sin(rot) * 92 - Math.cos(rot) * 38 + 30; for (let i = 0; i < 2; i++) s.drops.push({ x: sx + rand(-8, 8), y: sy, vx: rand(50, 130), vy: rand(-20, 40) }); s.water = Math.min(100, s.water + 58 * dt); }
+      // the can itself is the reminder: it bounces and asks for a tap when the soil is dry (or at the very start)
+      if (!k && (s.g < .05 || s.water < 1)) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, s.g < .05 ? 'Tap me!' : 'Water me!', CAN[0], CAN[1] - 62 - b, { size: 19, color: C.carrot }); }
     }
     function drawPlantAt(c, t, g) {
       const droop = clamp(s.thirst / 2, 0, 1) * (g >= 1.9 ? 1 : 0), sw = RM ? 0 : Math.sin(t * 1.3) * 4;
@@ -102,13 +103,19 @@ const A_grow = {
       if (s.factQ.length && !Voice.speaking && !App.sayQ.length && t - (App.sayT || -99) > (Voice.auto && Sound.unlocked ? .8 : 5)) ui.say(s.factQ.shift());
       // growth slows down while Pip is explaining, so the story keeps pace with the plant
       const pace = Voice.speaking || s.factQ.length ? .35 : 1;
-      if (okW && okS && s.g < 7.25) { s.g += dt * .2 * pace; s.water = Math.max(0, s.water - dt * 6); if (above) s.sunM = Math.max(0, s.sunM - dt * 4.5); }
-      s.water = Math.max(0, s.water - dt * .6);
+      if (okW && okS && s.g < 7.25) { s.g += dt * .2 * pace; s.water = Math.max(0, s.water - dt * 2.4 * pace); if (above) s.sunM = Math.max(0, s.sunM - dt * 2.6 * pace); }
+      s.water = Math.max(0, s.water - dt * .3);
       s.thirst = !okW && s.g >= 1.9 && s.g < 7 ? s.thirst + dt : Math.max(0, s.thirst - dt * 2);
-      // reminders wait politely: never cut off Pip mid-sentence or replace a fact before there's time to read it
-      if ((!okW || !okS) && s.g > .05 && s.g < 7 && t - s.nagT > 8) {
-        const msg = !okW ? 'The plant is <b>thirsty</b>! Its leaves are drooping. Tap the watering can.' : 'Clouds are blocking the sun. Plants need <b>sunlight</b> to make food. Tap the sun!';
-        if (ui.say(msg, { polite: true })) { s.nagT = t; Sound.oops(); }
+      // Reminders: the can or the sun shows the need right away (bouncing label, drooping plant). Pip only says it
+      // the first time, or if it's been ignored for a while, and never over another line.
+      const need = !okW ? 'water' : !okS ? 'sun' : null;
+      s.dryT = need && s.g > .05 && s.g < 7 ? s.dryT + dt : 0;
+      if (need && s.dryT > 3) {
+        const first = !s.told[need], ignored = s.dryT > 20 && t - s.spokeT > 30;
+        if (first || ignored) {
+          const msg = need === 'water' ? 'The plant is <b>thirsty</b>! Its leaves are drooping. Tap the watering can.' : 'Clouds are blocking the sun. Plants need <b>sunlight</b> to make food. Tap the sun!';
+          if (ui.say(msg, { polite: true })) { s.told[need] = true; s.spokeT = t; Sound.oops(); }
+        }
       }
       const ns = Math.min(7, Math.floor(s.g)); if (ns > s.stage) { s.stage = ns; onStage(ns); }
       // sky dims with less sunshine
@@ -117,6 +124,7 @@ const A_grow = {
       const cov = clamp((55 - s.sunM) / 40, 0, 1) * (above ? 1 : 0); s.cloudX += ((t - s.sunT < 1.5 ? 900 : lerp(880, 640, cov)) - s.cloudX) * Math.min(1, dt * 2);
       sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); if (st.over(circle(...SUN, 70))) {}
       cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + ((t * 10) % 300), 60, .6);
+      if (above && s.sunM < 1 && s.g < 7) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, 'Tap the sun!', SUN[0] - 10, SUN[1] + 66 - b, { size: 19, color: C.carrot }); }
       ground(c, GY, t);
       // wet soil
       if (s.water > 0) { const wg = c.createRadialGradient(SX, GY + 30, 10, SX, GY + 30, 190); wg.addColorStop(0, `rgba(45,25,12,${s.water / 100 * .5})`); wg.addColorStop(1, 'rgba(45,25,12,0)'); c.fillStyle = wg; c.fillRect(SX - 200, GY + 6, 400, 260); }
@@ -146,6 +154,6 @@ const A_grow = {
     ui.button('Plant a new seed', () => { reset(); Sound.pop(); ui.say(A_grow.intro); }, 'go');
     chips = ui.extraEl('div', 'cycle');
     reset();
-    return { stage: st, destroy() { st.destroy(); } };
+    return { stage: st, state: () => s, destroy() { st.destroy(); } }; // state() is for tests
   }
 };
