@@ -1,14 +1,16 @@
-# Pull requests: make sure the page builds, the script parses and the Terraform is valid. No AWS access.
+# Pull requests: build and check the app, play every activity end to end, and show the Terraform plan.
 name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   check:
+    name: Build and validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,3 +32,55 @@ jobs:
           terraform fmt -check -recursive infra
           (cd infra && terraform init -backend=false -input=false && terraform validate)
           (cd infra/bootstrap && terraform init -backend=false -input=false && terraform validate)
+
+  walkthrough:
+    name: Play every activity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: npm install --no-save playwright@1 && npx playwright install --with-deps chromium
+      - name: Build and serve
+        run: |
+          python3 build.py
+          (cd dist && python3 -m http.server 8799 >/dev/null 2>&1 &)
+          sleep 1
+      - name: Walkthrough
+        run: node tests/walkthrough.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: walkthrough-screenshot
+          path: tests/last-run.png
+          if-no-files-found: ignore
+
+  plan:
+    name: Terraform plan
+    runs-on: ubuntu-latest
+    # the plan role trusts pull requests from this repo only (forks don't get OIDC tokens for it)
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Plan
+        working-directory: infra
+        run: |
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          terraform plan -input=false -no-color | tee plan.txt
+          { echo '### Terraform plan'; echo '```'; tail -c 60000 plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
