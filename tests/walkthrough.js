@@ -1,8 +1,9 @@
 /* End-to-end walkthrough: plays every activity from start to finish in a headless browser and checks
    that each stage unlocks, every star and badge can be earned, and every line Pip says has a recording
    in every voice. Also checks that reminders never cut Pip off mid-sentence.
-   Run: python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
-   Needs Playwright (npm i -g playwright, then npx playwright install chromium). */
+   Runs in CI on every pull request (.github/workflows/ci.yml). Locally:
+   python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
+   Needs Playwright (npm install --no-save playwright && npx playwright install chromium). */
 const { chromium } = require('playwright');
 const URL = process.env.WL_URL || 'http://localhost:8799/';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -123,4 +124,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log(JSON.stringify(report, null, 1));
   await page.screenshot({ path: 'tests/last-run.png' });
   await browser.close();
+
+  // fail the run (and the CI job) if anything is off
+  const stages = report.grow.stagesInOrder.map(s => s.trim());
+  const checks = {
+    'Meet the Plant: 5 stars': report.parts.length === 5,
+    'Open a Seed: 5 stars': report.seed.final.length === 5,
+    'Open a Seed: sprout button unlocks': report.seed.sproutButtonEnabled,
+    'Flower Lab: 5 stars': report.flower.final.length === 5,
+    'Flower Lab: bee appears after stamen + pistil': report.flower.beeAppeared,
+    'Flower Lab: withered parts stay quiet': report.flower.witheredStamensStillTalk === false,
+    'Flower Lab: fruit can be tapped': report.flower.fruitTapWorks,
+    'Grow a Bean: 6 stars': report.grow.final.length === 6,
+    'Grow a Bean: stages in order': JSON.stringify(stages) === JSON.stringify(['Seed', 'Germination', 'Sprout', 'Seedling', 'Adult plant', 'Flowers', 'Fruit & seeds']),
+    'Seed Travel: 4 stars': report.travel.length === 4,
+    'Plant Quiz: 12 stars': report.quiz === '12 of 12',
+    'All 7 badges': report.badges.length === 7,
+    'Every line recorded in every voice': Object.entries(report.voiceCoverage).every(([k, v]) => k === 'messagesSaid' || v === 'all recorded'),
+    'No page errors': report.errors.length === 0 && report.noRecordingWarnings.length === 0
+  };
+  const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
+  for (const [name, ok] of Object.entries(checks)) console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+  process.exit(failed.length ? 1 : 0);
 })();

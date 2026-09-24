@@ -1,8 +1,9 @@
 # One-time setup, applied by hand with admin credentials (same pattern as windchaser-ai):
 #   - the S3 bucket that holds the site's Terraform state
-#   - a deploy role GitHub Actions can assume through OIDC, only from the main branch of this repo
-# After this, every deploy runs in GitHub Actions with short-lived credentials. No AWS keys on a laptop or in GitHub.
-# This root keeps its own state locally (it creates the bucket the other root stores state in).
+#   - a read-only plan role that pull requests use for `terraform plan`
+#   - a deploy role that only the repo's `production` GitHub environment can assume
+# Both roles are reached through GitHub OIDC with short-lived sessions. No AWS keys on a laptop or in GitHub.
+# This root keeps its own state locally, because it creates the bucket the other root stores state in.
 
 terraform {
   required_version = ">= 1.10"
@@ -88,7 +89,55 @@ resource "aws_s3_bucket_policy" "state" {
   depends_on = [aws_s3_bucket_public_access_block.state]
 }
 
-# ----------------------------------------------------------------- deploy role --
+# ---------------------------------------------------------------- CI roles --
+data "aws_iam_policy_document" "assume_plan" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:${var.github_repo}:pull_request"]
+    }
+  }
+}
+
+resource "aws_iam_role" "plan" {
+  name                 = "wonder-lab-ci-plan"
+  description          = "Read-only: terraform plan on pull requests to ${var.github_repo}"
+  assume_role_policy   = data.aws_iam_policy_document.assume_plan.json
+  max_session_duration = 3600
+}
+resource "aws_iam_role_policy_attachment" "plan_readonly" {
+  role       = aws_iam_role.plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+data "aws_iam_policy_document" "plan_state" {
+  statement {
+    sid       = "ReadState"
+    actions   = ["s3:ListBucket", "s3:GetObject"]
+    resources = [aws_s3_bucket.state.arn, "${aws_s3_bucket.state.arn}/*"]
+  }
+  statement {
+    sid       = "StateLock" # S3-native locking writes a .tflock object next to the state
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.state.arn}/*.tflock"]
+  }
+}
+resource "aws_iam_role_policy" "plan_state" {
+  name   = "wonder-lab-plan-state"
+  role   = aws_iam_role.plan.id
+  policy = data.aws_iam_policy_document.plan_state.json
+}
+
 data "aws_iam_policy_document" "assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -104,14 +153,14 @@ data "aws_iam_policy_document" "assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+      values   = ["repo:${var.github_repo}:environment:production"]
     }
   }
 }
 
 resource "aws_iam_role" "deploy" {
   name                 = "wonder-lab-ci-deploy"
-  description          = "GitHub Actions (main branch of ${var.github_repo}) deploys Wonder Lab"
+  description          = "GitHub Actions (production environment of ${var.github_repo}) deploys Wonder Lab"
   assume_role_policy   = data.aws_iam_policy_document.assume.json
   max_session_duration = 3600
 }
@@ -166,10 +215,13 @@ resource "aws_iam_role_policy" "deploy" {
 # ---------------------------------------------------------------------- outputs --
 output "state_bucket" { value = aws_s3_bucket.state.id }
 output "deploy_role_arn" { value = aws_iam_role.deploy.arn }
+output "plan_role_arn" { value = aws_iam_role.plan.arn }
 output "github_variable_commands" {
-  description = "Run these once to point the GitHub workflow at this account"
+  description = "Run these once: create the production environment and point the workflows at this account"
   value       = <<-EOT
-    gh variable set AWS_DEPLOY_ROLE_ARN --repo ${var.github_repo} --body "${aws_iam_role.deploy.arn}"
+    gh api -X PUT repos/${var.github_repo}/environments/production
     gh variable set TF_STATE_BUCKET --repo ${var.github_repo} --body "${aws_s3_bucket.state.id}"
+    gh variable set AWS_PLAN_ROLE_ARN --repo ${var.github_repo} --body "${aws_iam_role.plan.arn}"
+    gh variable set AWS_DEPLOY_ROLE_ARN --repo ${var.github_repo} --env production --body "${aws_iam_role.deploy.arn}"
   EOT
 }

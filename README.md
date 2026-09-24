@@ -16,7 +16,7 @@ Live version (private Claude artifact): https://claude.ai/artifact/SG45qnd4mhnkx
 The page loads its voice file with `fetch`, so open it through a small web server (not by double-clicking the file):
 
 ```
-./serve.sh        # builds, serves at localhost:8000 and opens your browser (Ctrl+C to stop)
+./serve.sh        # local preview only: builds, serves at localhost:8000 and opens your browser (Ctrl+C to stop)
 ```
 
 ## Layout
@@ -34,8 +34,8 @@ src/               page source, concatenated in file-name order
   08b_settings.js  Settings dialog: name, voice, volumes, progress resets
   09_app.js        TOPICS list, Pip, stars, badges, tabs, controls
 build.py           builds dist/index.html (full page) and dist/artifact.html (for publishing as a Claude artifact)
-deploy.sh          builds and uploads to S3/CloudFront
-infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records
+infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records; infra/bootstrap: state bucket + CI roles
+.github/workflows/ CI (pull requests) and Deploy (main)
 voice/             narration pipeline: lines.py, synth_openai.py, check.py, lines.json (every message), packs/ (one mp3 + index per voice)
 tests/             walkthrough.js end-to-end test
 dist/              built page + hashed voice file
@@ -65,51 +65,43 @@ Templated lines (quiz feedback, badge messages, greetings) are built in `voice/l
 The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, voice/effects/music volume, and progress with a reset button per activity plus **Start over** for everything. Resets ask for a second tap.
 
 ## Test
-`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice.
+`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice. It runs on every pull request and fails the check if anything is off.
 ```
 python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
 ```
 
-## Deploy (AWS + Terraform + GitHub Actions)
-Same pattern as windchaser-ai: no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
+## Deploy: CI/CD with GitHub Actions + Terraform
+Same pattern as windchaser-ai: everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
 
-- `infra/bootstrap/` is applied **once, by hand**, with admin credentials. It creates the S3 bucket for Terraform state and a `wonder-lab-ci-deploy` role that GitHub Actions can assume through OIDC, only from the `main` branch of this repo. It reuses the account's existing GitHub OIDC provider (created by windchaser-ai). The role can touch the site bucket, CloudFront, ACM and the wonderlab.camp DNS records, and has no IAM permissions.
-- `.github/workflows/deploy.yml` runs on every push to `main`: `terraform apply` in `infra/`, then `deploy.sh` (build, upload to S3, refresh CloudFront).
-- `.github/workflows/ci.yml` runs on pull requests: build, script check, `terraform validate`. No AWS access.
+| Workflow | When | What it does |
+|---|---|---|
+| `.github/workflows/ci.yml` | every pull request | builds the page, checks the script, `terraform fmt` + `validate`, plays every activity end to end (`tests/walkthrough.js`), and posts a `terraform plan` to the run summary using the read-only plan role |
+| `.github/workflows/deploy.yml` | push to `main` (or run by hand) | in the `production` environment: `terraform apply`, build, upload to S3, refresh CloudFront |
 
-First time (needs the AWS CLI, Terraform and the GitHub CLI):
+AWS access comes from two roles the workflows assume through GitHub OIDC with short-lived sessions:
+- `wonder-lab-ci-plan`: read-only, trusted only for pull requests from this repo.
+- `wonder-lab-ci-deploy`: trusted only for the repo's `production` environment. It can touch the site bucket, CloudFront, ACM and the wonderlab.camp DNS records, and has no IAM permissions.
+
+### One-time bootstrap (by hand, like windchaser-ai)
+`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the GitHub OIDC provider windchaser-ai already created in the account. It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
 ```
-aws sso login                     # export AWS_PROFILE=<name> first if it isn't your default
-infra/bootstrap/setup.sh          # shows the account, applies the bootstrap, creates the GitHub repo, sets its variables, pushes main
-gh run watch                      # follow the first deploy (the certificate takes a few minutes)
-```
-After that, deploying is just `git push`.
-
-## Settings
-The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, voice/effects/music volume, and progress with a reset button per activity plus **Start over** for everything. Resets ask for a second tap.
-
-## Test
-`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice.
-```
-python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
-```
-
-## Deploy (AWS + Terraform)
-The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records. All of it is defined in `infra/`.
-
-First time:
-```
-infra/bootstrap.sh                     # creates the S3 bucket for Terraform state, prints the init command
-cd infra
-terraform init -backend-config="bucket=<state bucket from bootstrap>"
+aws sso login
+aws sts get-caller-identity                 # confirm the account first
+cd infra/bootstrap
+terraform init
+terraform plan                              # read it: it creates IAM roles
 terraform apply
-cd ..
 ```
-Every release:
+Then create the GitHub repo and point it at the account:
 ```
-./deploy.sh                            # build, upload to S3, refresh CloudFront
+gh repo create tiroger/wonder-lab --private
+git remote add origin git@github.com-personal:tiroger/wonder-lab.git
+terraform output -raw github_variable_commands    # run the four commands it prints
+git push -u origin main                           # first deploy
 ```
-Needs the AWS CLI and credentials for the account that owns the wonderlab.camp hosted zone.
+Keep `infra/bootstrap/terraform.tfstate` (git-ignored) somewhere safe; it only matters if the bootstrap ever changes.
+
+After that, every change ships by merging to `main`.
 
 ## Progress
 Stars, badges, the explorer name and sound settings are saved in the browser's localStorage, on that device only.
