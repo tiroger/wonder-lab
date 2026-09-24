@@ -70,6 +70,30 @@ The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, v
 python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
 ```
 
+## Deploy (AWS + Terraform + GitHub Actions)
+Same pattern as windchaser-ai: no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
+
+- `infra/bootstrap/` is applied **once, by hand**, with admin credentials. It creates the S3 bucket for Terraform state and a `wonder-lab-ci-deploy` role that GitHub Actions can assume through OIDC, only from the `main` branch of this repo. It reuses the account's existing GitHub OIDC provider (created by windchaser-ai). The role can touch the site bucket, CloudFront, ACM and the wonderlab.camp DNS records, and has no IAM permissions.
+- `.github/workflows/deploy.yml` runs on every push to `main`: `terraform apply` in `infra/`, then `deploy.sh` (build, upload to S3, refresh CloudFront).
+- `.github/workflows/ci.yml` runs on pull requests: build, script check, `terraform validate`. No AWS access.
+
+First time (needs the AWS CLI, Terraform and the GitHub CLI):
+```
+aws sso login                     # export AWS_PROFILE=<name> first if it isn't your default
+infra/bootstrap/setup.sh          # shows the account, applies the bootstrap, creates the GitHub repo, sets its variables, pushes main
+gh run watch                      # follow the first deploy (the certificate takes a few minutes)
+```
+After that, deploying is just `git push`.
+
+## Settings
+The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, voice/effects/music volume, and progress with a reset button per activity plus **Start over** for everything. Resets ask for a second tap.
+
+## Test
+`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice.
+```
+python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
+```
+
 ## Deploy (AWS + Terraform)
 The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records. All of it is defined in `infra/`.
 

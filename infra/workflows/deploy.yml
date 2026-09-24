@@ -1,0 +1,40 @@
+# Push to main: apply the site infrastructure, then build and upload the app.
+# AWS access comes from the OIDC deploy role created by infra/bootstrap; there are no stored AWS keys.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Terraform apply (S3, CloudFront, certificate, DNS)
+        working-directory: infra
+        run: |
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          terraform apply -input=false -auto-approve
+      - name: Build and upload the site
+        run: ./deploy.sh

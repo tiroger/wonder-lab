@@ -1,0 +1,32 @@
+# Pull requests: make sure the page builds, the script parses and the Terraform is valid. No AWS access.
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+      - name: Build
+        run: python3 build.py
+      - name: Script parses
+        run: sed -n '/<script>/,/<\/script>/p' dist/artifact.html | sed '1d;$d' > /tmp/app.js && node --check /tmp/app.js
+      - name: Terraform format and validate
+        run: |
+          terraform fmt -check -recursive infra
+          (cd infra && terraform init -backend=false -input=false && terraform validate)
+          (cd infra/bootstrap && terraform init -backend=false -input=false && terraform validate)
