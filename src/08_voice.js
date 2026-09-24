@@ -1,54 +1,55 @@
-/* ============ Pip's voice: recorded narration (whole messages, with short pieces for dynamic lines) ============ */
-const VOICE_MAP = __VOICE_MAP__; // filled in by build.py from voice/manifest.json
+/* ============ Pip's voice: recorded narration in several voices (whole messages, plus short pieces for dynamic lines) ============ */
+const VOICE_PACKS = __VOICE_PACKS__; // filled in by build.py: { name: { file, map: { clipKey: [byteOffset, byteLength] } } }
+// the voices offered in Settings (recorded with voice/synth_openai.py); only packs that exist are shown
+const VOICE_CHOICES = [
+  { id: 'marin', name: 'Marin', note: 'warm and natural' },
+  { id: 'coral', name: 'Coral', note: 'bright and upbeat' },
+  { id: 'nova', name: 'Nova', note: 'clear and friendly' },
+  { id: 'cedar', name: 'Cedar', note: 'calm, deeper voice' }
+].filter(v => VOICE_PACKS[v.id]);
 function plainText(h) { return h.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\([^)]*\)/g, '').replace(/&amp;/g, '&').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim(); }
 function splitSentences(t) { return (t.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || []).map(s => s.trim()).filter(Boolean); }
 function vkey(s) { s = s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); let h = 5381; for (const ch of s) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h.toString(36); }
 const Voice = {
-  auto: true, buf: null, loading: null, cache: new Map(), src: null, token: 0, speaking: false,
-  load() {
-    if (!this.loading) this.loading = fetch('__VOICE_FILE__').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(b => { this.buf = b; }).catch(() => { this.buf = null; });
-    return this.loading;
+  auto: true, name: 'marin', volume: 1, bufs: {}, loading: {}, cache: new Map(), src: null, gain: null, token: 0, speaking: false,
+  get map() { return (VOICE_PACKS[this.name] || {}).map || {}; },
+  setVoice(name) { if (VOICE_PACKS[name]) { this.stop(); this.name = name; this.load(); } },
+  setVolume(v) { this.volume = v; if (this.gain) this.gain.gain.value = 1.25 * v; },
+  load(name = this.name) {
+    const pack = VOICE_PACKS[name]; if (!pack) return Promise.resolve();
+    if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+      .then(b => { this.bufs[name] = skipId3(b); }).catch(() => { delete this.loading[name]; });
+    return this.loading[name];
   },
   keyFor(s) {
-    const k = vkey(s); if (VOICE_MAP[k]) return k;
+    const map = this.map, k = vkey(s); if (map[k]) return k;
     if (/^hi\b.*!$/i.test(s)) return vkey('Hi!');
     if (/^nice to meet you/i.test(s)) return vkey('Nice to meet you!');
     return null;
   },
   async clip(key) {
-    if (this.cache.has(key)) return this.cache.get(key);
-    const m = VOICE_MAP[key]; if (!m || !this.buf) return null;
-    const ab = this.buf.slice(m[0], m[0] + m[1]);
+    const ck = this.name + ':' + key; if (this.cache.has(ck)) return this.cache.get(ck);
+    const m = this.map[key], buf = this.bufs[this.name]; if (!m || !buf) return null;
+    const ab = buf.slice(m[0], m[0] + m[1]);
     const audio = await new Promise((res, rej) => Sound.ctx.decodeAudioData(ab, res, rej)).catch(() => null);
-    if (audio) { this.cache.set(key, audio); if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value); }
+    if (audio) { this.cache.set(ck, audio); if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value); }
     return audio;
   },
   play(audio, my) {
     return new Promise(res => {
       if (my !== this.token) return res();
-      const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(); src.buffer = audio; g.gain.value = 1.25;
+      const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(); src.buffer = audio; g.gain.value = 1.25 * this.volume; this.gain = g;
       src.connect(g).connect(c.destination); src.onended = () => res(); this.src = src; src.start();
       Pip.talkUntil = Loop.t + audio.duration;
     });
   },
-  browser(s, my) { // fallback for anything not pre-recorded: the best voice this device has
-    return new Promise(res => {
-      try {
-        if (my !== this.token || !('speechSynthesis' in window)) return res();
-        const u = new SpeechSynthesisUtterance(s), v = bestVoice(); if (v) u.voice = v; u.rate = .95; u.pitch = 1.05;
-        u.onend = u.onerror = () => res(); speechSynthesis.speak(u); Pip.talkUntil = Loop.t + s.split(' ').length * .38;
-        setTimeout(res, 9000);
-      } catch (e) { res(); }
-    });
-  },
   stop() {
     this.token++; if (this.src) { try { this.src.stop(); } catch (e) {} this.src = null; }
-    try { speechSynthesis.cancel(); } catch (e) {}
-    this.setSpeaking(false);
+        this.setSpeaking(false);
   },
   setSpeaking(on) {
     this.speaking = on; const b = $('#readBtn'); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    if (Sound.ctx && Sound.out) Sound.out.gain.setTargetAtTime(on ? .45 : .9, Sound.ctx.currentTime, .08); // duck effects + music under the voice
+    Sound.levels(on); // duck effects + music under the voice
   },
   async speak(html) {
     this.stop(); const my = this.token; Sound.unlocked = true;
@@ -60,24 +61,22 @@ const Voice = {
     for (let i = 0; i < S.length;) {
       if (my !== this.token) return;
       let k = null, j = S.length - 1;
-      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (VOICE_MAP[kk]) { k = kk; break; } }
+      const map = this.map;
+      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (map[kk]) { k = kk; break; } }
       if (!k) { j = i; k = this.keyFor(S[i]); }
       const audio = k ? await this.clip(k) : null;
       if (my !== this.token) return;
-      if (audio) await this.play(audio, my); else await this.browser(S.slice(i, j + 1).join(' '), my);
+      // every line Pip says is pre-recorded; anything missing stays silent rather than switching to a robotic device voice
+      if (audio) await this.play(audio, my); else console.warn('No recording for:', S.slice(i, j + 1).join(' '));
       i = j + 1; if (i < S.length) await new Promise(r => setTimeout(r, 120));
     }
     if (my === this.token) this.setSpeaking(false);
   }
 };
-let _bestVoice;
-function bestVoice() {
-  if (_bestVoice !== undefined) return _bestVoice;
-  try {
-    const vs = speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang)); if (!vs.length) return null;
-    const score = v => (/natural|neural|premium|enhanced|siri/i.test(v.name) ? 50 : 0) + (/aria|jenny|ava|samantha|allison|google us english|zira/i.test(v.name) ? 20 : 0) + (/en-us/i.test(v.lang) ? 10 : 0) + (v.localService ? 0 : 3);
-    _bestVoice = vs.sort((a, b) => score(b) - score(a))[0];
-  } catch (e) { _bestVoice = null; }
-  return _bestVoice;
+// the clip offsets count from the first audio byte; skip an ID3 tag if one got added to the file
+function skipId3(buf) {
+  const u = new Uint8Array(buf, 0, Math.min(10, buf.byteLength));
+  if (u.length < 10 || u[0] !== 0x49 || u[1] !== 0x44 || u[2] !== 0x33) return buf;
+  const size = (u[6] & 127) << 21 | (u[7] & 127) << 14 | (u[8] & 127) << 7 | (u[9] & 127);
+  return buf.slice(10 + size + (u[5] & 0x10 ? 10 : 0));
 }
-try { speechSynthesis.onvoiceschanged = () => { _bestVoice = undefined; }; } catch (e) {}

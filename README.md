@@ -30,12 +30,14 @@ src/               page source, concatenated in file-name order
   05_grow.js       Grow a Bean
   06_travel.js     Seed Travel
   07_quiz.js       Plant Quiz + tab/badge icons
-  08_voice.js      Pip's voice: plays pre-recorded sentences, falls back to the device's best voice
+  08_voice.js      Pip's voice: plays the recorded messages for the chosen voice
+  08b_settings.js  Settings dialog: name, voice, volumes, progress resets
   09_app.js        TOPICS list, Pip, stars, badges, tabs, controls
 build.py           builds dist/index.html (full page) and dist/artifact.html (for publishing as a Claude artifact)
 deploy.sh          builds and uploads to S3/CloudFront
 infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records
-voice/             narration pipeline: lines.py, synth_openai.py, lines.json (every message), manifest.json (clip offsets)
+voice/             narration pipeline: lines.py, synth_openai.py, check.py, lines.json (every message), packs/ (one mp3 + index per voice)
+tests/             walkthrough.js end-to-end test
 dist/              built page + hashed voice file
 ```
 
@@ -45,15 +47,28 @@ Each activity is an object `{ id, name, icon, badge, stars[], intro, mount(host,
 To add a topic: write new activity objects, add an entry to `TOPICS` in `09_app.js`, and drop the "coming soon" option from the dropdown.
 
 ## Pip's voice
-Narration is recorded ahead of time with OpenAI's `gpt-4o-mini-tts` model in the **Marin** voice, steered to sound like a warm, playful teacher. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. All clips are packed into `voice/pip-voice.mp3` with a byte-offset index (`voice/manifest.json`). `build.py` publishes it as `dist/voice/pip-voice.<hash>.mp3`, so a new recording never mixes with an old cached one. Anything without a recording falls back to the device's built-in voice.
+Every line Pip says is recorded ahead of time with OpenAI's `gpt-4o-mini-tts`, steered to sound like a warm, playful teacher. There are four voices to pick from in **Settings**: Marin (default), Coral, Nova and Cedar. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. Nothing falls back to the device's robotic voice: a line without a recording stays silent, and the walkthrough test fails on it.
 
-After adding or changing text, re-record (only new or changed lines cost anything):
+Each voice is a pack: `voice/packs/<voice>.mp3` (all clips back to back) and `voice/packs/<voice>.json` (byte offsets). `build.py` publishes them as `dist/voice/<voice>.<hash>.mp3`, so a new recording never mixes with an old cached one.
+
+After adding or changing any text Pip says, re-record (only new or changed lines cost anything):
 ```
 # .env at the repo root holds OPENAI_API_KEY=sk-...   (git-ignored)
-python3 voice/lines.py && python3 voice/synth_openai.py && python3 voice/check.py && python3 build.py
+python3 voice/lines.py              # collect every message from src/
+python3 voice/synth_openai.py       # record new lines in every voice
+python3 voice/check.py --fix        # transcribe each clip, re-record any that came out wrong
+python3 build.py
 ```
-`voice/check.py` transcribes every clip and lists any that don't match the script. Delete a bad clip from `voice/clips-marin/` and run `synth_openai.py` again to re-record just that one.
-Templated lines (quiz feedback, badge messages, greetings) are built in `voice/lines.py`.
+Templated lines (quiz feedback, badge messages, greetings) are built in `voice/lines.py`. To add a voice, add it to `VOICES` in `voice/synth_openai.py` and `VOICE_CHOICES` in `src/08_voice.js`.
+
+## Settings
+The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, voice/effects/music volume, and progress with a reset button per activity plus **Start over** for everything. Resets ask for a second tap.
+
+## Test
+`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice.
+```
+python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
+```
 
 ## Deploy (AWS + Terraform)
 The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records. All of it is defined in `infra/`.

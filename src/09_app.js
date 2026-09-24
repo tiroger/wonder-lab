@@ -3,7 +3,8 @@ const TOPICS = [
   { id: 'plants', name: 'Plants & Seeds', activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.' } }
 ];
-const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '' };
+const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
+Loop.add(() => { if (App.sayQ.length && !Voice.speaking && Loop.t - (App.sayT || -99) > .8) say(App.sayQ.shift()); });
 
 /* ============ Pip the seed ============ */
 const Pip = { talkUntil: 0, wowUntil: 0, pokeT: -9 };
@@ -74,10 +75,17 @@ function flyStar(cx, cy) {
 }
 
 /* ============ talking, stars, badges ============ */
-function say(html) {
+// polite messages (reminders) wait until Pip has finished talking and the last message has had time to be read
+function readTime(html) { return Math.max(4, plainText(html || '').split(' ').length * .4); }
+// queued messages (badge news) wait for Pip to finish the current one instead of cutting it off
+function say(html, { polite = false, queue = false } = {}) {
+  if (queue && (Voice.speaking || App.sayQ.length)) { App.sayQ.push(html); return true; }
+  if (polite && (Voice.speaking || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
+  App.sayT = Loop.t;
   const p = $('#say'); p.innerHTML = html; App.current = html; const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   const words = html.replace(/<[^>]+>/g, '').split(/\s+/).length; Pip.talkUntil = Loop.t + Math.min(3.5, .6 + words * .12);
   if (Voice.auto && Sound.unlocked) Voice.speak(html); else Sound.babble(Math.min(6, 2 + Math.floor(words / 6)));
+  return true;
 }
 function award(id, cx, cy) {
   if (Store.data.stars[id]) return false;
@@ -99,7 +107,7 @@ function nextToast() {
   const cv = el.querySelector('canvas'); const btn = document.createElement('button'); btn.className = 'btn go'; btn.textContent = 'Hooray!'; el.appendChild(btn); document.body.appendChild(el);
   const off = Loop.add(t => { const c = cv.getContext('2d'); c.setTransform(2.4, 0, 0, 2.4, 0, 0); c.clearRect(0, 0, 100, 100); c.save(); c.translate(50, 50); c.rotate(RM ? 0 : Math.sin(t * 3) * .12); c.translate(-50, -50); c.fillStyle = C.sun; c.beginPath(); for (let i = 0; i < 24; i++) { const r = i % 2 ? 40 : 48, a = i / 24 * TAU + t * .5; c.lineTo(50 + Math.cos(a) * r, 50 + Math.sin(a) * r); } c.fill(); c.fillStyle = '#FFF4D6'; c.beginPath(); c.arc(50, 50, 36, 0, TAU); c.fill(); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(); c.translate(20, 20); c.scale(.6, .6); ICONS[b.icon](c, t); c.restore(); });
   Sound.badge(); confetti(innerWidth / 2, innerHeight / 2, 120, 1.3); setTimeout(() => confetti(innerWidth * .25, innerHeight * .4, 50), 300); setTimeout(() => confetti(innerWidth * .75, innerHeight * .4, 50), 500);
-  say(`You earned the <b>${b.name}</b> badge! ${b.desc}`);
+  say(`You earned the <b>${b.name}</b> badge! ${b.desc}`, { queue: true });
   const close = () => { off(); el.remove(); App.toastOn = false; Sound.pop(); setTimeout(nextToast, 300); };
   btn.onclick = close; btn.focus(); setTimeout(() => { if (el.isConnected) close(); }, 7000);
 }
@@ -151,7 +159,7 @@ function mount(a) {
 function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }
 
 function init() {
-  Store.load(); Sound.on = Store.data.sound !== false;
+  Store.load();
   fxInit();
   // title letters hop when hovered or tapped
   const h1 = $('#title'); h1.innerHTML = [...'Wonder'].map(ch => `<span class="w">${ch}</span>`).join('') + ' ' + [...'Lab'].map(ch => `<span class="l">${ch}</span>`).join('');
@@ -163,23 +171,9 @@ function init() {
   // topic dropdown
   const sel = $('#topic'); sel.innerHTML = TOPICS.map(t => `<option value="${t.id}">${t.name}</option>`).join('') + '<option disabled>More topics coming soon…</option>';
   sel.onchange = () => { const tp = TOPICS.find(t => t.id === sel.value); if (tp) { Sound.whoosh(); selectTopic(tp); } };
-  // explorer name
-  const nm = $('#explorer'); nm.value = Store.data.name || ''; nm.oninput = () => { Store.data.name = nm.value.trim(); Store.save(); if (nm.value.length) Sound.tone(PENTA[nm.value.length % 10], .06, 'triangle', .05); };
-  nm.onchange = () => { if (Store.data.name) say(`Nice to meet you, <b>${Store.data.name.replace(/[<>&"]/g, '')}</b>! Let's explore together.`); };
-  // sound + music
-  const sb = $('#soundBtn'), mb = $('#musicBtn'); sb.setAttribute('aria-pressed', Sound.on);
-  sb.onclick = () => { Sound.on = !Sound.on; Store.data.sound = Sound.on; Store.save(); sb.setAttribute('aria-pressed', Sound.on); if (Sound.on) { Sound.ensure(); Sound.boing(); } else { Sound.buzz(false); Music.stop(); mb.setAttribute('aria-pressed', 'false'); } };
-  mb.onclick = () => { if (Music.on) { Music.stop(); mb.setAttribute('aria-pressed', 'false'); Store.data.music = false; } else { Sound.unlocked = true; if (!Sound.on) sb.click(); Music.start(); mb.setAttribute('aria-pressed', 'true'); Store.data.music = true; } Store.save(); };
   $('#readBtn').onclick = () => { if (Voice.speaking) Voice.stop(); else Voice.speak(App.current); };
-  const tb = $('#talkBtn'); Voice.auto = Store.data.voiceAuto !== false; tb.setAttribute('aria-pressed', Voice.auto);
-  tb.onclick = () => { Voice.auto = !Voice.auto; Store.data.voiceAuto = Voice.auto; Store.save(); tb.setAttribute('aria-pressed', Voice.auto); if (Voice.auto) Voice.speak('Okay! I\'ll read everything out loud for you.'); else Voice.stop(); };
-  // start over (two taps)
-  const rb = $('#resetBtn'); let armed = 0;
-  rb.onclick = () => {
-    if (Date.now() - armed < 4000) { Store.data.stars = {}; Store.data.badges = {}; Store.save(); armed = 0; rb.textContent = 'Start over'; Sound.whoosh(); mount(App.act); say('All clear! Every star is ready to be found again.'); }
-    else { armed = Date.now(); rb.textContent = 'Tap again to erase all stars'; Sound.oops(); setTimeout(() => { if (Date.now() - armed >= 3900) rb.textContent = 'Start over'; }, 4000); }
-  };
-  const unlock = () => { Sound.unlocked = true; Sound.ensure(); Voice.load(); if (Store.data.music && Sound.on && !Music.on) { Music.start(); mb.setAttribute('aria-pressed', 'true'); } };
+  Settings.init();
+  const unlock = () => { Sound.unlocked = true; Sound.ensure(); Sound.levels(); Voice.load(); if (Store.data.music && !Music.on) Settings.setMusic(true); };
   document.addEventListener('pointerdown', unlock, { capture: true, once: true }); document.addEventListener('keydown', unlock, { capture: true, once: true });
   // ambient birds now and then
   setInterval(() => { if (Sound.on && Sound.ctx && !document.hidden && App.act && App.act.id !== 'quiz' && Math.random() < .5) Sound.chirp(); }, 9000);

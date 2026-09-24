@@ -18,15 +18,16 @@ const A_grow = {
       '<b>Fruit and seeds!</b> After pollination, the flowers turned into bean pods. Inside each pod are new seeds.'
     ];
     let s, chips = null;
-    function reset() { s = { g: 0, water: 0, sunM: 70, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, nagT: Loop.t, cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
+    function reset() { s = { g: 0, water: 0, sunM: 70, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, nagT: Loop.t, factQ: [], cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
     function paintChips() { if (!chips) return; chips.innerHTML = STAGES.map((n, i) => `<span class="${i <= s.stage ? 'on' : ''}">${n}</span>`).join('<i>›</i>'); }
     const canTip = () => { const e = st.t - s.pourT; if (e > 1.6) return 0; return e < .3 ? ease(e / .3) : e < 1.25 ? 1 : 1 - ease((e - 1.25) / .35); };
-    function water(x, y) { if (st.t - s.pourT < 1.6) return; s.pourT = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 700); if (s.g < .1) ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); }
-    function shine() { s.sunT = st.t; s.sunM = 100; Sound.grow(4); Sound.sparkle(.2); if (s.g < 1.9) ui.say('Warm sunshine! The seed is still under the ground, so it only needs <b>water</b> and <b>warmth</b> for now.'); }
+    function water(x, y) { if (st.t - s.pourT < 1.6) return; s.pourT = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
+    function shine() { s.sunT = st.t; s.sunM = 100; Sound.grow(4); Sound.sparkle(.2); if (s.g < 1.9 && !s.toldSun) { s.toldSun = true; ui.say('Warm sunshine! The seed is still under the ground, so it only needs <b>water</b> and <b>warmth</b> for now.'); } }
     function onStage(n) {
       paintChips();
-      if (n <= 6) { Sound.grow(n); ui.say(facts[n]); ui.award('grow.' + n, ...st.client(SX, n < 2 ? SY : GY - 120)); }
-      if (n === 7) { Sound.boing(); ui.say('The pods dried up and popped open. The seeds fell to the ground and the <b>life cycle</b> can start all over again! Press <b>Plant a new seed</b> to grow another.'); s.done = true; }
+      // stage facts wait in line so one never cuts off the one before it
+      if (n <= 6) { Sound.grow(n); s.factQ.push(facts[n]); ui.award('grow.' + n, ...st.client(SX, n < 2 ? SY : GY - 120)); }
+      if (n === 7) { Sound.boing(); s.factQ.push('The pods dried up and popped open. The seeds fell to the ground and the <b>life cycle</b> can start all over again! Press <b>Plant a new seed</b> to grow another.'); s.done = true; }
     }
     st.onDown = (x, y) => {
       if (dist(x, y, ...CAN) < 75 || (x < 250 && y < 280 && y > 110)) return water(x, y);
@@ -97,10 +98,18 @@ const A_grow = {
     st.draw = (c, t, dt) => {
       // grow logic
       const above = s.g >= 1.9, okW = s.water > .5, okS = !above || s.sunM > .5;
-      if (okW && okS && s.g < 7.25) { s.g += dt * .2; s.water = Math.max(0, s.water - dt * 6); if (above) s.sunM = Math.max(0, s.sunM - dt * 4.5); }
+      // say the next stage fact once Pip is free (and the last message had a moment on screen)
+      if (s.factQ.length && !Voice.speaking && !App.sayQ.length && t - (App.sayT || -99) > (Voice.auto && Sound.unlocked ? .8 : 5)) ui.say(s.factQ.shift());
+      // growth slows down while Pip is explaining, so the story keeps pace with the plant
+      const pace = Voice.speaking || s.factQ.length ? .35 : 1;
+      if (okW && okS && s.g < 7.25) { s.g += dt * .2 * pace; s.water = Math.max(0, s.water - dt * 6); if (above) s.sunM = Math.max(0, s.sunM - dt * 4.5); }
       s.water = Math.max(0, s.water - dt * .6);
       s.thirst = !okW && s.g >= 1.9 && s.g < 7 ? s.thirst + dt : Math.max(0, s.thirst - dt * 2);
-      if ((!okW || !okS) && s.g > .05 && s.g < 7 && t - s.nagT > 8) { s.nagT = t; if (!okW) { Sound.oops(); ui.say('The plant is <b>thirsty</b>! Its leaves are drooping. Tap the watering can.'); } else { Sound.oops(); ui.say('Clouds are blocking the sun. Plants need <b>sunlight</b> to make food. Tap the sun!'); } }
+      // reminders wait politely: never cut off Pip mid-sentence or replace a fact before there's time to read it
+      if ((!okW || !okS) && s.g > .05 && s.g < 7 && t - s.nagT > 8) {
+        const msg = !okW ? 'The plant is <b>thirsty</b>! Its leaves are drooping. Tap the watering can.' : 'Clouds are blocking the sun. Plants need <b>sunlight</b> to make food. Tap the sun!';
+        if (ui.say(msg, { polite: true })) { s.nagT = t; Sound.oops(); }
+      }
       const ns = Math.min(7, Math.floor(s.g)); if (ns > s.stage) { s.stage = ns; onStage(ns); }
       // sky dims with less sunshine
       const dim = above ? (1 - s.sunM / 100) : 0;

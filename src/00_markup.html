@@ -134,9 +134,74 @@ button,select,input{font:inherit;color:inherit}
 .toast p{margin:0 0 14px}
 @keyframes toastin{from{transform:translate(-50%,-50%) scale(.3) rotate(-10deg);opacity:0}}
 footer{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--ink-soft);font-size:14px}
+/* settings */
+dialog#settings{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:4px solid var(--ink);border-radius:26px;background:var(--card);color:var(--ink);box-shadow:0 8px 0 var(--ink);overflow:hidden}
+dialog#settings[open]{display:flex;flex-direction:column;animation:toastin .35s cubic-bezier(.3,1.4,.5,1)}
+dialog#settings::backdrop{background:rgba(36,54,40,.45)}
+.set-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 12px 22px;border-bottom:3px solid var(--ink);background:var(--sun);margin:0}
+.set-head h2{font-family:var(--display);font-size:26px;margin:0}
+.set-body{overflow-y:auto;padding:6px 22px 22px}
+.set-sec{padding:14px 0;border-bottom:2px dashed #CFE0C8}
+.set-sec:last-child{border-bottom:0}
+.set-sec h3{font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 10px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;font-family:var(--display);font-weight:500;font-size:17px}
+.set-row input[type=range]{width:min(220px,50%);accent-color:var(--leaf)}
+.set-row .name-input{width:min(220px,55%);cursor:text}
+.set-note{margin:4px 0 0;color:var(--ink-soft);font-size:14px}
+.switch input{appearance:none;-webkit-appearance:none;width:56px;height:32px;border-radius:999px;border:3px solid var(--ink);background:#E3E7DF;position:relative;cursor:pointer;flex:none;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--ink);transition:transform .2s}
+.switch input:checked{background:var(--leaf)}
+.switch input:checked::after{transform:translateX(24px)}
+.voices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:8px}
+.voice{display:flex;align-items:center;gap:10px;padding:10px 12px;border:3px solid var(--ink);border-radius:16px;background:var(--card-2);cursor:pointer;text-align:left;box-shadow:0 3px 0 var(--ink)}
+.voice[aria-checked="true"]{background:var(--sky)}
+.voice b{display:block;font-family:var(--display);font-weight:600;font-size:17px}
+.voice small{display:block;color:var(--ink-soft);font-size:13px;line-height:1.2}
+.voice .dot{width:18px;height:18px;border-radius:50%;border:3px solid var(--ink);background:#fff;flex:none}
+.voice[aria-checked="true"] .dot{background:var(--leaf)}
+.progress{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.progress li{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:500}
+.progress li canvas{width:34px;height:34px;flex:none}
+.progress li span{flex:1;min-width:0}
+.progress li small{color:var(--ink-soft);font-size:14px;font-variant-numeric:tabular-nums}
+.progress .btn{min-height:38px;padding:4px 12px;font-size:15px}
+.danger{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.btn.warn{background:#F7B9B9}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 
+<dialog id="settings" aria-labelledby="settingsTitle">
+  <form method="dialog" class="set-head"><h2 id="settingsTitle">Settings</h2><button class="icon-btn" value="close" aria-label="Close settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="#243628" stroke-width="3" stroke-linecap="round"/></svg></button></form>
+  <div class="set-body">
+    <section class="set-sec">
+      <h3>Explorer</h3>
+      <label class="set-row" for="explorer"><span>Your name</span><input id="explorer" class="name-input" maxlength="20" placeholder="Type your name" autocomplete="off" spellcheck="false"></label>
+      <p class="set-note">Pip uses it to say hi.</p>
+    </section>
+    <section class="set-sec">
+      <h3>Pip's voice</h3>
+      <div class="voices" id="voiceList" role="radiogroup" aria-label="Pip's voice"></div>
+      <label class="set-row switch"><span>Read everything out loud</span><input type="checkbox" id="setAuto"></label>
+      <label class="set-row" for="setVoiceVol"><span>Voice volume</span><input type="range" id="setVoiceVol" min="0" max="100" step="5"></label>
+    </section>
+    <section class="set-sec">
+      <h3>Sounds</h3>
+      <label class="set-row switch"><span>Sound effects</span><input type="checkbox" id="setSound"></label>
+      <label class="set-row" for="setSoundVol"><span>Effects volume</span><input type="range" id="setSoundVol" min="0" max="100" step="5"></label>
+      <label class="set-row switch"><span>Garden music</span><input type="checkbox" id="setMusic"></label>
+      <label class="set-row" for="setMusicVol"><span>Music volume</span><input type="range" id="setMusicVol" min="0" max="100" step="5"></label>
+    </section>
+    <section class="set-sec">
+      <h3>Progress</h3>
+      <ul class="progress" id="progressList"></ul>
+      <div class="danger">
+        <button class="btn" id="resetAll" type="button">Start over</button>
+        <span class="set-note" id="resetNote">Clears every star and badge on this device.</span>
+      </div>
+    </section>
+  </div>
+</dialog>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="wrap">
   <header class="top">
@@ -146,21 +211,23 @@ footer{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:s
     </div>
     <div class="controls">
       <div class="field"><label for="topic">Topic</label><select id="topic" class="select"></select></div>
-      <div class="field"><label for="explorer">Explorer</label><input id="explorer" class="name-input" maxlength="20" placeholder="Your name" autocomplete="off" spellcheck="false"></div>
       <div class="field"><span class="lab">Stars</span><div class="pill" id="starPill" aria-live="polite"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="#FFC93C" stroke="#243628" stroke-width="1.8" stroke-linejoin="round"/></svg><span id="starCount">0</span><span class="of">/ <span id="starTotal">0</span></span></div></div>
-      <div class="field"><span class="lab">Sound · Voice · Music</span>
+      <div class="field"><span class="lab">Voice · Sound · Music · Settings</span>
         <div class="icons">
-          <button id="soundBtn" class="icon-btn" aria-pressed="true" aria-label="Sound effects" title="Sound effects">
-            <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#FFC93C" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
-            <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#E6E6E0" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M16 9l5 6M21 9l-5 6" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
-          </button>
           <button id="talkBtn" class="icon-btn" aria-pressed="true" aria-label="Pip reads out loud" title="Pip reads out loud">
             <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z" fill="#A9DDF1" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01" stroke="#243628" stroke-width="3" stroke-linecap="round"/></svg>
             <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z" fill="#E6E6E0" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M9 8l6 6M15 8l-6 6" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
           </button>
+          <button id="soundBtn" class="icon-btn" aria-pressed="true" aria-label="Sound effects" title="Sound effects">
+            <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#FFC93C" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#E6E6E0" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M16 9l5 6M21 9l-5 6" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
           <button id="musicBtn" class="icon-btn" aria-pressed="false" aria-label="Garden music" title="Garden music">
             <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12" fill="none" stroke="#243628" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="#F2668B" stroke="#243628" stroke-width="2"/><circle cx="17.5" cy="15.5" r="3" fill="#F2668B" stroke="#243628" stroke-width="2"/></svg>
             <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12" fill="none" stroke="#243628" stroke-width="2.2" stroke-linejoin="round" opacity=".45"/><circle cx="6.5" cy="17.5" r="3" fill="#E6E6E0" stroke="#243628" stroke-width="2"/><circle cx="17.5" cy="15.5" r="3" fill="#E6E6E0" stroke="#243628" stroke-width="2"/></svg>
+          </button>
+          <button id="settingsBtn" class="icon-btn" aria-haspopup="dialog" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z" fill="#FFC93C" stroke="#243628" stroke-width="2"/><path d="M19.4 13.5a7.6 7.6 0 000-3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 00-2.6-1.5L14 2.5h-4l-.4 2.5A7.4 7.4 0 007 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 000 3l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 002.6 1.5l.4 2.5h4l.4-2.5a7.4 7.4 0 002.6-1.5l2.4 1 2-3.4z" fill="none" stroke="#243628" stroke-width="2" stroke-linejoin="round"/></svg>
           </button>
         </div>
       </div>
@@ -188,5 +255,5 @@ footer{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:s
 
   <section class="card"><h2>My badges</h2><div class="shelf" id="shelf"></div></section>
 
-  <footer><span>Stars and badges are saved on this device.</span><button class="btn" id="resetBtn">Start over</button></footer>
+  <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span></footer>
 </div>

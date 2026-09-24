@@ -40,13 +40,14 @@ const Store = {
 /* ============ sound kit: every sound is synthesized ============ */
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568, 1760];
 const Sound = {
-  ctx: null, out: null, on: true, unlocked: false, noiseBuf: null, buzzNode: null, lastPeel: 0,
+  ctx: null, out: null, musicOut: null, on: true, unlocked: false, vol: 1, noiseBuf: null, buzzNode: null, lastPeel: 0,
   ensure() {
     if (!this.ctx) {
       try {
         const AC = window.AudioContext || window.webkitAudioContext; this.ctx = new AC();
         const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6;
-        this.out = this.ctx.createGain(); this.out.gain.value = .9; this.out.connect(comp); comp.connect(this.ctx.destination);
+        this.out = this.ctx.createGain(); this.out.connect(comp); comp.connect(this.ctx.destination);
+        this.musicOut = this.ctx.createGain(); this.musicOut.connect(comp); this.levels(false);
         const len = this.ctx.sampleRate * 1.5; this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       } catch (e) { this.ctx = null; }
@@ -54,19 +55,24 @@ const Sound = {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     return !!this.ctx;
   },
-  ok() { return this.on && this.unlocked && this.ensure(); },
+  ok(bus) { return (bus ? true : this.on) && this.unlocked && this.ensure(); },
+  // effects and music each have a volume; both dip while Pip is talking
+  levels(ducked = this.ducked) {
+    this.ducked = ducked; if (!this.ctx) return; const d = ducked ? .5 : 1, t = this.ctx.currentTime;
+    this.out.gain.setTargetAtTime(.9 * this.vol * d, t, .06); this.musicOut.gain.setTargetAtTime(.9 * Music.vol * d, t, .06);
+  },
   env(g, t, vol, a, d) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); },
-  tone(f, dur = .15, type = 'sine', vol = .15, when = 0, slide = 0, attack = .01) {
-    if (!this.ok()) return; const c = this.ctx, t = c.currentTime + when;
+  tone(f, dur = .15, type = 'sine', vol = .15, when = 0, slide = 0, attack = .01, bus = null) {
+    if (!this.ok(bus)) return; const c = this.ctx, t = c.currentTime + when;
     const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, f * slide), t + dur);
-    this.env(g, t, vol, attack, dur); o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + attack + .05);
+    this.env(g, t, vol, attack, dur); o.connect(g).connect(bus || this.out); o.start(t); o.stop(t + dur + attack + .05);
   },
-  noise(dur = .2, vol = .2, type = 'bandpass', f = 1000, when = 0, q = 1, f2 = 0) {
-    if (!this.ok()) return; const c = this.ctx, t = c.currentTime + when;
+  noise(dur = .2, vol = .2, type = 'bandpass', f = 1000, when = 0, q = 1, f2 = 0, bus = null) {
+    if (!this.ok(bus)) return; const c = this.ctx, t = c.currentTime + when;
     const s = c.createBufferSource(); s.buffer = this.noiseBuf; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q;
     if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
-    const g = c.createGain(); this.env(g, t, vol, .01, dur); s.connect(fl).connect(g).connect(this.out); s.start(t, Math.random()); s.stop(t + dur + .05);
+    const g = c.createGain(); this.env(g, t, vol, .01, dur); s.connect(fl).connect(g).connect(bus || this.out); s.start(t, Math.random()); s.stop(t + dur + .05);
   },
   wobble(f, dur, vol, rate, depth, type = 'sine', when = 0, slide = 0) { // vibrato voice (boings, slurps)
     if (!this.ok()) return; const c = this.ctx, t = c.currentTime + when;
@@ -111,11 +117,11 @@ const Sound = {
 
 /* ============ garden music (optional loop) ============ */
 const Music = {
-  on: false, timer: null, step: 0, next: 0,
+  on: false, timer: null, step: 0, next: 0, vol: 1,
   tune: [0, 2, 4, 2, 5, 4, 2, -1, 0, 2, 4, 5, 7, 5, 4, -1, 4, 5, 7, 5, 4, 2, 0, -1, 2, 4, 2, 0, 1, 0, -1, -1],
   bass: [261.63, 196, 220, 174.61],
   start() {
-    if (!Sound.ensure()) return; this.on = true; this.next = Sound.ctx.currentTime + .1; this.step = 0;
+    Sound.unlocked = true; if (!Sound.ensure()) return; this.on = true; this.next = Sound.ctx.currentTime + .1; this.step = 0;
     clearInterval(this.timer); this.timer = setInterval(() => this.tick(), 100);
   },
   stop() { this.on = false; clearInterval(this.timer); },
@@ -123,10 +129,11 @@ const Music = {
     const c = Sound.ctx; if (!c || !this.on) return; const beat = .28;
     while (this.next < c.currentTime + .4) {
       const when = this.next - c.currentTime, n = this.tune[this.step % this.tune.length];
-      if (n >= 0) { const f = PENTA[n] * .5; Sound.tone(f, .3, 'sine', .05, when); Sound.tone(f * 2, .06, 'sine', .015, when); }
-      if (this.step % 8 === 0) Sound.tone(this.bass[(this.step / 8) % 4] * .5, 1.8, 'triangle', .035, when);
-      if (this.step % 4 === 2) Sound.noise(.03, .02, 'highpass', 7000, when);
-      if (Math.random() < .03) Sound.chirp(when);
+      const M = Sound.musicOut;
+      if (n >= 0) { const f = PENTA[n] * .5; Sound.tone(f, .3, 'sine', .05, when, 0, .01, M); Sound.tone(f * 2, .06, 'sine', .015, when, 0, .01, M); }
+      if (this.step % 8 === 0) Sound.tone(this.bass[(this.step / 8) % 4] * .5, 1.8, 'triangle', .035, when, 0, .01, M);
+      if (this.step % 4 === 2) Sound.noise(.03, .02, 'highpass', 7000, when, 1, 0, M);
+      if (Math.random() < .03) { const f = rand(2200, 3000); for (let i = 0; i < 3; i++) Sound.tone(f, .07, 'sine', .04, when + i * .09, 1.35, .01, M); }
       this.next += beat; this.step++;
     }
   }
@@ -134,10 +141,10 @@ const Music = {
 
 
 /* ============ animation loop ============ */
-const Loop = { fns: new Set(), t: 0, last: 0 };
+const Loop = { fns: new Set(), t: 0, last: 0, speed: 1 }; // speed > 1 only in automated tests
 Loop.add = f => { Loop.fns.add(f); return () => Loop.fns.delete(f); };
 function frame(now) {
-  const t = now / 1000, dt = Loop.last ? Math.min(.05, t - Loop.last) : .016; Loop.last = t; Loop.t = t;
+  const t = now / 1000, dt = (Loop.last ? Math.min(.05, t - Loop.last) : .016) * Loop.speed; Loop.last = t; Loop.t = t;
   for (const f of Loop.fns) { try { f(t, dt); } catch (e) { console.error(e); } }
   requestAnimationFrame(frame);
 }

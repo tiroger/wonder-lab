@@ -41,6 +41,8 @@ const A_flower = {
     }
     const innerOpen = () => left('petal') === 0;
     function hitInner(x, y) {
+      // once pollination starts the stamens wither and the pistil turns into the fruit, so only the fruit can be tapped
+      if (s.tubeT > 0) return s.fruitDone && st.hit(ellipse(O[0], O[1] - 22, 60, 66), x, y) ? 'fruit' : null;
       if (STAM.some(m => st.hitLine(m.path, x, y, 18) || dist(x, y, ...m.tip) < 18)) return 'stamen';
       if (st.hitLine(STYLE, x, y, 22) || dist(x, y, ...STIG) < 20 || st.hit(ellipse(O[0], O[1], 24, 32), x, y)) return 'pistil';
       return null;
@@ -59,15 +61,16 @@ const A_flower = {
       for (const p of live) if (st.hit(pathOf(p), x, y)) { s.drag = { p, x0: x - p.dx, y0: y - p.dy }; Sound.fwip(); return; }
       const inner = hitInner(x, y);
       if (inner && !innerOpen()) { Sound.tap(2); ui.say('Pull off <b>all the petals</b> first to see what\'s hiding inside!'); return; }
+      if (inner === 'fruit') { Sound.boing(); ui.say('The ovary grew into a <b>fruit</b>, and the ovules inside became <b>seeds</b>. Press <b>Get a new flower</b> to do it again!'); return; }
       if (inner === 'stamen') {
         s.stamT = st.t; Sound.noise(.4, .12, 'bandpass', 3000, 0, 1, 800); Sound.sparkle(.1);
         for (const m of STAM) for (let i = 0; i < 7; i++) s.pollen.push({ x: m.tip[0], y: m.tip[1], vx: rand(-60, 60), vy: rand(-90, 10), life: rand(1, 1.8) });
+        ui.award('flower.stamen', ...st.client(x, y)); // award first so the bee can show up right away
         ui.say(maybeBee('That\'s a <b>stamen</b>, the pollen maker! The fuzzy top is the <b>anther</b>, covered in yellow <b>pollen</b>. The thin stalk is the <b>filament</b>.'));
-        ui.award('flower.stamen', ...st.client(x, y));
       } else if (inner === 'pistil') {
         s.cutOn = true; Sound.boing();
-        ui.say(maybeBee('The <b>pistil</b> is in the very middle. Its sticky top, the <b>stigma</b>, catches pollen. The tube is the <b>style</b>. At the bottom, the <b>ovary</b> holds tiny <b>ovules</b> that can become seeds!'));
         ui.award('flower.pistil', ...st.client(x, y));
+        ui.say(maybeBee('The <b>pistil</b> is in the very middle. Its sticky top, the <b>stigma</b>, catches pollen. The tube is the <b>style</b>. At the bottom, the <b>ovary</b> holds tiny <b>ovules</b> that can become seeds!'));
       } else Sound.tap(Math.floor(x / 90));
     };
     st.onMove = (x, y) => {
@@ -87,7 +90,7 @@ const A_flower = {
         Sound.hop();
         if (p.kind === 'sepal' && left('sepal') === 0) { ui.say('Those green leafy parts are <b>sepals</b>. They wrapped around the flower and protected it when it was a bud.'); ui.award('flower.sepals', ...st.client(x, y)); }
         else if (p.kind === 'petal' && left('petal') === 0) { ui.say('All 5 <b>petals</b> are off! Petals are bright and colorful to invite bees and butterflies. Now <b>tap the parts in the middle</b>.'); ui.award('flower.petals', ...st.client(x, y)); }
-        else if (p.kind === 'petal' && left('petal') === 4) ui.say('Nice pull! Keep going. Pull off every petal.');
+        else if (p.kind === 'petal' && left('petal') === 4) ui.say('Nice pull! Keep going. Pull off every petal.', { polite: true });
       } else Sound.boing();
     };
     st.draw = (c, t, dt) => {
@@ -107,7 +110,7 @@ const A_flower = {
       // hover
       let hvPiece = null; if (st.p.inside && !s.drag) { for (const p of s.pieces.filter(p => !p.removed).reverse()) if (st.hit(pathOf(p), st.p.x, st.p.y)) { hvPiece = p; st.cursor = 'grab'; break; } }
       if (s.drag) st.cursor = 'grabbing';
-      const hvInner = !hvPiece && st.p.inside && innerOpen() ? hitInner(st.p.x, st.p.y) : null; if (hvInner) st.cursor = 'pointer';
+      const hvInner = !hvPiece && st.p.inside && innerOpen() ? hitInner(st.p.x, st.p.y) : null, hvGlow = hvInner === 'fruit' ? 'pistil' : hvInner; if (hvInner) st.cursor = 'pointer';
       // sepals behind everything
       for (const p of s.pieces) if (p.kind === 'sepal' && !p.removed && p !== s.drag?.p) drawPiece(c, p, p === hvPiece);
       // pollen tube + fruit growth
@@ -116,15 +119,15 @@ const A_flower = {
       // receptacle
       c.fillStyle = C.leaf; c.strokeStyle = C.leafDeep; c.lineWidth = 3; c.beginPath(); c.ellipse(400, 356, 30, 14, 0, 0, TAU); c.fill(); c.stroke();
       // stamens
-      c.save(); c.globalAlpha = alive; if (hvInner === 'stamen') glowOn(c); c.lineCap = 'round';
+      c.save(); c.globalAlpha = alive; if (hvGlow === 'stamen') glowOn(c); c.lineCap = 'round';
       for (const m of STAM) { c.strokeStyle = '#E8E2A0'; c.lineWidth = 6; c.stroke(m.path); c.save(); c.translate(...m.tip); c.rotate(m.a * DEG); c.fillStyle = '#E0902A'; c.beginPath(); c.ellipse(0, 0, 8, 16, 0, 0, TAU); c.fill(); c.shadowBlur = 0; c.strokeStyle = '#A8601A'; c.lineWidth = 2; c.stroke(); c.fillStyle = C.pollen; for (const [px, py] of [[-3, -8], [3, -3], [-2, 4], [3, 9], [0, -12]]) { c.beginPath(); c.arc(px, py, 2.4, 0, TAU); c.fill(); } c.restore(); }
       c.restore();
       // pistil
       const orx = lerp(20, 60, fr), ory = lerp(28, 64, fr), oy = O[1] - fr * 22;
-      c.save(); c.globalAlpha = 1 - fr * .85; if (hvInner === 'pistil') glowOn(c); c.lineCap = 'round'; c.strokeStyle = '#8CC063'; c.lineWidth = 9; c.stroke(STYLE); c.shadowBlur = 0; c.strokeStyle = '#B8DF8C'; c.lineWidth = 4; c.stroke(STYLE);
+      c.save(); c.globalAlpha = 1 - fr * .85; if (hvGlow === 'pistil') glowOn(c); c.lineCap = 'round'; c.strokeStyle = '#8CC063'; c.lineWidth = 9; c.stroke(STYLE); c.shadowBlur = 0; c.strokeStyle = '#B8DF8C'; c.lineWidth = 4; c.stroke(STYLE);
       c.fillStyle = '#C8E06A'; c.strokeStyle = '#7FA23A'; c.lineWidth = 2.5; for (const [dx, dy] of [[-8, 0], [8, 0], [0, -8]]) { c.beginPath(); c.arc(STIG[0] + dx, STIG[1] + dy, 9, 0, TAU); c.fill(); c.stroke(); }
       sparkle(c, STIG[0] + 6, STIG[1] - 12, 4 + Math.abs(Math.sin(t * 4)) * 3); c.restore();
-      c.save(); if (hvInner === 'pistil') glowOn(c); const og = c.createRadialGradient(O[0] - 8, oy - 10, 4, O[0], oy, ory); og.addColorStop(0, mix('#CFEA92', '#FFB27A', fr)); og.addColorStop(1, mix('#8CC063', '#EF6F3A', fr));
+      c.save(); if (hvGlow === 'pistil') glowOn(c); const og = c.createRadialGradient(O[0] - 8, oy - 10, 4, O[0], oy, ory); og.addColorStop(0, mix('#CFEA92', '#FFB27A', fr)); og.addColorStop(1, mix('#8CC063', '#EF6F3A', fr));
       c.fillStyle = og; c.beginPath(); c.ellipse(O[0], oy, orx, ory, 0, 0, TAU); c.fill(); c.shadowBlur = 0; c.strokeStyle = mix('#5E8F34', '#B8451E', fr); c.lineWidth = 3; c.stroke(); c.restore();
       s.cut += ((s.cutOn ? 1 : 0) - s.cut) * Math.min(1, dt * 4);
       if (s.cut > .02) {

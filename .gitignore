@@ -4,7 +4,8 @@ voice/tmp.wav
 __pycache__/
 .DS_Store
 .env
-voice/clips-*/
+voice/clips/
 infra/.terraform/
 infra/*.tfstate*
 infra/.terraform.tfstate.lock.info
+tests/last-run.png
