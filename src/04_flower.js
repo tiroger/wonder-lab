@@ -20,7 +20,6 @@ const A_flower = {
       s = { pieces: [], drag: null, cut: 0, cutOn: false, bee: null, tubeT: -1, fruit: 0, pollen: [], stamT: -9, lastAct: Loop.t, fruitDone: false };
       [-118, 118].forEach(a => s.pieces.push({ kind: 'sepal', ang: a, removed: false, dx: 0, dy: 0, fly: 0 }));
       [-66, 66, -33, 33, 0].forEach(a => s.pieces.push({ kind: 'petal', ang: a, removed: false, dx: 0, dy: 0, fly: 0 }));
-      if (found('stamen') && found('pistil')) { /* inner parts known, but a new flower still starts closed */ }
       Sound.buzz(false);
     }
     const left = k => s.pieces.filter(p => p.kind === k && !p.removed).length;

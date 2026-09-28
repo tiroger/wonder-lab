@@ -17,7 +17,8 @@ const Voice = {
   setVolume(v) { this.volume = v; if (this.gain && this.src) this.gain.gain.value = 1.25 * v; },
   load(name = this.name) {
     const pack = VOICE_PACKS[name]; if (!pack) return Promise.resolve();
-    if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    // a pack that's gone (say, a page opened before a deploy) comes back as the app page, since CloudFront serves index.html for missing files
+    if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok && !/text\/html/.test(r.headers.get('content-type') || '') ? r.arrayBuffer() : Promise.reject(r.status))
       .then(b => { this.bufs[name] = skipId3(b); }).catch(() => { delete this.loading[name]; });
     return this.loading[name];
   },
@@ -66,21 +67,27 @@ const Voice = {
     await new Promise(r => setTimeout(r, wasTalking ? 350 : 260));
     if (my !== this.token) return;
     await this.load();
-    // play the longest recorded run of sentences each time, so whole messages keep their natural flow
-    const S = splitSentences(plainText(html));
-    for (let i = 0; i < S.length;) {
+    const P = this.pieces(html);
+    for (let n = 0; n < P.length; n++) {
       if (my !== this.token) return;
-      let k = null, j = S.length - 1;
-      const map = this.map;
-      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (map[kk]) { k = kk; break; } }
-      if (!k) { j = i; k = this.keyFor(S[i]); }
-      const audio = k ? await this.clip(k) : null;
+      const audio = P[n].key ? await this.clip(P[n].key) : null;
       if (my !== this.token) return;
       // every line Pip says is pre-recorded; anything missing stays silent rather than switching to a robotic device voice
-      if (audio) await this.play(audio, my); else console.warn('No recording for:', S.slice(i, j + 1).join(' '));
-      i = j + 1; if (i < S.length) await new Promise(r => setTimeout(r, 120));
+      if (audio) await this.play(audio, my); else console.warn('No recording for:', P[n].text);
+      if (n < P.length - 1) await new Promise(r => setTimeout(r, 120));
     }
     if (my === this.token) this.setSpeaking(false);
+  },
+  // split a message into recordings, taking the longest recorded run of sentences each time so whole messages keep their natural flow
+  pieces(html) {
+    const S = splitSentences(plainText(html)), map = this.map, out = [];
+    for (let i = 0; i < S.length;) {
+      let k = null, j = S.length - 1;
+      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (map[kk]) { k = kk; break; } }
+      if (!k) { j = i; k = this.keyFor(S[i]); }
+      out.push({ key: k, text: S.slice(i, j + 1).join(' ') }); i = j + 1;
+    }
+    return out;
   }
 };
 // the clip offsets count from the first audio byte; skip an ID3 tag if one got added to the file

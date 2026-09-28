@@ -122,7 +122,7 @@ const A_grow = {
       const dim = above ? (1 - s.sunM / 100) : 0;
       sky(c, mix('#86CFEA', '#7F97A6', dim), mix('#E2F6FC', '#B8C6CC', dim), GY);
       const cov = clamp((55 - s.sunM) / 40, 0, 1) * (above ? 1 : 0); s.cloudX += ((t - s.sunT < 1.5 ? 900 : lerp(880, 640, cov)) - s.cloudX) * Math.min(1, dt * 2);
-      sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); if (st.over(circle(...SUN, 70))) {}
+      sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); st.over(circle(...SUN, 70)); // pointer cursor over the sun
       cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + ((t * 10) % 300), 60, .6);
       if (above && s.sunM < 1 && s.g < 7) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, 'Tap the sun!', SUN[0] - 10, SUN[1] + 66 - b, { size: 19, color: C.carrot }); }
       ground(c, GY, t);

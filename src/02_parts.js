@@ -102,7 +102,7 @@ const A_parts = {
       c.fillStyle = '#A8DB8A'; c.beginPath(); c.moveTo(0, 392); c.quadraticCurveTo(170, 300, 360, 382); c.quadraticCurveTo(560, 320, 800, 374); c.lineTo(800, 400); c.lineTo(0, 400); c.fill();
       ground(c, 390, t);
       s.wormPath = worm(c, 170, 482, t, t - s.worm < 2);
-      if (st.over(s.wormPath)) {}
+      st.over(s.wormPath); // pointer cursor over the worm
       // which part is under the pointer
       let hv = null; const P0 = s.P;
       if (P0 && st.p.inside) { hv = which(st.p.x, st.p.y); if (hv) st.cursor = 'pointer'; }

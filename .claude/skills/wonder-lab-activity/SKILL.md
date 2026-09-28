@@ -12,7 +12,7 @@ const A_example = {
   badge: { id: 'b.example', name: 'Badge Name', desc: 'You did the thing!' },
   stars: [{ id: 'example.first', name: 'First idea' }, ...],   // 3-6, each a real concept; ids are saved, never rename them
   badgeNeed: 10,                                            // optional; default = all stars
-  html: true,                                               // optional; activity builds DOM instead of a canvas (the quiz)
+  html: true,                                               // optional; activity builds DOM instead of a canvas (the quiz); it must say ui.intro itself
   intro: 'What Pip says when the tab opens. <b>Bold</b> the action.',
   mount(host, ui) {
     const st = new Stage(host, 'Plain description of the scene for screen readers.');
@@ -38,7 +38,7 @@ const A_example = {
 - `ui.award('example.first', ...st.client(x, y))` gives a star once (it returns false if already earned). Badges are awarded automatically when an activity's stars are complete.
 - `ui.say(html)` sets Pip's bubble and plays the recording. Options: `{ polite: true }` for reminders (skipped if Pip is talking or the last message is fresh; returns false so you can retry later), `{ queue: true }` for news that must not interrupt.
 - Lines of 8+ words lock input until Pip finishes ("listen first"); pass `{ lock: false }` for an instruction the kid must act on mid-gesture, or `{ lock: true }` to lock a short line. The Stage, `ui.button` buttons and the quiz already respect the lock; custom DOM controls should check `inputLocked()` and call `nudge(x, y)`.
-- A line that follows another (the next step, the result of an animation) uses `{ queue: true }` so it starts after Pip finishes plus a breath. Don't chain lines with `setTimeout`.
+- A line that follows another (the next step, the result of an animation) uses `{ queue: true }` so it starts after Pip finishes plus a breath (with the voice off, once the last line has had time to be read). Don't chain lines with `setTimeout`. A line that belongs with the one just said (the "you found every part" after the last fact) is joined to it instead: `ui.say(fact + '<br>' + next)` plays both recordings back to back.
 - If a message depends on a star, award first, then say.
 - Rapid taps are handled for you: the newest line wins after a short settle pause, the old one fades out, and repeating the line that's playing doesn't restart it. Pair every tap with an instant `Sound.*` effect.
 - Reminders: show the need on screen first (bouncing label, visual change). Speak it once with `{ polite: true }`, and again only if it's been ignored for 20+ seconds.
