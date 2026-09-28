@@ -79,7 +79,7 @@ const A_flower = {
       if (b && b.drag) {
         b.x = x; b.y = y;
         if (!b.pollen && STAM.some(m => dist(x, y, ...m.tip) < 34)) { b.pollen = true; Sound.sparkle(); Sound.pop(); for (let i = 0; i < 12; i++) s.pollen.push({ x, y, vx: rand(-70, 70), vy: rand(-80, 20), life: 1.2 }); ui.say('The bee is dusted with pollen! Now drag it to the sticky <b>stigma</b> at the very top of the pistil.'); }
-        if (b.pollen && dist(x, y, ...STIG) < 34) { b.drag = false; b.done = true; s.tubeT = st.t; Sound.grow(1); ui.say('Pollen landed on the stigma! Watch: a tiny <b>pollen tube</b> grows down the style to the ovules...'); }
+        if (b.pollen && dist(x, y, ...STIG) < 34) { b.drag = false; b.done = true; s.tubeT = st.t; Sound.grow(1); ui.say('Pollen landed on the stigma! Watch: a tiny <b>pollen tube</b> grows down the style to the ovules...', { queue: true }); }
       }
     };
     st.onUp = (x, y) => {
@@ -114,7 +114,7 @@ const A_flower = {
       // sepals behind everything
       for (const p of s.pieces) if (p.kind === 'sepal' && !p.removed && p !== s.drag?.p) drawPiece(c, p, p === hvPiece);
       // pollen tube + fruit growth
-      if (s.tubeT > 0) { const e = st.t - s.tubeT; s.fruit = clamp((e - 2.8) / 2.2, 0, 1); if (s.fruit >= 1 && !s.fruitDone) { s.fruitDone = true; Sound.buzz(false); ui.say('Pollen + ovule = seed! The ovary swelled up into a <b>fruit</b> with seeds inside. That\'s <b>pollination</b>. You\'re a flower detective!'); ui.award('flower.pollen', ...st.client(O[0], O[1])); } }
+      if (s.tubeT > 0) { const e = st.t - s.tubeT; s.fruit = clamp((e - 2.8) / 2.2, 0, 1); if (s.fruit >= 1 && !s.fruitDone) { s.fruitDone = true; Sound.buzz(false); ui.say('Pollen + ovule = seed! The ovary swelled up into a <b>fruit</b> with seeds inside. That\'s <b>pollination</b>. You\'re a flower detective!', { queue: true }); ui.award('flower.pollen', ...st.client(O[0], O[1])); } }
       const fr = s.fruit, alive = 1 - fr;
       // receptacle
       c.fillStyle = C.leaf; c.strokeStyle = C.leafDeep; c.lineWidth = 3; c.beginPath(); c.ellipse(400, 356, 30, 14, 0, 0, TAU); c.fill(); c.stroke();

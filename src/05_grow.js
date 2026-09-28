@@ -100,9 +100,9 @@ const A_grow = {
       // grow logic
       const above = s.g >= 1.9, okW = s.water > .5, okS = !above || s.sunM > .5;
       // say the next stage fact once Pip is free (and the last message had a moment on screen)
-      if (s.factQ.length && !Voice.speaking && !App.sayQ.length && t - (App.sayT || -99) > (Voice.auto && Sound.unlocked ? .8 : 5)) ui.say(s.factQ.shift());
+      if (s.factQ.length && !App.sayQ.length && calm(1) && t - (App.sayT || -99) > (Voice.auto && Sound.unlocked || waitForPip() ? 1 : 5)) ui.say(s.factQ.shift());
       // growth slows down while Pip is explaining, so the story keeps pace with the plant
-      const pace = Voice.speaking || s.factQ.length ? .35 : 1;
+      const pace = Voice.speaking || Listen.on || s.factQ.length ? .35 : 1;
       if (okW && okS && s.g < 7.25) { s.g += dt * .2 * pace; s.water = Math.max(0, s.water - dt * 2.4 * pace); if (above) s.sunM = Math.max(0, s.sunM - dt * 2.6 * pace); }
       s.water = Math.max(0, s.water - dt * .3);
       s.thirst = !okW && s.g >= 1.9 && s.g < 7 ? s.thirst + dt : Math.max(0, s.thirst - dt * 2);

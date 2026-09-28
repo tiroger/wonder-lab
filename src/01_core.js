@@ -159,7 +159,7 @@ class Stage {
     this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(this.canvas); this.resize();
     const L = e => { const r = this.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
     this.ev = {
-      pointerdown: e => { Sound.ensure(); const [x, y] = L(e); Object.assign(this.p, { x, y, down: true, inside: true }); try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {} if (this.onDown) this.onDown(x, y); e.preventDefault(); },
+      pointerdown: e => { Sound.ensure(); if (typeof inputLocked === 'function' && inputLocked()) { e.preventDefault(); nudge(e.clientX, e.clientY); return; } const [x, y] = L(e); Object.assign(this.p, { x, y, down: true, inside: true }); try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {} if (this.onDown) this.onDown(x, y); e.preventDefault(); },
       pointermove: e => { const [x, y] = L(e); Object.assign(this.p, { x, y, inside: true }); if (this.onMove) this.onMove(x, y); },
       pointerup: e => { const [x, y] = L(e); this.p.down = false; if (this.onUp) this.onUp(x, y); if (e.pointerType !== 'mouse') this.p.inside = false; },
       pointercancel: () => { this.p.down = false; if (this.onUp) this.onUp(this.p.x, this.p.y); },

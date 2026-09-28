@@ -21,7 +21,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   await page.evaluate(() => {
     window.__said = []; window.__cutoffs = [];
     const orig = window.say;
-    window.say = (html, opts) => { const r = orig(html, opts); if (r !== false) window.__said.push(html); return r; };
+    window.__timeline = [];
+    window.say = (html, opts) => { const before = { t: Loop.t, speaking: Voice.speaking, endT: Voice.endT || -99, html }; const r = orig(html, opts); if (r === true) { window.__said.push(html); window.__timeline.push(before); } return r; };
+    Store.data.waitForPip = false; // most checks run with the listen lock off; it gets its own checks below
     window.__clips = 0; const play = Voice.play.bind(Voice); Voice.play = (a, my) => { if (my === Voice.token) window.__clips++; return play(a, my); };
     const speak = Voice.speak.bind(Voice);
     Voice.speak = html => { if (Voice.speaking) window.__cutoffs.push({ was: plainText(App.current_prev || ''), now: plainText(html) }); App.current_prev = html; return speak(html); };
@@ -52,6 +54,17 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   await sleep(1500); const quickTapClips = (await page.evaluate(() => window.__clips)) - c0;
   const lastSaid = await page.evaluate(() => window.__said.filter(h => !h.includes('badge')).pop() || '');
   report.rapidTaps = { sameTapClips, quickTapClips, lastSaid: plainText0(lastSaid), newestWins: lastSaid.includes('food factories') };
+  // listen first (voice on): a second tap while Pip explains is held with a nudge, and works once he's done
+  await closeToasts(); await page.evaluate(() => { Store.data.waitForPip = true; App.sayQ.length = 0; }); await setVoiceAuto(true); await sleep(1500);
+  await page.mouse.click(...await at(400, 470)); await sleep(700);
+  const lockedNow = await page.evaluate(() => Listen.on);
+  await page.mouse.click(...await at(P.stem[0], P.stem[1] - 6)); await sleep(250);
+  const heldTap = await page.evaluate(() => ({ stillRoots: App.current.includes('Roots'), nudge: !!document.querySelector('.nudge-tip') }));
+  const tw = Date.now(); while (await page.evaluate(() => Listen.on) && Date.now() - tw < 25000) await sleep(250);
+  const unlockSecs = Math.round((Date.now() - tw) / 100) / 10;
+  await page.mouse.click(...await at(P.stem[0], P.stem[1] - 6)); await sleep(400);
+  report.listen = { lockedNow, heldTap, unlockSecs, stemAfter: await page.evaluate(() => App.current.includes('stem')) };
+  await page.evaluate(() => { Store.data.waitForPip = false; });
   await setVoiceAuto(false);
 
   // ---------- Open a Seed ----------
@@ -80,7 +93,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   report.flower = { afterPieces, beeAppeared: beeHere, final: await stars('flower.'), witheredStamensStillTalk: lateSays > 0, fruitTapWorks: fruitTap };
 
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
-  await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; });
+  await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
   const stagesSeen = [];
   while (Date.now() - t0 < 240000) {
@@ -90,19 +103,33 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     const done = await page.evaluate(() => window.__said.some(h => h.includes('life cycle</b> can start')) && !Voice.speaking);
     if (done) break;
   }
-  await page.evaluate(() => { Loop.speed = 1; });
+  const pacing = await page.evaluate(() => {
+    const facts = window.__timeline.filter(e => /<b>(Germination|Sprout|Seedling|Adult plant|Flowers|Fruit and seeds)!<\/b>|life cycle<\/b> can start/.test(e.html));
+    return { cutoffs: window.__timeline.filter(e => e.speaking).map(e => plainText(e.html).slice(0, 50)), factGaps: facts.map(e => Math.round((e.t - e.endT) * 10) / 10) };
+  });
+  await page.evaluate(() => { Loop.speed = 1; Store.data.waitForPip = false; });
   // reminders: a sprouted plant with dry soil, left alone for 26 s. Pip should ask for water once, not over and over
   await page.click('text=Plant a new seed'); await sleep(500);
   await page.evaluate(() => { const s = App.inst.state(); Object.assign(s, { g: 2.5, stage: 2, water: 0, sunM: 100, told: {} }); });
   const r0 = await page.evaluate(() => window.__said.filter(h => h.includes('thirsty')).length);
   await sleep(26000);
   const thirstyLines = (await page.evaluate(() => window.__said.filter(h => h.includes('thirsty')).length)) - r0;
-  report.grow = { stagesInOrder: stagesSeen, final: await stars('grow.'), thirstyReminders: thirstyLines, seconds: Math.round((Date.now() - t0) / 1000), narrationCutoffs: await page.evaluate(() => window.__cutoffs) };
+  report.grow = { stagesInOrder: stagesSeen, final: await stars('grow.'), thirstyReminders: thirstyLines, seconds: Math.round((Date.now() - t0) / 1000), linesCutOff: pacing.cutoffs, gapsBeforeStageFacts: pacing.factGaps };
   await setVoiceAuto(false);
 
   // ---------- Seed Travel ----------
-  await tab('travel');
-  for (const [x, y] of [[200, 140], [600, 140], [200, 420], [600, 420]]) await tap(x, y);
+  await tab('travel'); await sleep(500);
+  await page.evaluate(() => { Store.data.waitForPip = true; }); await sleep(6500); // let the intro finish
+  const count = () => page.evaluate(() => +document.querySelector('#starCount').textContent);
+  const c1 = await count(); await tap(200, 140); await sleep(300);
+  const during = await count(); await tap(600, 140); await sleep(300);
+  const animalHeld = !(await page.evaluate(() => !!Store.data.stars['travel.animal']));
+  const tl = Date.now(); while (await page.evaluate(() => Listen.on) && Date.now() - tl < 15000) await sleep(250);
+  await sleep(1300); const after = await count();
+  await tap(600, 140); await sleep(300);
+  report.travelListen = { before: c1, during, after, animalHeld, animalAfter: await page.evaluate(() => !!Store.data.stars['travel.animal']) };
+  await page.evaluate(() => { Store.data.waitForPip = false; stopListening(); });
+  for (const [x, y] of [[200, 420], [600, 420]]) await tap(x, y);
   await sleep(6000); report.travel = await stars('travel.');
 
   // ---------- Plant Quiz: two rounds ----------
@@ -158,6 +185,10 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Grow a Bean: one thirsty reminder, not a stream': report.grow.thirstyReminders === 1,
     'Rapid taps on one part start one line': report.rapidTaps.sameTapClips <= 1,
     'Quick taps on several parts: only the last one speaks': report.rapidTaps.quickTapClips <= 1 && report.rapidTaps.newestWins,
+    'Listen first: taps wait while Pip explains, with a nudge': report.listen.lockedNow && report.listen.heldTap.stillRoots && report.listen.heldTap.nudge && report.listen.stemAfter,
+    'Listen first: the star arrives when Pip finishes': report.travelListen.during === report.travelListen.before && report.travelListen.after === report.travelListen.before + 1 && report.travelListen.animalHeld && report.travelListen.animalAfter,
+    'Grow a Bean: no line cuts off another': report.grow.linesCutOff.length === 0,
+    'Grow a Bean: a pause before each stage fact': report.grow.gapsBeforeStageFacts.length >= 6 && report.grow.gapsBeforeStageFacts.every(g => g >= .8),
     'Grow a Bean: stages in order': JSON.stringify(stages) === JSON.stringify(['Seed', 'Germination', 'Sprout', 'Seedling', 'Adult plant', 'Flowers', 'Fruit & seeds']),
     'Seed Travel: 4 stars': report.travel.length === 4,
     'Plant Quiz: 12 stars': report.quiz === '12 of 12',

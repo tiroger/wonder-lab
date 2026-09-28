@@ -4,7 +4,8 @@ const TOPICS = [
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.' } }
 ];
 const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
-Loop.add(() => { if (App.sayQ.length && !Voice.speaking && Loop.t - (App.sayT || -99) > .8) say(App.sayQ.shift()); });
+// queued lines start only after Pip has finished and taken a breath
+Loop.add(() => { if (App.sayQ.length && calm(.9)) say(App.sayQ.shift()); });
 
 /* ============ Pip the seed ============ */
 const Pip = { talkUntil: 0, wowUntil: 0, pokeT: -9 };
@@ -75,24 +76,75 @@ function flyStar(cx, cy) {
 }
 
 /* ============ talking, stars, badges ============ */
-// polite messages (reminders) wait until Pip has finished talking and the last message has had time to be read
+// Pip is "calm" when he isn't talking, nothing is waiting for the kid to listen, and he finished at least `gap` seconds ago
+function calm(gap = .9) { return !Voice.speaking && !Listen.on && Loop.t - (Voice.endT || -99) > gap && Loop.t - (App.sayT || -99) > gap; }
 function readTime(html) { return Math.max(4, plainText(html || '').split(' ').length * .4); }
-// queued messages (badge news) wait for Pip to finish the current one instead of cutting it off
-function say(html, { polite = false, queue = false } = {}) {
-  if (queue && (Voice.speaking || App.sayQ.length)) { App.sayQ.push(html); return true; }
-  if (polite && (Voice.speaking || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
+// say(html, opts)
+//   polite: a reminder; skipped (returns false) unless Pip is calm and the last line had time to be read
+//   queue:  news that waits its turn instead of cutting Pip off
+//   lock:   make the kid listen before tapping again; default: any line of 8+ words that isn't polite
+function say(html, { polite = false, queue = false, lock } = {}) {
+  if (queue && (Voice.speaking || Listen.on || App.sayQ.length)) { App.sayQ.push(html); return 'queued'; }
+  if (polite && (!calm(2) || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
   // tapping the same thing again while Pip is still saying it doesn't restart the line
-  if (html === App.current && Voice.speaking) { const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); return true; }
+  if (html === App.current && (Voice.speaking || Listen.on)) { const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); return true; }
   App.sayT = Loop.t;
   const p = $('#say'); p.innerHTML = html; App.current = html; const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
-  const words = html.replace(/<[^>]+>/g, '').split(/\s+/).length; Pip.talkUntil = Loop.t + Math.min(3.5, .6 + words * .12);
+  const words = plainText(html).split(' ').length; Pip.talkUntil = Loop.t + Math.min(3.5, .6 + words * .12);
   if (Voice.auto && Sound.unlocked) Voice.speak(html); else Sound.babble(Math.min(6, 2 + Math.floor(words / 6)));
+  if (lock ?? (!polite && words >= 8)) startListening(html);
   return true;
 }
+
+/* ============ Listen first: while Pip explains, the activity waits ============ */
+// Taps on the activity and its buttons are held while Pip explains something, with a gentle nudge,
+// and stars earned during the explanation fly in when he finishes. Parents can turn it off in Settings.
+const Listen = { on: false, t0: 0, dur: 0, voice: false, pending: [], nudgeT: -9 };
+function waitForPip() { return Store.data.waitForPip !== false; }
+function inputLocked() { return Listen.on; }
+function narrationSeconds(html) { // roughly how long the recording runs (packs are 56 kbps, about 7 kB a second)
+  const S = splitSentences(plainText(html)), map = Voice.map, whole = map[vkey(S.join(' '))];
+  let bytes = whole ? whole[1] : 0;
+  if (!whole) for (const s of S) { const k = Voice.keyFor(s); if (k && map[k]) bytes += map[k][1]; }
+  return bytes ? bytes / 7000 + .4 * S.length : S.join(' ').split(' ').length * .38;
+}
+function startListening(html) {
+  if (!waitForPip()) return;
+  const voice = Voice.auto && Sound.unlocked, words = plainText(html).split(' ').length;
+  Object.assign(Listen, { on: true, t0: Loop.t, voice, dur: voice ? narrationSeconds(html) + .6 : clamp(words * .3, 2.5, 9) });
+  document.body.classList.add('listening');
+}
+function stopListening() {
+  if (!Listen.on) return; Listen.on = false; document.body.classList.remove('listening'); $('#listenBar').style.width = '0';
+  const p = Listen.pending.splice(0); p.forEach(([id, cx, cy], i) => setTimeout(() => celebrate(id, cx, cy), i * 250));
+  if (!p.length) { Sound.tone(PENTA[2], .12, 'sine', .05); Sound.tone(PENTA[4], .16, 'sine', .05, .1); } // "your turn"
+}
+Loop.add(() => {
+  if (!Listen.on) return;
+  const el = Loop.t - Listen.t0;
+  const done = Listen.voice ? el > .8 && !Voice.speaking && Loop.t - (Voice.endT || -99) > .35 : el > Listen.dur;
+  $('#listenBar').style.width = (done ? 100 : Math.min(97, el / Listen.dur * 100)) + '%';
+  if (done || el > Math.max(12, Listen.dur * 2)) stopListening();
+});
+function nudge(cx, cy) {
+  if (Loop.t - Listen.nudgeT < .7) return; Listen.nudgeT = Loop.t;
+  Pip.pokeT = Loop.t; Sound.tone(420, .12, 'sine', .05, 0, .8);
+  const b = $('#bubble'); b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge');
+  const el = document.createElement('div'); el.className = 'nudge-tip';
+  el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9a4 4 0 118 0c0 2.5-2 3.2-2.6 5.2-.5 1.8-1.4 3.8-3.4 3.8a2.6 2.6 0 01-2.5-2" fill="#FFE7A3" stroke="#243628" stroke-width="2" stroke-linecap="round"/><path d="M10.5 9.5a1.6 1.6 0 013 0c0 1-1 1.3-1.2 2.3" fill="none" stroke="#243628" stroke-width="2" stroke-linecap="round"/></svg><span>Listen to Pip first</span>';
+  el.style.left = cx + 'px'; el.style.top = cy + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
+}
+
 function award(id, cx, cy) {
   if (Store.data.stars[id]) return false;
-  Store.data.stars[id] = Date.now(); Store.save(); Sound.star(); Pip.wowUntil = Loop.t + 1.3;
-  flyStar(cx, cy); App.fresh = id; refresh(); setTimeout(checkBadges, 1100); return true;
+  Store.data.stars[id] = Date.now(); Store.save(); // saved now, so the activity logic can see it right away
+  // the celebration waits until Pip has explained what was found
+  setTimeout(() => { if (Listen.on) Listen.pending.push([id, cx, cy]); else celebrate(id, cx, cy); }, 0);
+  return true;
+}
+function celebrate(id, cx, cy) {
+  Sound.star(); Pip.wowUntil = Loop.t + 1.3;
+  flyStar(cx, cy); App.fresh = id; refresh(); setTimeout(checkBadges, 1100);
 }
 const allBadges = topic => topic.activities.map(a => ({ ...a.badge, icon: a.icon, act: a })).concat([topic.master]);
 function hasBadge(a) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => Store.data.stars[s.id]).length >= need; }
@@ -141,7 +193,7 @@ function makeUI() {
   const ui = {
     showAll: false,
     say, award,
-    button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = () => { Sound.ensure(); fn(); }; $('#actions').appendChild(b); return b; },
+    button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = e => { Sound.ensure(); if (inputLocked()) return nudge(e.clientX || b.getBoundingClientRect().left + 30, e.clientY || b.getBoundingClientRect().top + 10); fn(); }; $('#actions').appendChild(b); return b; },
     hint(text) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = text; $('#extra').appendChild(p); return p; },
     extraEl(tagName, cls) { const e = document.createElement(tagName); e.className = cls; $('#extra').appendChild(e); return e; }
   };
@@ -149,14 +201,14 @@ function makeUI() {
 }
 function mount(a) {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
-  Sound.buzz(false); Voice.stop();
+  Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
   const host = $('#stage'); host.innerHTML = ''; host.classList.toggle('quiz', !!a.html); $('#actions').innerHTML = ''; $('#extra').innerHTML = '';
   App.act = a; Store.data.last = a.id; Store.save();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.id === a.id ? 'true' : 'false'));
   refresh();
   let intro = a.intro; if (!App.greeted) { App.greeted = true; const n = Store.data.name; intro = `Hi${n ? ' ' + n.replace(/[<>&"]/g, '') : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
   App.inst = a.mount(host, makeUI()) || {};
-  if (!a.html) say(intro); else setTimeout(() => {}, 0);
+  if (!a.html) say(intro);
 }
 function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }
 

@@ -167,6 +167,17 @@ dialog#settings::backdrop{background:rgba(36,54,40,.45)}
 .progress .btn{min-height:38px;padding:4px 12px;font-size:15px}
 .danger{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .btn.warn{background:#F7B9B9}
+/* listen first */
+.listen-bar{position:absolute;left:18px;right:18px;bottom:7px;height:5px;border-radius:3px;background:transparent;overflow:hidden;pointer-events:none}
+.listen-bar i{display:block;height:100%;width:0;border-radius:3px;background:var(--leaf);transition:width .15s linear}
+body.listening .listen-bar{background:#E3EBDD}
+body.listening .stage{box-shadow:0 6px 0 var(--ink),0 0 0 5px var(--sun-soft)}
+body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
+.bubble.nudge{animation:nudge .45s ease}
+@keyframes nudge{20%,60%{transform:translateX(-6px) rotate(-.6deg)}40%,80%{transform:translateX(6px) rotate(.6deg)}}
+.nudge-tip{position:fixed;z-index:80;transform:translate(-50%,-120%);display:flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;background:var(--card);border:3px solid var(--ink);border-radius:999px;box-shadow:0 3px 0 var(--ink);font-family:var(--display);font-weight:600;font-size:16px;white-space:nowrap;pointer-events:none;animation:tipin 1.4s ease forwards}
+.nudge-tip svg{width:22px;height:22px}
+@keyframes tipin{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}15%{opacity:1;transform:translate(-50%,-120%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 
@@ -183,6 +194,8 @@ dialog#settings::backdrop{background:rgba(36,54,40,.45)}
       <h3>Pip's voice</h3>
       <div class="voices" id="voiceList" role="radiogroup" aria-label="Pip's voice"></div>
       <label class="set-row switch"><span>Read everything out loud</span><input type="checkbox" id="setAuto"></label>
+      <label class="set-row switch"><span>Wait for Pip to finish before the next tap</span><input type="checkbox" id="setWait"></label>
+      <p class="set-note">Helps kids listen to each lesson instead of racing ahead. Stars appear when Pip finishes explaining.</p>
       <label class="set-row" for="setVoiceVol"><span>Voice volume</span><input type="range" id="setVoiceVol" min="0" max="100" step="5"></label>
     </section>
     <section class="set-sec">
@@ -240,6 +253,7 @@ dialog#settings::backdrop{background:rgba(36,54,40,.45)}
     <canvas id="pip" width="216" height="216" aria-hidden="true" title="Tap Pip!"></canvas>
     <div class="bubble" id="bubble">
       <p id="say" aria-live="polite"></p>
+      <div class="listen-bar" aria-hidden="true"><i id="listenBar"></i></div>
       <button class="icon-btn" id="readBtn" aria-label="Read it to me" title="Read it to me (tap Pip too!)" aria-pressed="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#A9DDF1" stroke="#243628" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5a5 5 0 010 7" fill="none" stroke="#243628" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>

@@ -50,19 +50,21 @@ const A_quiz = {
         b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b);
       });
       const foot = document.createElement('div'); foot.className = 'q-foot';
-      box.append(meta, body, ch, foot); ui.say(q.q);
+      box.append(meta, body, ch, foot); ui.say(q.q, { lock: true });
     }
     function answer(btn, right, q) {
-      if (btn.disabled) return; tries++;
+      if (btn.disabled) return;
+      if (inputLocked()) { const r = btn.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); }
+      tries++;
       const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       if (right) {
         btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
         results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
-        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); ui.say(`Yes! ${q.why}`); }
-        else { Sound.boing(); ui.say(`You got it! ${q.why}`); }
+        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+        else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
         const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
-        nb.onclick = () => { Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
-      } else { btn.classList.add('wrong'); btn.disabled = true; Sound.oops(); ui.say(`Not quite. Hint: ${q.hint}`); }
+        nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
+      } else { btn.classList.add('wrong'); btn.disabled = true; Sound.oops(); ui.say(`Not quite. Hint: ${q.hint}`, { lock: true }); }
     }
     function end() {
       const n = results.filter(x => x === 1).length; box.innerHTML = '';

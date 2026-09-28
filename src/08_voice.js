@@ -52,6 +52,7 @@ const Voice = {
   },
   stop() { this.token++; this.fadeOut(); this.setSpeaking(false); },
   setSpeaking(on) {
+    if (this.speaking && !on) this.endT = Loop.t;
     this.speaking = on; const b = $('#readBtn'); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
     Sound.levels(on); // duck effects + music under the voice
   },

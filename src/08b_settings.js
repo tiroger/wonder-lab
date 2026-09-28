@@ -13,7 +13,7 @@ const Settings = {
   // keep the header buttons and the dialog controls showing the same state
   sync() {
     $('#talkBtn').setAttribute('aria-pressed', Voice.auto); $('#soundBtn').setAttribute('aria-pressed', Sound.on); $('#musicBtn').setAttribute('aria-pressed', Music.on);
-    $('#setAuto').checked = Voice.auto; $('#setSound').checked = Sound.on; $('#setMusic').checked = Music.on;
+    $('#setAuto').checked = Voice.auto; $('#setWait').checked = waitForPip(); $('#setSound').checked = Sound.on; $('#setMusic').checked = Music.on;
     $('#setVoiceVol').value = Math.round(Voice.volume * 100); $('#setSoundVol').value = Math.round(Sound.vol * 100); $('#setMusicVol').value = Math.round(Music.vol * 100);
     document.querySelectorAll('.voice').forEach(b => b.setAttribute('aria-checked', b.dataset.id === Voice.name ? 'true' : 'false'));
   },
@@ -77,6 +77,7 @@ const Settings = {
     $('#settingsBtn').onclick = () => { Sound.fwip(); this.renderProgress(); this.sync(); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); };
     // dialog controls
     $('#setAuto').onchange = e => this.setAuto(e.target.checked);
+    $('#setWait').onchange = e => { this.save('waitForPip', e.target.checked); if (!e.target.checked) stopListening(); Sound.fwip(); };
     $('#setSound').onchange = e => this.setSound(e.target.checked);
     $('#setMusic').onchange = e => this.setMusic(e.target.checked);
     $('#setVoiceVol').oninput = e => { Voice.setVolume(e.target.value / 100); this.save('voiceVol', Voice.volume); };

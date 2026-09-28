@@ -88,7 +88,7 @@ const A_seed = {
       checkAll();
     }
     function checkAll() {
-      if (A_seed.stars.every(q => Store.data.stars[q.id]) && sproutBtn.disabled) { sproutBtn.disabled = false; setTimeout(() => ui.say('You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.'), 2600); }
+      if (A_seed.stars.every(q => Store.data.stars[q.id]) && sproutBtn.disabled) { sproutBtn.disabled = false; ui.say('You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.', { queue: true }); }
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
@@ -133,7 +133,7 @@ const A_seed = {
           if (e < .8) { const k = ease(e / .8); x = lerp(BX, GLASS[0], k); y = lerp(BY, GLASS[1] + 30, k) - Math.sin(k * PI) * 120; sc = lerp(.82, .38, k); }
           else if (e < 3) { x = GLASS[0] + Math.sin(e * 3) * 3; y = GLASS[1] + 30; sc = lerp(.38, .48, (e - .8) / 2.2); swell = (e - .8) / 2.2; }
           else { const k = ease(clamp((e - 3) / .9, 0, 1)); x = lerp(GLASS[0], BX, k); y = lerp(GLASS[1] + 30, BY, k) - Math.sin(k * PI) * 120; sc = lerp(.48, 1, k); swell = 1; }
-          if (e > 3.9 && s.step === .5) { s.step = 1; buildCells(); ui.say('The bean drank up water and got bigger and softer! Now <b>rub the bean</b> with your finger to peel off its skin.'); Sound.slurp(); }
+          if (e > 3.9 && s.step === .5) { s.step = 1; buildCells(); ui.say('The bean drank up water and got bigger and softer! Now <b>rub the bean</b> with your finger to peel off its skin.', { queue: true }); Sound.slurp(); }
         }
         c.save(); c.translate(x, y); c.scale(sc, sc); c.rotate(-.05);
         if (st.over(circle(BX, BY, 150)) && s.step === 0) glowOn(c);
