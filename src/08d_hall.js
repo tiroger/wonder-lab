@@ -62,7 +62,7 @@ function renderHall() {
     const ped = document.createElement('div'); ped.className = 'pedestal'; ped.appendChild(btn(master, tp, true));
     const plaque = document.createElement('div'); plaque.className = 'plaque'; plaque.textContent = `${master.name} · ${have} of ${list.length}`; ped.appendChild(plaque);
     const body = document.createElement('div'); body.className = 'case-body';
-    body.innerHTML = `<h2 class="nameplate">${tp.name}</h2>`;
+    body.innerHTML = `<h2 class="nameplate" style="background:${tp.accent.plate}">${tp.name}</h2>`; // white text: plate colors keep 4.5:1
     const glass = document.createElement('div'); glass.className = 'glass'; list.forEach(b => glass.appendChild(btn(b, tp, false)));
     body.appendChild(glass); box.append(ped, body); cases.appendChild(box);
   }
@@ -82,7 +82,7 @@ function hallTap(el, b) {
   say(Store.data.badges[b.id] ? earnedLine(b) : b.how);
 }
 function showHall() {
-  leaveActivity(); App.view = 'hall'; App.topic = null; App.act = null;
+  leaveActivity(); App.view = 'hall'; App.topic = null; App.act = null; applyAccent(null);
   const root = document.documentElement; root.classList.remove('at-home', 'in-topic'); root.classList.add('at-hall');
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();

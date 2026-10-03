@@ -177,7 +177,7 @@ function homeInit() {
 }
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.
 function showHome() {
-  leaveActivity(); App.view = 'home'; App.topic = null; App.act = null;
+  leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
   document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
   renderHome(); refresh();
   let line = HOME_NEXT;

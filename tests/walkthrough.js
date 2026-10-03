@@ -327,6 +327,43 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   }
   report.hall = hall;
 
+  // ---------- Topic theming: accent colors and Pip's costumes ----------
+  const theme = {};
+  {
+    const { ctx, p } = await fresh(null, { hash: '#/plants/parts' });
+    theme.topic = await p.evaluate(() => { const cs = getComputedStyle(document.documentElement); return { ground: cs.getPropertyValue('--ground').trim(), bold: cs.getPropertyValue('--bold').trim(), tab: getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor, stage: getComputedStyle(document.querySelector('#stage')).backgroundColor }; });
+    await p.evaluate(() => go('#/')); await sleep(600);
+    theme.home = await p.evaluate(() => { const cs = getComputedStyle(document.documentElement); return { ground: cs.getPropertyValue('--ground').trim(), bold: cs.getPropertyValue('--bold').trim() }; });
+    // each costume changes how Pip looks but never hides his eyes or mouth
+    theme.costumes = await p.evaluate(() => {
+      const draw = costume => { const cv = document.createElement('canvas'); cv.width = cv.height = 216; const c = cv.getContext('2d'); c.setTransform(2, 0, 0, 2, 0, 0); c.translate(54, 64); pipFigure(c, 1, { costume }); return c.getImageData(0, 0, 216, 216).data; };
+      const lum = (d, x, y) => { const i = (Math.round(y) * 216 + Math.round(x)) * 4; return d[i + 3] < 128 ? 255 : .3 * d[i] + .59 * d[i + 1] + .11 * d[i + 2]; };
+      const plain = draw(null), out = {};
+      for (const k of Object.keys(PIP_COSTUMES)) {
+        const d = draw(k); let diff = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - plain[i]) + Math.abs(d[i + 1] - plain[i + 1]) + Math.abs(d[i + 2] - plain[i + 2]) > 60) diff++;
+        // eye whites (above the pupils), pupils and the bottom of the smile, in the 2x canvas
+        // Pip bobs a little, so look for the darkest pixel near each feature rather than at one exact point
+        const darkest = (x, y) => { let m = 255; for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) m = Math.min(m, lum(d, x + dx, y + dy)); return m; };
+        out[k] = { diff, eyes: [-12, 12].every(ex => lum(d, (54 + ex) * 2, (64 - 9) * 2) > 150), pupils: [-11, 13].every(ex => darkest((54 + ex) * 2, (64 - 1.5) * 2) < 110), mouth: darkest(106, (64 + 15.5) * 2) < 110 };
+      }
+      return out;
+    });
+    // costumes are worn inside a topic only
+    theme.wear = {};
+    await p.evaluate(() => { TOPICS[0].pip = 'helmet'; });
+    const pipPixels = () => p.evaluate(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 216; const c = cv.getContext('2d'); drawPip(c, 1); const d = c.getImageData(0, 0, 216, 216).data; let a = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) a++; return a; });
+    theme.wear.home = await pipPixels();
+    await p.evaluate(() => go('#/plants/parts')); await sleep(600);
+    theme.wear.topic = await pipPixels();
+    await p.evaluate(() => { TOPICS[0].pip = null; });
+    theme.wear.plain = await pipPixels();
+    // the startup check catches a topic missing what the platform needs (console.error muted here on purpose)
+    theme.catches = await p.evaluate(() => { const tp = TOPICS[0], saved = { building: tp.building, accent: tp.accent, pip: tp.pip }, ce = console.error; console.error = () => {};
+      tp.accent = { ...tp.accent, bold: 'green' }; tp.pip = 'cape'; tp.building = null; const r = checkIds(); Object.assign(tp, saved); console.error = ce; return r; });
+    await done(ctx, p);
+  }
+  report.theme = theme;
+
   // ---------- badges + voice coverage ----------
   report.badges = await page.evaluate(() => Object.keys(Store.data.badges));
   report.voiceCoverage = await page.evaluate(extra => {
@@ -409,6 +446,11 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Pacing: rapid badge taps start one line (newest wins)': report.hall.rapid.clips <= 1 && report.hall.rapid.last.startsWith('Not yet! Earn 10 stars'),
     'Trophy Hall: back to the map, the sparkle is gone': report.hall.back.view === 'home' && !report.hall.back.sparkle && report.hall.back.line === 'Where should we explore next?',
     'Trophy Hall: reachable from a topic\'s badge shelf': report.hall.fromShelf === 'hall',
+    'Theme: inside a topic, the page takes its accent': report.theme.topic.ground === '#E8F3E1' && report.theme.topic.bold === '#2A7340' && report.theme.topic.tab === 'rgb(255, 201, 60)' && report.theme.topic.stage === 'rgb(191, 230, 244)',
+    'Theme: the map uses the shared colors': report.theme.home.ground === '#F6F1E4' && report.theme.home.bold === '',
+    'Costumes: each one changes Pip and keeps his eyes and mouth showing': Object.keys(report.theme.costumes).length === 3 && Object.values(report.theme.costumes).every(c => c.diff > 300 && c.eyes && c.pupils && c.mouth),
+    'Costumes: worn only inside a topic': report.theme.wear.topic > report.theme.wear.plain && report.theme.wear.home === report.theme.wear.plain,
+    'Topic checks catch a broken topic': ['needs a building', 'accent needs bold', 'unknown costume cape'].every(m => report.theme.catches.some(x => x.includes(m))),
     'Trophy Hall: phone layout, no sideways scrolling': report.hall.phone.view === 'hall' && !report.hall.phone.sideways && report.hall.phone.minTap >= 44,
     'Topic ids are unique (new topics prefixed)': report.routing.ids.length === 0,
     'Every line recorded in every voice': Object.entries(report.voiceCoverage).every(([k, v]) => k === 'messagesSaid' || v === 'all recorded'),
