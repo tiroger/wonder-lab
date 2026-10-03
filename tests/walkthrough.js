@@ -16,7 +16,11 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); if (m.type() === 'warning') warnings.push(m.text()); });
   await page.goto(URL); await sleep(800);
+  // first visit: the page can't play sound until the first tap, which should then read Pip's opening line out loud
+  await page.evaluate(() => { window.__firstClips = 0; const p = Voice.play.bind(Voice); Voice.play = (a, my) => { if (my === Voice.token) window.__firstClips++; return p(a, my); }; });
   await page.mouse.click(5, 5); // first tap unlocks audio
+  const openingHeard = await page.waitForFunction(() => window.__firstClips > 0, null, { timeout: 8000 }).then(() => true, () => false);
+  const firstVisit = { openingHeard, holdWaitsForVoice: await page.evaluate(() => Listen.on && Listen.voice), line: await page.evaluate(() => plainText(App.current).slice(0, 60)) };
   // record every message Pip says, and any time a new message interrupts one still being spoken
   await page.evaluate(() => {
     window.__said = []; window.__cutoffs = [];
@@ -36,7 +40,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   const tab = async id => { await sleep(1300); await closeToasts(); await page.click(`.tab[data-id="${id}"]`); await sleep(700); };
   const stars = prefix => page.evaluate(p => Object.keys(Store.data.stars).filter(k => k.startsWith(p)).sort(), prefix);
   const saidCount = () => page.evaluate(() => window.__said.length);
-  const report = {};
+  const report = { firstVisit };
   const setVoiceAuto = on => page.evaluate(v => { Voice.auto = v; Voice.stop(); }, on);
 
   // ---------- Meet the Plant ----------
@@ -176,6 +180,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   // fail the run (and the CI job) if anything is off
   const stages = report.grow.stagesInOrder.map(s => s.trim());
   const checks = {
+    'First tap: Pip reads the opening line out loud': report.firstVisit.openingHeard && report.firstVisit.holdWaitsForVoice,
     'Meet the Plant: 5 stars': report.parts.length === 5,
     'Open a Seed: 5 stars': report.seed.final.length === 5,
     'Open a Seed: sprout button unlocks': report.seed.sproutButtonEnabled,
