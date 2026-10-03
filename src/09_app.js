@@ -1,7 +1,8 @@
 /* ============ topics: add new ones here ============ */
 const TOPICS = [
   { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
-    master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.' } }
+    master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
+      how: 'Not yet! Earn all 6 Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } }
 ];
 const App = { view: '', topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath
@@ -158,17 +159,19 @@ function hasBadge(a) { const need = a.badgeNeed || a.stars.length; return a.star
 function checkBadges() {
   const tp = App.topic; if (!tp) return; let changed = false;
   for (const a of tp.activities) if (!Store.data.badges[a.badge.id] && hasBadge(a)) { Store.data.badges[a.badge.id] = Date.now(); App.toastQ.push({ ...a.badge, icon: a.icon }); changed = true; }
-  if (!Store.data.badges[tp.master.id] && tp.activities.every(a => Store.data.badges[a.badge.id])) { Store.data.badges[tp.master.id] = Date.now(); App.toastQ.push(tp.master); changed = true; }
+  if (!Store.data.badges[tp.master.id] && tp.activities.every(a => Store.data.badges[a.badge.id])) { Store.data.badges[tp.master.id] = Date.now(); App.toastQ.push({ ...tp.master, trophy: true }); changed = true; }
   if (changed) { Store.save(); refresh(); nextToast(); }
 }
+// what Pip says about a badge you've earned; a topic's top badge is a trophy (recorded whole in voice/lines.py)
+function earnedLine(b) { return b.trophy ? `You won the <b>${b.name}</b> trophy! ${b.desc}` : `You earned the <b>${b.name}</b> badge! ${b.desc}`; }
 function nextToast() {
   if (App.toastOn || !App.toastQ.length) return; const b = App.toastQ.shift(); App.toastOn = true;
   const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'New badge');
-  el.innerHTML = `<canvas width="240" height="240" aria-hidden="true"></canvas><div class="kicker">New badge!</div><h3>${b.name}</h3><p>${b.desc}</p>`;
+  el.innerHTML = `<canvas width="240" height="240" aria-hidden="true"></canvas><div class="kicker">${b.trophy ? "New trophy!" : "New badge!"}</div><h3>${b.name}</h3><p>${b.desc}</p>`;
   const cv = el.querySelector('canvas'); const btn = document.createElement('button'); btn.className = 'btn go'; btn.textContent = 'Hooray!'; el.appendChild(btn); document.body.appendChild(el);
   const off = Loop.add(t => { const c = cv.getContext('2d'); c.setTransform(2.4, 0, 0, 2.4, 0, 0); c.clearRect(0, 0, 100, 100); c.save(); c.translate(50, 50); c.rotate(RM ? 0 : Math.sin(t * 3) * .12); c.translate(-50, -50); c.fillStyle = C.sun; c.beginPath(); for (let i = 0; i < 24; i++) { const r = i % 2 ? 40 : 48, a = i / 24 * TAU + t * .5; c.lineTo(50 + Math.cos(a) * r, 50 + Math.sin(a) * r); } c.fill(); c.fillStyle = '#FFF4D6'; c.beginPath(); c.arc(50, 50, 36, 0, TAU); c.fill(); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(); c.translate(20, 20); c.scale(.6, .6); ICONS[b.icon](c, t); c.restore(); });
   Sound.badge(); confetti(innerWidth / 2, innerHeight / 2, 120, 1.3); setTimeout(() => confetti(innerWidth * .25, innerHeight * .4, 50), 300); setTimeout(() => confetti(innerWidth * .75, innerHeight * .4, 50), 500);
-  say(`You earned the <b>${b.name}</b> badge! ${b.desc}`, { queue: true });
+  say(earnedLine(b), { queue: true });
   const close = () => { off(); el.remove(); App.toastOn = false; Sound.pop(); setTimeout(nextToast, 300); };
   btn.onclick = close; btn.focus(); setTimeout(() => { if (el.isConnected) close(); }, 7000);
 }
@@ -178,7 +181,7 @@ function refresh() {
   const tp = App.topic, stars = Store.data.stars, acts = tp ? tp.activities : TOPICS.flatMap(t => t.activities); // home counts every topic
   const total = acts.reduce((n, a) => n + a.stars.length, 0), have = acts.reduce((n, a) => n + a.stars.filter(s => stars[s.id]).length, 0);
   $('#starCount').textContent = have; $('#starTotal').textContent = total;
-  if (!tp) { if (App.view === 'home') renderHome(); return; }
+  if (!tp) { if (App.view === 'home') renderHome(); if (App.view === 'hall') renderHall(); return; }
   for (const a of tp.activities) { const el = document.querySelector(`.tab[data-id="${a.id}"]`); if (!el) continue; const n = a.stars.filter(s => stars[s.id]).length; el.querySelector('.count').textContent = `${n} of ${a.stars.length} stars`; el.classList.toggle('done', hasBadge(a)); }
   if (App.act) $('#finds').innerHTML = App.act.stars.map(s => `<li class="${stars[s.id] ? 'got' : ''} ${App.fresh === s.id ? 'fresh' : ''}">${STAR_SVG(!!stars[s.id])}<span>${s.name}</span></li>`).join('');
   App.fresh = null;
@@ -234,19 +237,20 @@ function hearOpening(e) {
   if (App.currentLocks) startListening(App.current);
 }
 /* ============ routes: every place has its own link, so back, refresh and bookmarks work ============ */
-// #/ home, #/<topic>/<activity> (and #/<topic>, which opens its last or first activity); anything else goes home
+// #/ home, #/trophies the Trophy Hall, #/<topic>/<activity> (and #/<topic>, which opens its last or first activity); anything else goes home
 // the last place: { topic, activity }; older saves stored just a Plants & Seeds activity id
 function lastPlace() { const l = Store.data.last; return typeof l === 'string' ? (l ? { topic: 'plants', activity: l } : {}) : l || {}; }
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
 function route() {
   const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
+  if (tid === 'trophies') { if (location.hash !== '#/trophies') history.replaceState(null, '', '#/trophies'); if (App.view !== 'hall') showHall(); return; }
   const tp = TOPICS.find(t => t.id === tid);
   if (!tp) { if (location.hash !== '#/') history.replaceState(null, '', '#/'); if (App.view !== 'home') showHome(); return; }
   const a = tp.activities.find(x => x.id === aid) || (last.topic === tp.id && tp.activities.find(x => x.id === last.activity)) || tp.activities[0];
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
   if (App.view !== 'topic' || App.topic !== tp) {
     App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name;
-    document.documentElement.classList.remove('at-home'); document.documentElement.classList.add('in-topic');
+    document.documentElement.classList.remove('at-home', 'at-hall'); document.documentElement.classList.add('in-topic');
   }
   if (App.act !== a) mount(a);
 }

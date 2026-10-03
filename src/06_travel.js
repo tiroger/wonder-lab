@@ -1,7 +1,7 @@
 /* ============ Activity: Seed Travel ============ */
 const A_travel = {
   id: 'travel', name: 'Seed Travel', icon: 'travel',
-  badge: { id: 'b.travel', name: 'Seed Launcher', desc: 'You found 4 ways seeds travel to new places!' },
+  badge: { id: 'b.travel', name: 'Seed Launcher', desc: 'You found 4 ways seeds travel to new places!', how: 'Not yet! Find all 4 ways seeds travel in <b>Seed Travel</b>.' },
   stars: [{ id: 'travel.wind', name: 'Wind' }, { id: 'travel.animal', name: 'Animals' }, { id: 'travel.water', name: 'Water' }, { id: 'travel.pop', name: 'Pop!' }],
   intro: 'Plants can\'t walk, so how do their seeds get to new places? <b>Tap each picture</b> to discover 4 ways seeds travel!',
   mount(host, ui) {

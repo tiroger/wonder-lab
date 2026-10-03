@@ -277,6 +277,56 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   }
   report.home = home;
 
+  // ---------- The Trophy Hall ----------
+  const hall = {};
+  {
+    const saved = { last: { topic: 'plants', activity: 'parts' }, stars: { 'parts.roots': 1, 'parts.stem': 1, 'parts.leaves': 1, 'parts.flower': 1, 'parts.fruit': 1 }, badges: { 'b.parts': 1 } };
+    const { ctx, p } = await fresh(d => { if (!localStorage.getItem('wonderlab.v1')) localStorage.setItem('wonderlab.v1', JSON.stringify(d)); }, {});
+    await p.evaluate(d => { localStorage.setItem('wonderlab.v1', JSON.stringify(d)); }, saved); await p.reload(); await sleep(900);
+    await p.evaluate(() => { window.__said = [App.current]; window.__talkover = []; const o = window.say; window.say = (h, op) => { const speaking = Voice.speaking; const r = o(h, op); if (r === true) { window.__said.push(h); if (speaking) window.__talkover.push(plainText(h).slice(0, 50)); } return r; }; window.__clips = 0; const play = Voice.play.bind(Voice); Voice.play = (a, my) => { if (my === Voice.token) window.__clips++; return play(a, my); }; });
+    hall.map = await p.evaluate(() => ({ last: Home.lots[Home.lots.length - 1].hall === true, pill: (document.querySelector('.lot[data-hall]') || {}).textContent, sparkle: hallNew() }));
+    await p.click('.lot[data-hall]'); await p.waitForFunction(() => location.hash === '#/trophies', null, { timeout: 4000 }).catch(() => {});
+    await sleep(400);
+    hall.page = await p.evaluate(() => ({
+      view: App.view, atHall: document.documentElement.classList.contains('at-hall'), cases: document.querySelectorAll('.case').length,
+      badges: document.querySelectorAll('.hb').length, earned: [...document.querySelectorAll('.hb:not(.locked)')].map(b => b.dataset.id),
+      fresh: [...document.querySelectorAll('.hb.fresh')].map(b => b.dataset.id), soon: !!document.querySelector('.soon-case'),
+      totals: document.querySelector('#hallTotals').textContent, line: plainText(App.current), crumb: document.querySelector('#crumbTopic').textContent,
+      seen: Object.keys(Store.data.hallSeen || {}), sparkle: hallNew() }));
+    await quiet(p);
+    // a locked badge: Pip says how to earn it, and listen first holds the next tap while he explains
+    await p.click('.hb[data-id="b.flower"]'); await sleep(250);
+    hall.locked = await p.evaluate(() => ({ line: plainText(App.current), holds: Listen.on }));
+    await p.click('.hb[data-id="b.grow"]'); await sleep(250);
+    hall.held = await p.evaluate(() => ({ still: App.current.includes('Flower Lab'), nudge: !!document.querySelector('.nudge-tip') }));
+    await quiet(p); await p.waitForFunction(() => !Listen.on, null, { timeout: 15000 }).catch(() => {});
+    await p.click('.hb[data-id="b.parts"]'); await sleep(250);
+    hall.earnedLine = await p.evaluate(() => plainText(App.current));
+    await quiet(p); await p.waitForFunction(() => !Listen.on, null, { timeout: 15000 }).catch(() => {});
+    await p.click('.hb[data-id="b.botanist"]'); await sleep(250);
+    hall.trophyLine = await p.evaluate(() => plainText(App.current));
+    await quiet(p); await p.waitForFunction(() => !Listen.on, null, { timeout: 15000 }).catch(() => {});
+    hall.talkover = await p.evaluate(() => window.__talkover.slice());
+    // rapid taps (listen first off): only the last badge tapped speaks
+    await p.evaluate(() => { Store.data.waitForPip = false; window.__clips = 0; });
+    for (const id of ['b.seed', 'b.grow', 'b.travel', 'b.quiz']) { await p.click(`.hb[data-id="${id}"]`); await sleep(110); }
+    await sleep(1600);
+    hall.rapid = await p.evaluate(() => ({ clips: window.__clips, last: plainText(App.current) }));
+    await quiet(p);
+    await p.goBack(); await sleep(700);
+    hall.back = await p.evaluate(() => ({ view: App.view, sparkle: hallNew(), line: plainText(App.current) }));
+    await p.evaluate(() => go('#/plants/parts')); await sleep(800);
+    await p.click('.hall-link'); await sleep(700);
+    hall.fromShelf = await p.evaluate(() => App.view);
+    await done(ctx, p);
+  }
+  {
+    const { ctx, p } = await fresh(null, { hash: '#/trophies', viewport: { width: 390, height: 844 } });
+    hall.phone = await p.evaluate(() => ({ view: App.view, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth, minTap: Math.min(...[...document.querySelectorAll('.hb')].map(b => b.getBoundingClientRect().height)) }));
+    await done(ctx, p);
+  }
+  report.hall = hall;
+
   // ---------- badges + voice coverage ----------
   report.badges = await page.evaluate(() => Object.keys(Store.data.badges));
   report.voiceCoverage = await page.evaluate(extra => {
@@ -348,6 +398,18 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Home: phone map is one column, no sideways scrolling': report.home.phone.tall && report.home.phone.cols === 1 && !report.home.phone.sideways && report.home.phone.minLot >= 44 && report.home.phone.entered === '#/plants/parts',
     'Home: reduced motion skips the walk': report.home.rm.hash === '#/plants/parts' && !report.home.rm.walking,
     'First tap on a link into an activity reads its intro and holds taps': report.home.deepLink && report.home.deepLinkHold,
+    'Trophy Hall: at the end of the trail, with a badge count and a sparkle for new badges': report.hall.map.last && /Trophy Hall\s*1 badge\b/.test(report.hall.map.pill) && report.hall.map.sparkle,
+    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 1 && report.hall.page.badges === 7 && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
+    'Trophy Hall: earned and locked badges shown right; new ones glow once': JSON.stringify(report.hall.page.earned) === '["b.parts"]' && JSON.stringify(report.hall.page.fresh) === '["b.parts"]' && report.hall.page.seen.includes('b.parts') && !report.hall.page.sparkle,
+    'Trophy Hall: greeting': report.hall.page.line.startsWith('Welcome to the Trophy Hall'),
+    'Trophy Hall: totals': /5 of 37 stars/.test(report.hall.page.totals) && /1 of 6 badges/.test(report.hall.page.totals) && /0 of 1 trophies/.test(report.hall.page.totals),
+    'Trophy Hall: a locked badge says how to earn it, an earned one how you earned it': report.hall.locked.line === 'Not yet! Take the flower apart and help the bee in Flower Lab.' && report.hall.earnedLine.startsWith('You earned the Plant Pal badge!') && report.hall.trophyLine.includes('win the Botanist trophy'),
+    'Trophy Hall: listen first holds badge taps while Pip explains': report.hall.locked.holds && report.hall.held.still && report.hall.held.nudge,
+    'Pacing: no line talks over another in the Trophy Hall': report.hall.talkover.length === 0,
+    'Pacing: rapid badge taps start one line (newest wins)': report.hall.rapid.clips <= 1 && report.hall.rapid.last.startsWith('Not yet! Earn 10 stars'),
+    'Trophy Hall: back to the map, the sparkle is gone': report.hall.back.view === 'home' && !report.hall.back.sparkle && report.hall.back.line === 'Where should we explore next?',
+    'Trophy Hall: reachable from a topic\'s badge shelf': report.hall.fromShelf === 'hall',
+    'Trophy Hall: phone layout, no sideways scrolling': report.hall.phone.view === 'hall' && !report.hall.phone.sideways && report.hall.phone.minTap >= 44,
     'Topic ids are unique (new topics prefixed)': report.routing.ids.length === 0,
     'Every line recorded in every voice': Object.entries(report.voiceCoverage).every(([k, v]) => k === 'messagesSaid' || v === 'all recorded'),
     'No page errors': report.errors.length === 0 && report.noRecordingWarnings.length === 0

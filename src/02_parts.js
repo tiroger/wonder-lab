@@ -58,7 +58,7 @@ function worm(c, x, y, t, fast = 0) {
 /* ============ Activity: Meet the Plant ============ */
 const A_parts = {
   id: 'parts', name: 'Meet the Plant', icon: 'plant',
-  badge: { id: 'b.parts', name: 'Plant Pal', desc: 'You found every part of a plant!' },
+  badge: { id: 'b.parts', name: 'Plant Pal', desc: 'You found every part of a plant!', how: 'Not yet! Find all 5 parts of the plant in <b>Meet the Plant</b>.' },
   stars: [{ id: 'parts.roots', name: 'Roots' }, { id: 'parts.stem', name: 'Stem' }, { id: 'parts.leaves', name: 'Leaves' }, { id: 'parts.flower', name: 'Flower' }, { id: 'parts.fruit', name: 'Fruit & seeds' }],
   intro: 'Every plant has parts with special jobs. <b>Tap each part</b> of this plant to learn its job. Can you find all 5?',
   mount(host, ui) {
