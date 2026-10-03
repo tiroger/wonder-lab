@@ -49,8 +49,7 @@ data "aws_route53_zone" "site" {
 
 locals {
   account     = data.aws_caller_identity.current.account_id
-  project     = "wonderlab"                   # the Project tag infra/versions.tf puts on every site resource
-  owned_tags  = [local.project, "wonder-lab"] # "wonder-lab" is the old value: drop it once the site is retagged
+  project     = "wonderlab" # the Project tag infra/versions.tf puts on every site resource
   prefix      = replace(var.domain, ".", "-")
   site_names  = [var.domain, "www.${var.domain}"]
   site_bucket = "${local.prefix}-site"
@@ -133,14 +132,9 @@ resource "aws_iam_role" "plan" {
 # read access: no S3 objects outside the state bucket, no databases, no other project's settings.
 data "aws_iam_policy_document" "plan" {
   statement {
-    sid       = "ReadState"
+    sid       = "ReadState" # plans run with -lock=false, so they never write (or block a deploy)
     actions   = ["s3:ListBucket", "s3:GetObject"]
     resources = [aws_s3_bucket.state.arn, "${aws_s3_bucket.state.arn}/*"]
-  }
-  statement {
-    sid       = "StateLock" # S3-native locking writes a .tflock object next to the state
-    actions   = ["s3:PutObject", "s3:DeleteObject"]
-    resources = ["${aws_s3_bucket.state.arn}/*.tflock"]
   }
   statement {
     sid       = "SiteBucketSettings" # the bucket's own settings, not the files in it
@@ -229,7 +223,7 @@ data "aws_iam_policy_document" "deploy" {
     condition {
       test     = "StringEquals"
       variable = "aws:ResourceTag/Project"
-      values   = local.owned_tags
+      values   = [local.project]
     }
   }
   statement {
@@ -274,7 +268,7 @@ data "aws_iam_policy_document" "deploy" {
     condition {
       test     = "StringEquals"
       variable = "aws:ResourceTag/Project"
-      values   = local.owned_tags
+      values   = [local.project]
     }
   }
   statement {
