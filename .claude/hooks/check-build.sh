@@ -9,6 +9,7 @@ case "$path" in
 esac
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 if ! out=$(python3 build.py 2>&1); then echo "build.py failed after editing $path:" >&2; echo "$out" >&2; exit 2; fi
+command -v node >/dev/null 2>&1 || exit 0 # no Node here: CI still checks the script parses
 tmp="${TMPDIR:-/tmp}/wonder-lab-check-$$.js"
 sed -n '/<script>/,/<\/script>/p' dist/artifact.html | sed '1d;$d' > "$tmp"
 if ! err=$(node --check "$tmp" 2>&1); then echo "The page script no longer parses after editing $path:" >&2; echo "$err" >&2; rm -f "$tmp"; exit 2; fi

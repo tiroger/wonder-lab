@@ -30,7 +30,7 @@ const Settings = {
       b.innerHTML = `<span class="dot" aria-hidden="true"></span><span><b>${v.name}</b><small>${v.note}</small></span>`;
       b.onclick = () => this.setVoice(v.id); list.appendChild(b);
     }
-    if (!VOICE_CHOICES.length) list.innerHTML = '<p class="set-note">No recorded voices yet. Pip will use this device\'s voice.</p>';
+    if (!VOICE_CHOICES.length) list.innerHTML = '<p class="set-note">No recorded voices yet, so Pip can\'t read out loud.</p>';
   },
 
   // ----- progress -----
@@ -45,13 +45,13 @@ const Settings = {
   resetActivity(a) {
     for (const s of a.stars) delete Store.data.stars[s.id];
     delete Store.data.badges[a.badge.id]; delete Store.data.badges[App.topic.master.id]; Store.save();
-    Sound.whoosh(); refresh(); this.renderProgress(); if (App.act === a) mount(a);
-    say('Fresh start! Every star in this activity is ready to be found again.');
+    Sound.whoosh(); refresh(); this.renderProgress();
+    const msg = 'Fresh start! Every star in this activity is ready to be found again.';
+    if (App.act === a) mount(a, msg); else say(msg); // said with the intro, so one doesn't cut off the other
   },
   resetAll() {
     Store.data.stars = {}; Store.data.badges = {}; Store.save();
-    Sound.whoosh(); refresh(); this.renderProgress(); mount(App.act);
-    say('All clear! Every star is ready to be found again.');
+    Sound.whoosh(); refresh(); this.renderProgress(); mount(App.act, 'All clear! Every star is ready to be found again.');
   },
   renderProgress() {
     const ul = $('#progressList'); ul.innerHTML = '';
@@ -89,7 +89,7 @@ const Settings = {
     // explorer name
     const nm = $('#explorer'); nm.value = Store.data.name || '';
     nm.oninput = () => { this.save('name', nm.value.trim()); if (nm.value.length) Sound.tone(PENTA[nm.value.length % 10], .06, 'triangle', .05); };
-    nm.onchange = () => { if (Store.data.name) say(`Nice to meet you, <b>${Store.data.name.replace(/[<>&"]/g, '')}</b>! Let's explore together.`); };
+    nm.onchange = () => { const n = explorerName(); if (n) say(`Nice to meet you, <b>${n}</b>! Let's explore together.`); };
     // tap outside the dialog to close it
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     dlg.addEventListener('close', () => Sound.pop());

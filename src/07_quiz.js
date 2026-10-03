@@ -32,12 +32,13 @@ const A_quiz = {
   mount(host, ui) {
     const box = document.createElement('div'); box.className = 'quiz-box'; host.appendChild(box);
     let round, idx, results, tries;
-    function newRound() {
-      const unseen = QUIZ.filter(q => !Store.data.stars['quiz.' + q.id]).sort(() => Math.random() - .5);
-      const seen = QUIZ.filter(q => Store.data.stars['quiz.' + q.id]).sort(() => Math.random() - .5);
-      round = unseen.concat(seen).slice(0, 8).sort(() => Math.random() - .5); idx = 0; results = []; show();
+    function newRound(lead) {
+      const unseen = shuffle(QUIZ.filter(q => !Store.data.stars['quiz.' + q.id]));
+      const seen = shuffle(QUIZ.filter(q => Store.data.stars['quiz.' + q.id]));
+      round = shuffle(unseen.concat(seen).slice(0, 8)); idx = 0; results = []; show(lead);
     }
-    function show() {
+    // lead: the tab's intro, said together with the first question so neither cuts the other off
+    function show(lead) {
       const q = round[idx]; tries = 0; box.innerHTML = '';
       const meta = document.createElement('div'); meta.className = 'q-meta';
       meta.innerHTML = `<span>Question ${idx + 1} of ${round.length}</span><span class="q-dots">${round.map((_, i) => `<i class="${results[i] === 1 ? 'ok' : results[i] === 0 ? 'meh' : ''} ${i === idx ? 'now' : ''}"></i>`).join('')}</span>`;
@@ -45,12 +46,12 @@ const A_quiz = {
       if (q.pic) { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Picture with an arrow pointing to a part'); body.appendChild(cv); requestAnimationFrame(() => drawQuizPic(cv, q.pic)); }
       const h = document.createElement('p'); h.className = 'q-text'; h.textContent = q.q; body.appendChild(h);
       const ch = document.createElement('div'); ch.className = 'choices';
-      [...q.a].sort(() => Math.random() - .5).forEach((txt, i) => {
+      shuffle(q.a).forEach((txt, i) => {
         const b = document.createElement('button'); b.className = 'choice'; b.textContent = txt;
         b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b);
       });
       const foot = document.createElement('div'); foot.className = 'q-foot';
-      box.append(meta, body, ch, foot); ui.say(q.q, { lock: true });
+      box.append(meta, body, ch, foot); ui.say((lead ? lead + ' ' : '') + q.q, { lock: true });
     }
     function answer(btn, right, q) {
       if (btn.disabled) return;
@@ -76,7 +77,7 @@ const A_quiz = {
     }
     ui.button('New round', () => { Sound.pop(); newRound(); });
     ui.hint('Stars only count on the first try, so take your time and think!');
-    newRound();
+    newRound(ui.intro);
     return { destroy() { box.remove(); } };
   }
 };

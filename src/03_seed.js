@@ -77,18 +77,19 @@ const A_seed = {
       if (st.hit(LH, x, y) || st.hit(RH, x, y)) return 'cot'; return null;
     }
     function explore(p, x, y) {
-      s.lastAct = st.t;
-      if (p === 'cot') { Sound.boing(); ui.say(facts.cot); ui.award('seed.cot', ...st.client(x, y)); }
-      else {
-        if (!found('embryo')) { Sound.grow(0); ui.say(facts.embryo); ui.award('seed.embryo', ...st.client(x, y)); }
-        else if (p === 'root') { Sound.hop(); ui.say(facts.root); ui.award('seed.root', ...st.client(x, y)); }
-        else if (p === 'leaves') { Sound.sparkle(); Sound.tap(5); ui.say(facts.leaves); ui.award('seed.leaves', ...st.client(x, y)); }
-        else { Sound.tap(3); ui.say(facts.embryo); }
-      }
-      checkAll();
+      s.lastAct = st.t; let k = null;
+      if (p === 'cot') { Sound.boing(); k = 'cot'; }
+      else if (!found('embryo')) { Sound.grow(0); k = 'embryo'; }
+      else if (p === 'root') { Sound.hop(); k = 'root'; }
+      else if (p === 'leaves') { Sound.sparkle(); Sound.tap(5); k = 'leaves'; }
+      else Sound.tap(3);
+      if (k) ui.award('seed.' + k, ...st.client(x, y)); // award first: the message changes once every part is found
+      ui.say(k ? facts[k] + allFound() : facts.embryo);
     }
-    function checkAll() {
-      if (A_seed.stars.every(q => Store.data.stars[q.id]) && sproutBtn.disabled) { sproutBtn.disabled = false; ui.say('You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.', { queue: true }); }
+    // the last part found unlocks the sprout button, and Pip says so right after that part's fact
+    function allFound() {
+      if (!A_seed.stars.every(q => Store.data.stars[q.id]) || !sproutBtn.disabled) return '';
+      sproutBtn.disabled = false; return '<br>You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.';
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
@@ -226,7 +227,8 @@ const A_seed = {
         st.cursor = 'none';
       }
     };
-    magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag) ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
+    let magTold = false; // explain the magnifier the first time only
+    magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag && !magTold) magTold = ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
     sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); setTimeout(() => Sound.grow(3), 1800); setTimeout(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
     ui.button('Get a new bean', () => { reset(); Sound.pop(); ui.say(A_seed.intro); });
     reset(); magBtn.setAttribute('aria-pressed', 'false');

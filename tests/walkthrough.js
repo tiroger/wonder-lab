@@ -88,6 +88,8 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   await tap(488, 231); await tap(400, 250);                                  // stamen, pistil
   await sleep(600); const beeHere = await page.evaluate(() => App.current.includes('bee buzzed'));
   await sleep(1500); await drag([[700, 120], [488, 231], [488, 240], [400, 184], [400, 186]], 14); await sleep(6000);
+  // with the voice off, queued lines wait until the last one could be read; let them finish so they aren't counted as late taps
+  await page.waitForFunction(() => Store.data.stars['flower.pollen'] && !App.sayQ.length, null, { timeout: 45000 });
   await closeToasts(); const beforeLateTaps = await saidCount(); await tap(488, 231); await tap(440, 200); const lateSays = (await saidCount()) - beforeLateTaps; // old anther spots
   await tap(400, 300); const fruitTap = (await page.evaluate(() => App.current)).includes('grew into a');
   report.flower = { afterPieces, beeAppeared: beeHere, final: await stars('flower.'), witheredStamensStillTalk: lateSays > 0, fruitTapWorks: fruitTap };

@@ -5,7 +5,7 @@ const TOPICS = [
 ];
 const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath
-Loop.add(() => { if (App.sayQ.length && calm(.9)) say(App.sayQ.shift()); });
+Loop.add(() => { if (App.sayQ.length && ready()) say(App.sayQ.shift()); });
 
 /* ============ Pip the seed ============ */
 const Pip = { talkUntil: 0, wowUntil: 0, pokeT: -9 };
@@ -79,12 +79,16 @@ function flyStar(cx, cy) {
 // Pip is "calm" when he isn't talking, nothing is waiting for the kid to listen, and he finished at least `gap` seconds ago
 function calm(gap = .9) { return !Voice.speaking && !Listen.on && Loop.t - (Voice.endT || -99) > gap && Loop.t - (App.sayT || -99) > gap; }
 function readTime(html) { return Math.max(4, plainText(html || '').split(' ').length * .4); }
+// ready for queued news: Pip is calm and, when he isn't reading out loud, the last line has had time to be read
+function ready() { return calm(.9) && (Voice.auto && Sound.unlocked || Loop.t - (App.sayT || -99) > readTime(App.current)); }
+// the explorer's name, without anything that would break the bubble or split Pip's sentences
+function explorerName() { return (Store.data.name || '').replace(/[<>&"().!?…]/g, '').replace(/\s+/g, ' ').trim(); }
 // say(html, opts)
 //   polite: a reminder; skipped (returns false) unless Pip is calm and the last line had time to be read
 //   queue:  news that waits its turn instead of cutting Pip off
 //   lock:   make the kid listen before tapping again; default: any line of 8+ words that isn't polite
 function say(html, { polite = false, queue = false, lock } = {}) {
-  if (queue && (Voice.speaking || Listen.on || App.sayQ.length)) { App.sayQ.push(html); return 'queued'; }
+  if (queue && (!ready() || App.sayQ.length)) { App.sayQ.push(html); return 'queued'; }
   if (polite && (!calm(2) || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
   // tapping the same thing again while Pip is still saying it doesn't restart the line
   if (html === App.current && (Voice.speaking || Listen.on)) { const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); return true; }
@@ -103,10 +107,8 @@ const Listen = { on: false, t0: 0, dur: 0, voice: false, pending: [], nudgeT: -9
 function waitForPip() { return Store.data.waitForPip !== false; }
 function inputLocked() { return Listen.on; }
 function narrationSeconds(html) { // roughly how long the recording runs (packs are 56 kbps, about 7 kB a second)
-  const S = splitSentences(plainText(html)), map = Voice.map, whole = map[vkey(S.join(' '))];
-  let bytes = whole ? whole[1] : 0;
-  if (!whole) for (const s of S) { const k = Voice.keyFor(s); if (k && map[k]) bytes += map[k][1]; }
-  return bytes ? bytes / 7000 + .4 * S.length : S.join(' ').split(' ').length * .38;
+  const P = Voice.pieces(html), map = Voice.map, bytes = P.reduce((n, p) => n + (p.key && map[p.key] ? map[p.key][1] : 0), 0);
+  return bytes ? bytes / 7000 + .4 * P.length : plainText(html).split(' ').length * .38;
 }
 function startListening(html) {
   if (!waitForPip()) return;
@@ -189,9 +191,10 @@ function renderTabs() {
     nav.appendChild(b); drawIcon(b.querySelector('canvas'), a.icon);
   });
 }
-function makeUI() {
+function makeUI(intro) {
   const ui = {
     showAll: false,
+    intro, // what Pip says as the tab opens; an html activity says it itself (the quiz adds it to its first question)
     say, award,
     button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = e => { Sound.ensure(); if (inputLocked()) return nudge(e.clientX || b.getBoundingClientRect().left + 30, e.clientY || b.getBoundingClientRect().top + 10); fn(); }; $('#actions').appendChild(b); return b; },
     hint(text) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = text; $('#extra').appendChild(p); return p; },
@@ -199,15 +202,17 @@ function makeUI() {
   };
   return ui;
 }
-function mount(a) {
+// lead: a line Pip says just before the intro (after a reset), so the two don't cut each other off
+function mount(a, lead = '') {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
   const host = $('#stage'); host.innerHTML = ''; host.classList.toggle('quiz', !!a.html); $('#actions').innerHTML = ''; $('#extra').innerHTML = '';
   App.act = a; Store.data.last = a.id; Store.save();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.id === a.id ? 'true' : 'false'));
   refresh();
-  let intro = a.intro; if (!App.greeted) { App.greeted = true; const n = Store.data.name; intro = `Hi${n ? ' ' + n.replace(/[<>&"]/g, '') : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
-  App.inst = a.mount(host, makeUI()) || {};
+  let intro = (lead ? lead + ' ' : '') + a.intro;
+  if (!App.greeted) { App.greeted = true; const n = explorerName(); intro = `Hi${n ? ' ' + n : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
+  App.inst = a.mount(host, makeUI(intro)) || {};
   if (!a.html) say(intro);
 }
 function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }

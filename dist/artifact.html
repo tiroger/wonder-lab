@@ -283,6 +283,7 @@ const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
+function shuffle(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; } // fair order, returns a copy
 const dist = (a, b, c, d) => Math.hypot(a - c, b - d);
 function seeded(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const bez = (p0, p1, p2, p3, u) => { const v = 1 - u; return [v*v*v*p0[0] + 3*v*v*u*p1[0] + 3*v*u*u*p2[0] + u*u*u*p3[0], v*v*v*p0[1] + 3*v*v*u*p1[1] + 3*v*u*u*p2[1] + u*u*u*p3[1]]; };
@@ -678,7 +679,7 @@ const A_parts = {
       c.fillStyle = '#A8DB8A'; c.beginPath(); c.moveTo(0, 392); c.quadraticCurveTo(170, 300, 360, 382); c.quadraticCurveTo(560, 320, 800, 374); c.lineTo(800, 400); c.lineTo(0, 400); c.fill();
       ground(c, 390, t);
       s.wormPath = worm(c, 170, 482, t, t - s.worm < 2);
-      if (st.over(s.wormPath)) {}
+      st.over(s.wormPath); // pointer cursor over the worm
       // which part is under the pointer
       let hv = null; const P0 = s.P;
       if (P0 && st.p.inside) { hv = which(st.p.x, st.p.y); if (hv) st.cursor = 'pointer'; }
@@ -814,18 +815,19 @@ const A_seed = {
       if (st.hit(LH, x, y) || st.hit(RH, x, y)) return 'cot'; return null;
     }
     function explore(p, x, y) {
-      s.lastAct = st.t;
-      if (p === 'cot') { Sound.boing(); ui.say(facts.cot); ui.award('seed.cot', ...st.client(x, y)); }
-      else {
-        if (!found('embryo')) { Sound.grow(0); ui.say(facts.embryo); ui.award('seed.embryo', ...st.client(x, y)); }
-        else if (p === 'root') { Sound.hop(); ui.say(facts.root); ui.award('seed.root', ...st.client(x, y)); }
-        else if (p === 'leaves') { Sound.sparkle(); Sound.tap(5); ui.say(facts.leaves); ui.award('seed.leaves', ...st.client(x, y)); }
-        else { Sound.tap(3); ui.say(facts.embryo); }
-      }
-      checkAll();
+      s.lastAct = st.t; let k = null;
+      if (p === 'cot') { Sound.boing(); k = 'cot'; }
+      else if (!found('embryo')) { Sound.grow(0); k = 'embryo'; }
+      else if (p === 'root') { Sound.hop(); k = 'root'; }
+      else if (p === 'leaves') { Sound.sparkle(); Sound.tap(5); k = 'leaves'; }
+      else Sound.tap(3);
+      if (k) ui.award('seed.' + k, ...st.client(x, y)); // award first: the message changes once every part is found
+      ui.say(k ? facts[k] + allFound() : facts.embryo);
     }
-    function checkAll() {
-      if (A_seed.stars.every(q => Store.data.stars[q.id]) && sproutBtn.disabled) { sproutBtn.disabled = false; ui.say('You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.', { queue: true }); }
+    // the last part found unlocks the sprout button, and Pip says so right after that part's fact
+    function allFound() {
+      if (!A_seed.stars.every(q => Store.data.stars[q.id]) || !sproutBtn.disabled) return '';
+      sproutBtn.disabled = false; return '<br>You found every part! Press <b>Watch it sprout</b> to see what the embryo does next.';
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
@@ -963,7 +965,8 @@ const A_seed = {
         st.cursor = 'none';
       }
     };
-    magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag) ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
+    let magTold = false; // explain the magnifier the first time only
+    magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag && !magTold) magTold = ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
     sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); setTimeout(() => Sound.grow(3), 1800); setTimeout(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
     ui.button('Get a new bean', () => { reset(); Sound.pop(); ui.say(A_seed.intro); });
     reset(); magBtn.setAttribute('aria-pressed', 'false');
@@ -994,7 +997,6 @@ const A_flower = {
       s = { pieces: [], drag: null, cut: 0, cutOn: false, bee: null, tubeT: -1, fruit: 0, pollen: [], stamT: -9, lastAct: Loop.t, fruitDone: false };
       [-118, 118].forEach(a => s.pieces.push({ kind: 'sepal', ang: a, removed: false, dx: 0, dy: 0, fly: 0 }));
       [-66, 66, -33, 33, 0].forEach(a => s.pieces.push({ kind: 'petal', ang: a, removed: false, dx: 0, dy: 0, fly: 0 }));
-      if (found('stamen') && found('pistil')) { /* inner parts known, but a new flower still starts closed */ }
       Sound.buzz(false);
     }
     const left = k => s.pieces.filter(p => p.kind === k && !p.removed).length;
@@ -1268,7 +1270,7 @@ const A_grow = {
       const dim = above ? (1 - s.sunM / 100) : 0;
       sky(c, mix('#86CFEA', '#7F97A6', dim), mix('#E2F6FC', '#B8C6CC', dim), GY);
       const cov = clamp((55 - s.sunM) / 40, 0, 1) * (above ? 1 : 0); s.cloudX += ((t - s.sunT < 1.5 ? 900 : lerp(880, 640, cov)) - s.cloudX) * Math.min(1, dt * 2);
-      sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); if (st.over(circle(...SUN, 70))) {}
+      sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); st.over(circle(...SUN, 70)); // pointer cursor over the sun
       cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + ((t * 10) % 300), 60, .6);
       if (above && s.sunM < 1 && s.g < 7) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, 'Tap the sun!', SUN[0] - 10, SUN[1] + 66 - b, { size: 19, color: C.carrot }); }
       ground(c, GY, t);
@@ -1486,12 +1488,13 @@ const A_quiz = {
   mount(host, ui) {
     const box = document.createElement('div'); box.className = 'quiz-box'; host.appendChild(box);
     let round, idx, results, tries;
-    function newRound() {
-      const unseen = QUIZ.filter(q => !Store.data.stars['quiz.' + q.id]).sort(() => Math.random() - .5);
-      const seen = QUIZ.filter(q => Store.data.stars['quiz.' + q.id]).sort(() => Math.random() - .5);
-      round = unseen.concat(seen).slice(0, 8).sort(() => Math.random() - .5); idx = 0; results = []; show();
+    function newRound(lead) {
+      const unseen = shuffle(QUIZ.filter(q => !Store.data.stars['quiz.' + q.id]));
+      const seen = shuffle(QUIZ.filter(q => Store.data.stars['quiz.' + q.id]));
+      round = shuffle(unseen.concat(seen).slice(0, 8)); idx = 0; results = []; show(lead);
     }
-    function show() {
+    // lead: the tab's intro, said together with the first question so neither cuts the other off
+    function show(lead) {
       const q = round[idx]; tries = 0; box.innerHTML = '';
       const meta = document.createElement('div'); meta.className = 'q-meta';
       meta.innerHTML = `<span>Question ${idx + 1} of ${round.length}</span><span class="q-dots">${round.map((_, i) => `<i class="${results[i] === 1 ? 'ok' : results[i] === 0 ? 'meh' : ''} ${i === idx ? 'now' : ''}"></i>`).join('')}</span>`;
@@ -1499,12 +1502,12 @@ const A_quiz = {
       if (q.pic) { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Picture with an arrow pointing to a part'); body.appendChild(cv); requestAnimationFrame(() => drawQuizPic(cv, q.pic)); }
       const h = document.createElement('p'); h.className = 'q-text'; h.textContent = q.q; body.appendChild(h);
       const ch = document.createElement('div'); ch.className = 'choices';
-      [...q.a].sort(() => Math.random() - .5).forEach((txt, i) => {
+      shuffle(q.a).forEach((txt, i) => {
         const b = document.createElement('button'); b.className = 'choice'; b.textContent = txt;
         b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b);
       });
       const foot = document.createElement('div'); foot.className = 'q-foot';
-      box.append(meta, body, ch, foot); ui.say(q.q, { lock: true });
+      box.append(meta, body, ch, foot); ui.say((lead ? lead + ' ' : '') + q.q, { lock: true });
     }
     function answer(btn, right, q) {
       if (btn.disabled) return;
@@ -1530,7 +1533,7 @@ const A_quiz = {
     }
     ui.button('New round', () => { Sound.pop(); newRound(); });
     ui.hint('Stars only count on the first try, so take your time and think!');
-    newRound();
+    newRound(ui.intro);
     return { destroy() { box.remove(); } };
   }
 };
@@ -1565,7 +1568,8 @@ const Voice = {
   setVolume(v) { this.volume = v; if (this.gain && this.src) this.gain.gain.value = 1.25 * v; },
   load(name = this.name) {
     const pack = VOICE_PACKS[name]; if (!pack) return Promise.resolve();
-    if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    // a pack that's gone (say, a page opened before a deploy) comes back as the app page, since CloudFront serves index.html for missing files
+    if (!this.loading[name]) this.loading[name] = fetch(pack.file).then(r => r.ok && !/text\/html/.test(r.headers.get('content-type') || '') ? r.arrayBuffer() : Promise.reject(r.status))
       .then(b => { this.bufs[name] = skipId3(b); }).catch(() => { delete this.loading[name]; });
     return this.loading[name];
   },
@@ -1614,21 +1618,27 @@ const Voice = {
     await new Promise(r => setTimeout(r, wasTalking ? 350 : 260));
     if (my !== this.token) return;
     await this.load();
-    // play the longest recorded run of sentences each time, so whole messages keep their natural flow
-    const S = splitSentences(plainText(html));
-    for (let i = 0; i < S.length;) {
+    const P = this.pieces(html);
+    for (let n = 0; n < P.length; n++) {
       if (my !== this.token) return;
-      let k = null, j = S.length - 1;
-      const map = this.map;
-      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (map[kk]) { k = kk; break; } }
-      if (!k) { j = i; k = this.keyFor(S[i]); }
-      const audio = k ? await this.clip(k) : null;
+      const audio = P[n].key ? await this.clip(P[n].key) : null;
       if (my !== this.token) return;
       // every line Pip says is pre-recorded; anything missing stays silent rather than switching to a robotic device voice
-      if (audio) await this.play(audio, my); else console.warn('No recording for:', S.slice(i, j + 1).join(' '));
-      i = j + 1; if (i < S.length) await new Promise(r => setTimeout(r, 120));
+      if (audio) await this.play(audio, my); else console.warn('No recording for:', P[n].text);
+      if (n < P.length - 1) await new Promise(r => setTimeout(r, 120));
     }
     if (my === this.token) this.setSpeaking(false);
+  },
+  // split a message into recordings, taking the longest recorded run of sentences each time so whole messages keep their natural flow
+  pieces(html) {
+    const S = splitSentences(plainText(html)), map = this.map, out = [];
+    for (let i = 0; i < S.length;) {
+      let k = null, j = S.length - 1;
+      for (; j >= i; j--) { const kk = vkey(S.slice(i, j + 1).join(' ')); if (map[kk]) { k = kk; break; } }
+      if (!k) { j = i; k = this.keyFor(S[i]); }
+      out.push({ key: k, text: S.slice(i, j + 1).join(' ') }); i = j + 1;
+    }
+    return out;
   }
 };
 // the clip offsets count from the first audio byte; skip an ID3 tag if one got added to the file
@@ -1670,7 +1680,7 @@ const Settings = {
       b.innerHTML = `<span class="dot" aria-hidden="true"></span><span><b>${v.name}</b><small>${v.note}</small></span>`;
       b.onclick = () => this.setVoice(v.id); list.appendChild(b);
     }
-    if (!VOICE_CHOICES.length) list.innerHTML = '<p class="set-note">No recorded voices yet. Pip will use this device\'s voice.</p>';
+    if (!VOICE_CHOICES.length) list.innerHTML = '<p class="set-note">No recorded voices yet, so Pip can\'t read out loud.</p>';
   },
 
   // ----- progress -----
@@ -1685,13 +1695,13 @@ const Settings = {
   resetActivity(a) {
     for (const s of a.stars) delete Store.data.stars[s.id];
     delete Store.data.badges[a.badge.id]; delete Store.data.badges[App.topic.master.id]; Store.save();
-    Sound.whoosh(); refresh(); this.renderProgress(); if (App.act === a) mount(a);
-    say('Fresh start! Every star in this activity is ready to be found again.');
+    Sound.whoosh(); refresh(); this.renderProgress();
+    const msg = 'Fresh start! Every star in this activity is ready to be found again.';
+    if (App.act === a) mount(a, msg); else say(msg); // said with the intro, so one doesn't cut off the other
   },
   resetAll() {
     Store.data.stars = {}; Store.data.badges = {}; Store.save();
-    Sound.whoosh(); refresh(); this.renderProgress(); mount(App.act);
-    say('All clear! Every star is ready to be found again.');
+    Sound.whoosh(); refresh(); this.renderProgress(); mount(App.act, 'All clear! Every star is ready to be found again.');
   },
   renderProgress() {
     const ul = $('#progressList'); ul.innerHTML = '';
@@ -1729,7 +1739,7 @@ const Settings = {
     // explorer name
     const nm = $('#explorer'); nm.value = Store.data.name || '';
     nm.oninput = () => { this.save('name', nm.value.trim()); if (nm.value.length) Sound.tone(PENTA[nm.value.length % 10], .06, 'triangle', .05); };
-    nm.onchange = () => { if (Store.data.name) say(`Nice to meet you, <b>${Store.data.name.replace(/[<>&"]/g, '')}</b>! Let's explore together.`); };
+    nm.onchange = () => { const n = explorerName(); if (n) say(`Nice to meet you, <b>${n}</b>! Let's explore together.`); };
     // tap outside the dialog to close it
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     dlg.addEventListener('close', () => Sound.pop());
@@ -1742,7 +1752,7 @@ const TOPICS = [
 ];
 const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath
-Loop.add(() => { if (App.sayQ.length && calm(.9)) say(App.sayQ.shift()); });
+Loop.add(() => { if (App.sayQ.length && ready()) say(App.sayQ.shift()); });
 
 /* ============ Pip the seed ============ */
 const Pip = { talkUntil: 0, wowUntil: 0, pokeT: -9 };
@@ -1816,12 +1826,16 @@ function flyStar(cx, cy) {
 // Pip is "calm" when he isn't talking, nothing is waiting for the kid to listen, and he finished at least `gap` seconds ago
 function calm(gap = .9) { return !Voice.speaking && !Listen.on && Loop.t - (Voice.endT || -99) > gap && Loop.t - (App.sayT || -99) > gap; }
 function readTime(html) { return Math.max(4, plainText(html || '').split(' ').length * .4); }
+// ready for queued news: Pip is calm and, when he isn't reading out loud, the last line has had time to be read
+function ready() { return calm(.9) && (Voice.auto && Sound.unlocked || Loop.t - (App.sayT || -99) > readTime(App.current)); }
+// the explorer's name, without anything that would break the bubble or split Pip's sentences
+function explorerName() { return (Store.data.name || '').replace(/[<>&"().!?…]/g, '').replace(/\s+/g, ' ').trim(); }
 // say(html, opts)
 //   polite: a reminder; skipped (returns false) unless Pip is calm and the last line had time to be read
 //   queue:  news that waits its turn instead of cutting Pip off
 //   lock:   make the kid listen before tapping again; default: any line of 8+ words that isn't polite
 function say(html, { polite = false, queue = false, lock } = {}) {
-  if (queue && (Voice.speaking || Listen.on || App.sayQ.length)) { App.sayQ.push(html); return 'queued'; }
+  if (queue && (!ready() || App.sayQ.length)) { App.sayQ.push(html); return 'queued'; }
   if (polite && (!calm(2) || App.sayQ.length || Loop.t - (App.sayT || -99) < readTime(App.current))) return false;
   // tapping the same thing again while Pip is still saying it doesn't restart the line
   if (html === App.current && (Voice.speaking || Listen.on)) { const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); return true; }
@@ -1840,10 +1854,8 @@ const Listen = { on: false, t0: 0, dur: 0, voice: false, pending: [], nudgeT: -9
 function waitForPip() { return Store.data.waitForPip !== false; }
 function inputLocked() { return Listen.on; }
 function narrationSeconds(html) { // roughly how long the recording runs (packs are 56 kbps, about 7 kB a second)
-  const S = splitSentences(plainText(html)), map = Voice.map, whole = map[vkey(S.join(' '))];
-  let bytes = whole ? whole[1] : 0;
-  if (!whole) for (const s of S) { const k = Voice.keyFor(s); if (k && map[k]) bytes += map[k][1]; }
-  return bytes ? bytes / 7000 + .4 * S.length : S.join(' ').split(' ').length * .38;
+  const P = Voice.pieces(html), map = Voice.map, bytes = P.reduce((n, p) => n + (p.key && map[p.key] ? map[p.key][1] : 0), 0);
+  return bytes ? bytes / 7000 + .4 * P.length : plainText(html).split(' ').length * .38;
 }
 function startListening(html) {
   if (!waitForPip()) return;
@@ -1926,9 +1938,10 @@ function renderTabs() {
     nav.appendChild(b); drawIcon(b.querySelector('canvas'), a.icon);
   });
 }
-function makeUI() {
+function makeUI(intro) {
   const ui = {
     showAll: false,
+    intro, // what Pip says as the tab opens; an html activity says it itself (the quiz adds it to its first question)
     say, award,
     button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = e => { Sound.ensure(); if (inputLocked()) return nudge(e.clientX || b.getBoundingClientRect().left + 30, e.clientY || b.getBoundingClientRect().top + 10); fn(); }; $('#actions').appendChild(b); return b; },
     hint(text) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = text; $('#extra').appendChild(p); return p; },
@@ -1936,15 +1949,17 @@ function makeUI() {
   };
   return ui;
 }
-function mount(a) {
+// lead: a line Pip says just before the intro (after a reset), so the two don't cut each other off
+function mount(a, lead = '') {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
   const host = $('#stage'); host.innerHTML = ''; host.classList.toggle('quiz', !!a.html); $('#actions').innerHTML = ''; $('#extra').innerHTML = '';
   App.act = a; Store.data.last = a.id; Store.save();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.id === a.id ? 'true' : 'false'));
   refresh();
-  let intro = a.intro; if (!App.greeted) { App.greeted = true; const n = Store.data.name; intro = `Hi${n ? ' ' + n.replace(/[<>&"]/g, '') : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
-  App.inst = a.mount(host, makeUI()) || {};
+  let intro = (lead ? lead + ' ' : '') + a.intro;
+  if (!App.greeted) { App.greeted = true; const n = explorerName(); intro = `Hi${n ? ' ' + n : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
+  App.inst = a.mount(host, makeUI(intro)) || {};
   if (!a.html) say(intro);
 }
 function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }

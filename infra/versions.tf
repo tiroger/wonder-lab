@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = { source = "hashicorp/aws", version = "~> 6.0" }
   }
-  # State lives in S3 (created once by bootstrap.sh). use_lockfile gives S3-native locking, no DynamoDB needed.
+  # State lives in S3 (created once by infra/bootstrap). use_lockfile gives S3-native locking, no DynamoDB needed.
   backend "s3" {
     key          = "wonder-lab/site.tfstate"
     region       = "us-east-1"
