@@ -15,7 +15,11 @@ The platform must never look like it's about one subject. Plants are one topic a
 
 ## 2. The look: rules that make it Wonder Lab
 
-- **Everything is drawn in code.** Canvas 2D in the app, with no images and no libraries. (The mockups use inline SVG as a stand-in; the app draws the same shapes on a `<canvas>`.)
+- **Everything is made in code: no image files, no libraries.** Three layers:
+  - **Pictures are JavaScript drawing on a canvas** (Canvas 2D): activity scenes, Pip, the logo, tab and badge icons, topic covers, confetti.
+  - **Page layout and controls are HTML and CSS** in `src/00_markup.html`: the header, Pip's bubble, buttons, cards, tabs and Settings. Some are built by JavaScript at runtime (tabs, badge shelf, toasts).
+  - **Small UI icons are inline SVG**: the header toggles, read-aloud, the star (`STAR_SVG`) and the nudge hand.
+  - The mockups draw pictures in SVG too. In the app, pictures stay on a canvas.
 - **Sticker style.** Thick dark outlines (`--ink`, 3 px on cards and buttons, 4 px on the activity stage) and a solid offset shadow straight down (`0 3px 0` small controls, `0 5px 0` cards, `0 6px 0` stage). A pressed control moves down 3 px and loses its shadow.
 - **Rounded.** Radii are 14 px (buttons), 16 px (tabs), 22 px (cards and the bubble) and 26 px (stage).
 - **Warm paper ground with a dot grid**, `radial-gradient(dot 1.5px, transparent 1.6px)` at 22 px.
