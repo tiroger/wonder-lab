@@ -22,6 +22,13 @@ variable "github_repo" {
   type        = string
   default     = "tiroger/wonder-lab"
 }
+# GitHub now puts immutable IDs in the OIDC subject (repo:owner@owner_id/name@repo_id:...), so a renamed or
+# recreated repo can't inherit the roles. See: gh api repos/<owner>/<name>/actions/oidc/customization/sub
+variable "github_repo_immutable" {
+  description = "owner@owner_id/name@repo_id of the same repository"
+  type        = string
+  default     = "tiroger@49209247/wonder-lab@1391446809"
+}
 variable "domain" {
   type    = string
   default = "wonderlab.camp"
@@ -42,6 +49,7 @@ data "aws_route53_zone" "site" {
 
 locals {
   site_bucket = "${replace(var.domain, ".", "-")}-site"
+  subjects    = ["repo:${var.github_repo}", "repo:${var.github_repo_immutable}"] # both subject formats
 }
 
 # ---------------------------------------------------------------- state bucket --
@@ -105,7 +113,7 @@ data "aws_iam_policy_document" "assume_plan" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:pull_request"]
+      values   = [for s in local.subjects : "${s}:pull_request"]
     }
   }
 }
@@ -153,7 +161,7 @@ data "aws_iam_policy_document" "assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:environment:production"]
+      values   = [for s in local.subjects : "${s}:environment:production"]
     }
   }
 }
@@ -165,7 +173,7 @@ resource "aws_iam_role" "deploy" {
   max_session_duration = 3600
 }
 
-# Scoped to what the site's Terraform and deploy.sh touch. No IAM permissions at all,
+# Scoped to what the site's Terraform and the Deploy workflow touch. No IAM permissions at all,
 # so a compromised workflow can't widen its own access.
 data "aws_iam_policy_document" "deploy" {
   statement {
