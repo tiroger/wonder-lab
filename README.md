@@ -71,7 +71,7 @@ python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/wal
 ```
 
 ## Deploy: CI/CD with GitHub Actions + Terraform
-Same pattern as windchaser-ai: everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
+Everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
 
 | Workflow | When | What it does |
 |---|---|---|
@@ -82,8 +82,8 @@ AWS access comes from two roles the workflows assume through GitHub OIDC with sh
 - `wonder-lab-ci-plan`: trusted only for pull requests from this repo. Reads the Terraform state and this site's settings, nothing else in the account.
 - `wonder-lab-ci-deploy`: trusted only for the repo's `production` environment. It can change only this site's resources: the site bucket, the wonderlab.camp DNS records, and CloudFront and certificate resources tagged `Project = wonderlab` (functions by name). It has no IAM permissions.
 
-### One-time bootstrap (by hand, like windchaser-ai)
-`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the GitHub OIDC provider windchaser-ai already created in the account. It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
+### One-time bootstrap (by hand)
+`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the account's existing GitHub OIDC provider (an account has only one). It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
 ```
 aws sso login
 aws sts get-caller-identity                 # confirm the account first
