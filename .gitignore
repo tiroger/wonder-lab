@@ -11,3 +11,4 @@ infra/.terraform.tfstate.lock.info
 tests/last-run.png
 infra/bootstrap/.terraform/
 infra/bootstrap/terraform.tfstate*
+node_modules/

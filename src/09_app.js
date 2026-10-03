@@ -1,9 +1,9 @@
 /* ============ topics: add new ones here ============ */
 const TOPICS = [
-  { id: 'plants', name: 'Plants & Seeds', activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
+  { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.' } }
 ];
-const App = { topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
+const App = { view: '', topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath
 Loop.add(() => { if (App.sayQ.length && ready()) say(App.sayQ.shift()); });
 
@@ -11,19 +11,23 @@ Loop.add(() => { if (App.sayQ.length && ready()) say(App.sayQ.shift()); });
 const Pip = { talkUntil: 0, wowUntil: 0, pokeT: -9 };
 function drawPip(c, t) {
   c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, 108, 108);
-  const talking = t < Pip.talkUntil, wow = t < Pip.wowUntil, poke = t - Pip.pokeT < .6;
-  const bob = RM ? 0 : Math.sin(t * 2.2) * 2 - (talking ? Math.abs(Math.sin(t * 10)) * 3 : 0) - (wow || poke ? Math.abs(Math.sin(t * 12)) * 6 : 0);
-  c.save(); c.translate(54, 64);
-  c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 36, 26 - bob, 5, 0, 0, TAU); c.fill();
+  // eyes follow your finger on the stage
+  const st = App.inst && App.inst.stage;
+  const look = st && st.p.inside ? [clamp((st.p.x / W - .5) * 5, -2.5, 2.5), clamp((st.p.y / H - .2) * 3, -2, 2.5)] : null;
+  c.save(); c.translate(54, 64); pipFigure(c, t, { talking: t < Pip.talkUntil, wow: t < Pip.wowUntil, poke: t - Pip.pokeT < .6, look }); c.restore();
+}
+// Pip at the origin (body center; feet near y 29, shadow at y 36). Used by the guide and on the campus map.
+function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0 } = {}) {
+  const bob = RM ? 0 : Math.sin(t * 2.2) * 2 - (talking ? Math.abs(Math.sin(t * 10)) * 3 : 0) - (wow || poke ? Math.abs(Math.sin(t * 12)) * 6 : 0) - hop;
+  c.save();
+  c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 36, Math.max(10, 26 - bob), 5, 0, 0, TAU); c.fill();
   c.translate(0, bob);
   const sw = RM ? 0 : Math.sin(t * 1.7) * 6;
   c.strokeStyle = C.leafDeep; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(3, -24); c.quadraticCurveTo(1, -36, 3 + sw * .4, -44); c.stroke();
   drawLeaf(c, 3 + sw * .4, -44, -150 + sw, .22); drawLeaf(c, 3 + sw * .4, -44, -30 + sw, .24);
   c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28); g.addColorStop(0, '#F8E6AE'); g.addColorStop(1, '#E3C27A');
   c.fillStyle = g; c.fill(body); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(body); c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-16, -16, 12, 5, -.4, 0, TAU); c.fill(); c.restore();
-  // eyes follow your finger
-  let lx = Math.sin(t * .7) * 1.5, ly = 0; const st = App.inst && App.inst.stage;
-  if (st && st.p.inside) { lx = clamp((st.p.x / W - .5) * 5, -2.5, 2.5); ly = clamp((st.p.y / H - .2) * 3, -2, 2.5); }
+  const lx = look ? look[0] : Math.sin(t * .7) * 1.5, ly = look ? look[1] : 0;
   const blink = (t % 3.7) < .12;
   for (const ex of [-12, 12]) {
     c.fillStyle = '#fff'; c.strokeStyle = C.ink; c.lineWidth = 2; c.beginPath(); c.ellipse(ex, -4, 8, blink ? 1 : 9, 0, 0, TAU); c.fill(); c.stroke();
@@ -96,7 +100,8 @@ function say(html, { polite = false, queue = false, lock } = {}) {
   const p = $('#say'); p.innerHTML = html; App.current = html; const b = $('#bubble'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   const words = plainText(html).split(' ').length; Pip.talkUntil = Loop.t + Math.min(3.5, .6 + words * .12);
   if (Voice.auto && Sound.unlocked) Voice.speak(html); else Sound.babble(Math.min(6, 2 + Math.floor(words / 6)));
-  if (lock ?? (!polite && words >= 8)) startListening(html);
+  App.currentLocks = lock ?? (!polite && words >= 8); // hearOpening needs to know
+  if (App.currentLocks) startListening(html);
   return true;
 }
 
@@ -151,7 +156,7 @@ function celebrate(id, cx, cy) {
 const allBadges = topic => topic.activities.map(a => ({ ...a.badge, icon: a.icon, act: a })).concat([topic.master]);
 function hasBadge(a) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => Store.data.stars[s.id]).length >= need; }
 function checkBadges() {
-  const tp = App.topic; let changed = false;
+  const tp = App.topic; if (!tp) return; let changed = false;
   for (const a of tp.activities) if (!Store.data.badges[a.badge.id] && hasBadge(a)) { Store.data.badges[a.badge.id] = Date.now(); App.toastQ.push({ ...a.badge, icon: a.icon }); changed = true; }
   if (!Store.data.badges[tp.master.id] && tp.activities.every(a => Store.data.badges[a.badge.id])) { Store.data.badges[tp.master.id] = Date.now(); App.toastQ.push(tp.master); changed = true; }
   if (changed) { Store.save(); refresh(); nextToast(); }
@@ -170,9 +175,10 @@ function nextToast() {
 
 /* ============ page rendering ============ */
 function refresh() {
-  const tp = App.topic, stars = Store.data.stars;
-  const total = tp.activities.reduce((n, a) => n + a.stars.length, 0), have = tp.activities.reduce((n, a) => n + a.stars.filter(s => stars[s.id]).length, 0);
+  const tp = App.topic, stars = Store.data.stars, acts = tp ? tp.activities : TOPICS.flatMap(t => t.activities); // home counts every topic
+  const total = acts.reduce((n, a) => n + a.stars.length, 0), have = acts.reduce((n, a) => n + a.stars.filter(s => stars[s.id]).length, 0);
   $('#starCount').textContent = have; $('#starTotal').textContent = total;
+  if (!tp) { if (App.view === 'home') renderHome(); return; }
   for (const a of tp.activities) { const el = document.querySelector(`.tab[data-id="${a.id}"]`); if (!el) continue; const n = a.stars.filter(s => stars[s.id]).length; el.querySelector('.count').textContent = `${n} of ${a.stars.length} stars`; el.classList.toggle('done', hasBadge(a)); }
   if (App.act) $('#finds').innerHTML = App.act.stars.map(s => `<li class="${stars[s.id] ? 'got' : ''} ${App.fresh === s.id ? 'fresh' : ''}">${STAR_SVG(!!stars[s.id])}<span>${s.name}</span></li>`).join('');
   App.fresh = null;
@@ -203,9 +209,13 @@ function makeUI(intro) {
   return ui;
 }
 // lead: a line Pip says just before the intro (after a reset), so the two don't cut each other off
-function mount(a, lead = '') {
+// stop whatever is running: the activity, Pip mid-sentence, queued lines, the listen hold, sound loops
+function leaveActivity() {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
+}
+function mount(a, lead = '') {
+  leaveActivity();
   const host = $('#stage'); host.innerHTML = ''; host.classList.toggle('quiz', !!a.html); $('#actions').innerHTML = ''; $('#extra').innerHTML = '';
   App.act = a; Store.data.last = { topic: App.topic.id, activity: a.id }; Store.save();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.id === a.id ? 'true' : 'false'));
@@ -221,19 +231,23 @@ function mount(a, lead = '') {
 function hearOpening(e) {
   if (!Voice.auto || !App.current || (e.target.closest && e.target.closest('#readBtn, #pip, #talkBtn'))) return;
   App.sayT = Loop.t; Voice.speak(App.current);
-  if (plainText(App.current).split(' ').length >= 8) startListening(App.current);
+  if (App.currentLocks) startListening(App.current);
 }
 /* ============ routes: every place has its own link, so back, refresh and bookmarks work ============ */
-// #/<topic>/<activity> (and #/<topic>, which opens its last or first activity)
+// #/ home, #/<topic>/<activity> (and #/<topic>, which opens its last or first activity); anything else goes home
 // the last place: { topic, activity }; older saves stored just a Plants & Seeds activity id
-function lastPlace() { const l = Store.data.last; return typeof l === 'string' ? { topic: 'plants', activity: l } : l || {}; }
+function lastPlace() { const l = Store.data.last; return typeof l === 'string' ? (l ? { topic: 'plants', activity: l } : {}) : l || {}; }
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
 function route() {
   const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
-  const tp = TOPICS.find(t => t.id === tid) || TOPICS.find(t => t.id === last.topic) || TOPICS[0];
+  const tp = TOPICS.find(t => t.id === tid);
+  if (!tp) { if (location.hash !== '#/') history.replaceState(null, '', '#/'); if (App.view !== 'home') showHome(); return; }
   const a = tp.activities.find(x => x.id === aid) || (last.topic === tp.id && tp.activities.find(x => x.id === last.activity)) || tp.activities[0];
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
-  if (App.topic !== tp) { App.topic = tp; renderTabs(); $('#topic').value = tp.id; }
+  if (App.view !== 'topic' || App.topic !== tp) {
+    App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name;
+    document.documentElement.classList.remove('at-home'); document.documentElement.classList.add('in-topic');
+  }
   if (App.act !== a) mount(a);
 }
 // ids are saved in progress, so they must be unique across topics; new topics prefix theirs with the topic id
@@ -254,19 +268,19 @@ function init() {
   const h1 = $('#title'); h1.innerHTML = [...'Wonder'].map(ch => `<span class="w">${ch}</span>`).join('') + ' ' + [...'Lab'].map(ch => `<span class="l">${ch}</span>`).join('');
   h1.querySelectorAll('span').forEach((sp, i) => { const go = () => { sp.classList.remove('hop'); void sp.offsetWidth; sp.classList.add('hop'); Sound.tone(PENTA[i % 10], .12, 'triangle', .06); }; sp.addEventListener('mouseenter', go); sp.addEventListener('pointerdown', go); });
   // logo + Pip
-  const logo = $('#logo'); Loop.add(t => drawIcon(logo, 'grow', t));
+  const logo = $('#logo'); Loop.add(t => drawIcon(logo, 'flask', t));
   const pip = $('#pip'), pc = pip.getContext('2d'); Loop.add(t => drawPip(pc, t));
   pip.addEventListener('pointerdown', () => { Sound.ensure(); Pip.pokeT = Loop.t; Sound.boing(); setTimeout(() => Voice.speak(App.current), 250); confetti(pip.getBoundingClientRect().left + 54, pip.getBoundingClientRect().top + 40, 10, .4); });
-  // topic dropdown
-  const sel = $('#topic'); sel.innerHTML = TOPICS.map(t => `<option value="${t.id}">${t.name}</option>`).join('') + '<option disabled>More topics coming soon…</option>';
-  sel.onchange = () => { const tp = TOPICS.find(t => t.id === sel.value); if (tp) { Sound.whoosh(); go(`#/${tp.id}`); } };
+  // home: the logo, the title and the breadcrumb's Home button
+  for (const el of [$('#homeLink'), $('#crumbHome')]) el.addEventListener('click', () => Sound.whoosh());
+  homeInit();
   $('#readBtn').onclick = () => { if (Voice.speaking) Voice.stop(); else Voice.speak(App.current); };
   Settings.init();
   if (Voice.auto) Voice.load(); // fetching needs no tap, so the opening line can play as soon as sound is allowed
   const unlock = e => { Sound.unlocked = true; Sound.ensure(); Sound.levels(); Voice.load(); if (Store.data.music && !Music.on) Settings.setMusic(true); hearOpening(e); };
   document.addEventListener('pointerdown', unlock, { capture: true, once: true }); document.addEventListener('keydown', unlock, { capture: true, once: true });
   // ambient birds now and then
-  setInterval(() => { if (Sound.on && Sound.ctx && !document.hidden && App.act && App.act.id !== 'quiz' && Math.random() < .5) Sound.chirp(); }, 9000);
+  setInterval(() => { if (Sound.on && Sound.ctx && !document.hidden && (App.view === 'home' || App.act && App.act.id !== 'quiz') && Math.random() < .5) Sound.chirp(); }, 9000);
   checkIds();
   addEventListener('hashchange', route);
   route();
