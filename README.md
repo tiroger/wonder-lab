@@ -71,19 +71,19 @@ python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/wal
 ```
 
 ## Deploy: CI/CD with GitHub Actions + Terraform
-Same pattern as windchaser-ai: everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
+Everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
 
 | Workflow | When | What it does |
 |---|---|---|
 | `.github/workflows/ci.yml` | every pull request | builds the page, checks the script, `terraform fmt` + `validate`, plays every activity end to end (`tests/walkthrough.js`), and posts a `terraform plan` to the run summary using the read-only plan role |
 | `.github/workflows/deploy.yml` | push to `main` (or run by hand) | in the `production` environment: `terraform apply`, build, upload to S3, refresh CloudFront |
 
-AWS access comes from two roles the workflows assume through GitHub OIDC with short-lived sessions:
-- `wonder-lab-ci-plan`: read-only, trusted only for pull requests from this repo.
-- `wonder-lab-ci-deploy`: trusted only for the repo's `production` environment. It can touch the site bucket, CloudFront, ACM and the wonderlab.camp DNS records, and has no IAM permissions.
+AWS access comes from two roles the workflows assume through GitHub OIDC with short-lived sessions. Workflow actions are pinned to commit SHAs (Dependabot proposes updates):
+- `wonder-lab-ci-plan`: trusted only for pull requests from this repo. Reads the Terraform state and this site's settings, nothing else in the account.
+- `wonder-lab-ci-deploy`: trusted only for the repo's `production` environment. It can change only this site's resources: the site bucket, the wonderlab.camp DNS records, and CloudFront and certificate resources tagged `Project = wonderlab` (functions by name). It has no IAM permissions.
 
-### One-time bootstrap (by hand, like windchaser-ai)
-`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the GitHub OIDC provider windchaser-ai already created in the account. It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
+### One-time bootstrap (by hand)
+`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the account's existing GitHub OIDC provider (an account has only one). It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
 ```
 aws sso login
 aws sts get-caller-identity                 # confirm the account first
@@ -96,7 +96,7 @@ Then create the GitHub repo and point it at the account:
 ```
 gh repo create tiroger/wonder-lab --private
 git remote add origin git@github.com-personal:tiroger/wonder-lab.git
-terraform output -raw github_variable_commands    # run the four commands it prints
+terraform output -raw github_variable_commands    # run the commands it prints
 git push -u origin main                           # first deploy
 ```
 Keep `infra/bootstrap/terraform.tfstate` (git-ignored) somewhere safe; it only matters if the bootstrap ever changes.
