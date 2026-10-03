@@ -6,7 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 KEY = re.search(r'(sk-[A-Za-z0-9_\-]+)', open('.env').read()).group(1)
 lines = json.load(open('voice/lines.json'))
 NUM = {'1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '8': 'eight', '10': 'ten', '12': 'twelve', 'ok': 'okay'}
-norm = lambda s: [NUM.get(w, w) for w in re.sub(r'[^a-z0-9 ]', '', s.lower().replace('-', ' ')).split()]
+# transcripts sometimes join the app's name into one word; that's not a recording problem
+norm = lambda s: [NUM.get(w, w) for w in re.sub(r'[^a-z0-9 ]', '', s.lower().replace('-', ' ').replace('wonderlab', 'wonder lab')).split()]
 
 def check(voice, item):
     k, text = item; b = uuid.uuid4().hex; audio = open(f'voice/clips/{voice}/{k}.mp3', 'rb').read()
