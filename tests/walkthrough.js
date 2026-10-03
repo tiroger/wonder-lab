@@ -172,6 +172,39 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     }
     return { messagesSaid: window.__said.length, ...out };
   });
+  // ---------- Routing: every place has its own link (fresh sessions, so the main run's recorders stay clean) ----------
+  const fresh = async (init) => {
+    const ctx = await browser.newContext({ viewport: { width: 1100, height: 1300 } });
+    if (init) await ctx.addInitScript(init);
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    await p.goto(URL); await sleep(900); return { ctx, p };
+  };
+  const routing = {};
+  {
+    const { ctx, p } = await fresh();
+    routing.start = await p.evaluate(() => location.hash);
+    await p.click('.tab[data-id="seed"]'); await sleep(500);
+    routing.tabHash = await p.evaluate(() => location.hash);
+    await p.click('.tab[data-id="flower"]'); await sleep(500);
+    await p.goBack(); await sleep(700);
+    routing.back = await p.evaluate(() => ({ hash: location.hash, act: App.act.id, tab: document.querySelector('.tab[aria-selected="true"]').dataset.id }));
+    await p.evaluate(() => { location.hash = '#/plants/grow'; }); await sleep(500); await p.reload(); await sleep(900);
+    routing.refresh = await p.evaluate(() => App.act.id);
+    await p.evaluate(() => { location.hash = '#/nowhere/at-all'; }); await sleep(700);
+    routing.unknown = await p.evaluate(() => ({ hash: location.hash, act: App.act.id }));
+    routing.saved = await p.evaluate(() => JSON.parse(localStorage.getItem('wonderlab.v1')).last);
+    routing.ids = await p.evaluate(() => checkIds());
+    await ctx.close();
+  }
+  {
+    // saves from before routing stored just the activity id
+    const { ctx, p } = await fresh(() => { if (!localStorage.getItem('wonderlab.v1')) localStorage.setItem('wonderlab.v1', JSON.stringify({ last: 'flower', stars: {}, badges: {} })); });
+    routing.oldSave = await p.evaluate(() => ({ hash: location.hash, act: App.act.id }));
+    await ctx.close();
+  }
+  report.routing = routing;
+
   report.errors = errors; report.noRecordingWarnings = warnings.filter(w => w.includes('No recording'));
   console.log(JSON.stringify(report, null, 1));
   await page.screenshot({ path: 'tests/last-run.png' });
@@ -200,6 +233,13 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Seed Travel: 4 stars': report.travel.length === 4,
     'Plant Quiz: 12 stars': report.quiz === '12 of 12',
     'All 7 badges': report.badges.length === 7,
+    'Routing: each activity has its own link': report.routing.start === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
+    'Routing: back returns to the previous activity': report.routing.back.hash === '#/plants/seed' && report.routing.back.act === 'seed' && report.routing.back.tab === 'seed',
+    'Routing: refresh keeps your place': report.routing.refresh === 'grow',
+    'Routing: an unknown link falls back to the last place': report.routing.unknown.hash === '#/plants/grow' && report.routing.unknown.act === 'grow',
+    'Last place saved as topic + activity': report.routing.saved && report.routing.saved.topic === 'plants' && report.routing.saved.activity === 'grow',
+    'Old saves still open the last activity': report.routing.oldSave.act === 'flower' && report.routing.oldSave.hash === '#/plants/flower',
+    'Topic ids are unique (new topics prefixed)': report.routing.ids.length === 0,
     'Every line recorded in every voice': Object.entries(report.voiceCoverage).every(([k, v]) => k === 'messagesSaid' || v === 'all recorded'),
     'No page errors': report.errors.length === 0 && report.noRecordingWarnings.length === 0
   };

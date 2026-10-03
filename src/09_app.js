@@ -187,7 +187,7 @@ function renderTabs() {
   App.topic.activities.forEach((a, i) => {
     const b = document.createElement('button'); b.className = 'tab'; b.dataset.id = a.id; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', 'false');
     b.innerHTML = `<canvas width="96" height="96" aria-hidden="true"></canvas><span><b>${a.name}</b><span class="count"></span></span>`;
-    b.onclick = () => { Sound.tap(i); if (App.act !== a) mount(a); }; b.onmouseenter = () => Sound.tone(PENTA[i] * 2, .05, 'sine', .04);
+    b.onclick = () => { Sound.tap(i); if (App.act !== a) go(`#/${App.topic.id}/${a.id}`); }; b.onmouseenter = () => Sound.tone(PENTA[i] * 2, .05, 'sine', .04);
     nav.appendChild(b); drawIcon(b.querySelector('canvas'), a.icon);
   });
 }
@@ -207,7 +207,7 @@ function mount(a, lead = '') {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
   const host = $('#stage'); host.innerHTML = ''; host.classList.toggle('quiz', !!a.html); $('#actions').innerHTML = ''; $('#extra').innerHTML = '';
-  App.act = a; Store.data.last = a.id; Store.save();
+  App.act = a; Store.data.last = { topic: App.topic.id, activity: a.id }; Store.save();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.id === a.id ? 'true' : 'false'));
   refresh();
   let intro = (lead ? lead + ' ' : '') + a.intro;
@@ -223,7 +223,29 @@ function hearOpening(e) {
   App.sayT = Loop.t; Voice.speak(App.current);
   if (plainText(App.current).split(' ').length >= 8) startListening(App.current);
 }
-function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }
+/* ============ routes: every place has its own link, so back, refresh and bookmarks work ============ */
+// #/<topic>/<activity> (and #/<topic>, which opens its last or first activity)
+// the last place: { topic, activity }; older saves stored just a Plants & Seeds activity id
+function lastPlace() { const l = Store.data.last; return typeof l === 'string' ? { topic: 'plants', activity: l } : l || {}; }
+function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
+function route() {
+  const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
+  const tp = TOPICS.find(t => t.id === tid) || TOPICS.find(t => t.id === last.topic) || TOPICS[0];
+  const a = tp.activities.find(x => x.id === aid) || (last.topic === tp.id && tp.activities.find(x => x.id === last.activity)) || tp.activities[0];
+  const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
+  if (App.topic !== tp) { App.topic = tp; renderTabs(); $('#topic').value = tp.id; }
+  if (App.act !== a) mount(a);
+}
+// ids are saved in progress, so they must be unique across topics; new topics prefix theirs with the topic id
+function checkIds() {
+  const seen = new Set(), bad = [];
+  for (const tp of TOPICS) {
+    const ids = [...tp.activities.flatMap(a => [a.id, a.badge.id, ...a.stars.map(s => s.id)]), tp.master.id];
+    for (const id of ids) { if (seen.has(id)) bad.push(`duplicate id ${id}`); seen.add(id); if (tp.id !== 'plants' && !id.startsWith(tp.id + '.')) bad.push(`${id} should start with ${tp.id}.`); }
+  }
+  if (bad.length) console.error('Topic ids: ' + bad.join(', '));
+  return bad;
+}
 
 function init() {
   Store.load();
@@ -237,7 +259,7 @@ function init() {
   pip.addEventListener('pointerdown', () => { Sound.ensure(); Pip.pokeT = Loop.t; Sound.boing(); setTimeout(() => Voice.speak(App.current), 250); confetti(pip.getBoundingClientRect().left + 54, pip.getBoundingClientRect().top + 40, 10, .4); });
   // topic dropdown
   const sel = $('#topic'); sel.innerHTML = TOPICS.map(t => `<option value="${t.id}">${t.name}</option>`).join('') + '<option disabled>More topics coming soon…</option>';
-  sel.onchange = () => { const tp = TOPICS.find(t => t.id === sel.value); if (tp) { Sound.whoosh(); selectTopic(tp); } };
+  sel.onchange = () => { const tp = TOPICS.find(t => t.id === sel.value); if (tp) { Sound.whoosh(); go(`#/${tp.id}`); } };
   $('#readBtn').onclick = () => { if (Voice.speaking) Voice.stop(); else Voice.speak(App.current); };
   Settings.init();
   if (Voice.auto) Voice.load(); // fetching needs no tap, so the opening line can play as soon as sound is allowed
@@ -245,6 +267,8 @@ function init() {
   document.addEventListener('pointerdown', unlock, { capture: true, once: true }); document.addEventListener('keydown', unlock, { capture: true, once: true });
   // ambient birds now and then
   setInterval(() => { if (Sound.on && Sound.ctx && !document.hidden && App.act && App.act.id !== 'quiz' && Math.random() < .5) Sound.chirp(); }, 9000);
-  selectTopic(TOPICS[0]);
+  checkIds();
+  addEventListener('hashchange', route);
+  route();
 }
 init();

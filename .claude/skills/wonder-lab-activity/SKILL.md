@@ -4,6 +4,9 @@ description: How to build a Wonder Lab activity (the activity object, Stage canv
 ---
 # Building a Wonder Lab activity
 
+The look (colors, outlines, motion, sound, Pip) is in `docs/design.md`; follow it so every activity feels like the same app.
+Each activity has its own link, `#/<topic>/<activity id>`; switch with `go(hash)`, never by calling `mount` directly.
+
 ## The activity object
 Each activity is a `const` in its own `src/0N_name.js`, listed in a topic's `activities` in `src/09_app.js`:
 ```js
@@ -11,6 +14,7 @@ const A_example = {
   id: 'example', name: 'Tab Name', icon: 'plant',          // icon = key in ICONS (src/07_quiz.js), drawn in a 100x100 box
   badge: { id: 'b.example', name: 'Badge Name', desc: 'You did the thing!' },
   stars: [{ id: 'example.first', name: 'First idea' }, ...],   // 3-6, each a real concept; ids are saved, never rename them
+                                                            // in a new topic, prefix every id with the topic id: 'space.example', 'space.example.first'
   badgeNeed: 10,                                            // optional; default = all stars
   html: true,                                               // optional; activity builds DOM instead of a canvas (the quiz); it must say ui.intro itself
   intro: 'What Pip says when the tab opens. <b>Bold</b> the action.',
