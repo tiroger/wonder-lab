@@ -16,5 +16,5 @@ terraform {
 # Everything lives in us-east-1 because CloudFront only accepts ACM certificates from that region.
 provider "aws" {
   region = "us-east-1"
-  default_tags { tags = { Project = "wonder-lab", ManagedBy = "terraform" } }
+  default_tags { tags = { Project = "wonderlab", ManagedBy = "terraform" } }
 }

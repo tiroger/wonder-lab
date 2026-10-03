@@ -14,7 +14,7 @@ terraform {
 
 provider "aws" {
   region = "us-east-1"
-  default_tags { tags = { Project = "wonder-lab", ManagedBy = "terraform", Root = "bootstrap" } }
+  default_tags { tags = { Project = "wonderlab", ManagedBy = "terraform", Root = "bootstrap" } }
 }
 
 variable "github_repo" {
@@ -48,7 +48,12 @@ data "aws_route53_zone" "site" {
 }
 
 locals {
-  site_bucket = "${replace(var.domain, ".", "-")}-site"
+  account     = data.aws_caller_identity.current.account_id
+  project     = "wonderlab"                   # the Project tag infra/versions.tf puts on every site resource
+  owned_tags  = [local.project, "wonder-lab"] # "wonder-lab" is the old value: drop it once the site is retagged
+  prefix      = replace(var.domain, ".", "-")
+  site_names  = [var.domain, "www.${var.domain}"]
+  site_bucket = "${local.prefix}-site"
   subjects    = ["repo:${var.github_repo}", "repo:${var.github_repo_immutable}"] # both subject formats
 }
 
@@ -124,11 +129,9 @@ resource "aws_iam_role" "plan" {
   assume_role_policy   = data.aws_iam_policy_document.assume_plan.json
   max_session_duration = 3600
 }
-resource "aws_iam_role_policy_attachment" "plan_readonly" {
-  role       = aws_iam_role.plan.name
-  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
-}
-data "aws_iam_policy_document" "plan_state" {
+# Only what `terraform plan` on infra/ reads. The account is shared with other projects, so no account-wide
+# read access: no S3 objects outside the state bucket, no databases, no other project's settings.
+data "aws_iam_policy_document" "plan" {
   statement {
     sid       = "ReadState"
     actions   = ["s3:ListBucket", "s3:GetObject"]
@@ -139,11 +142,31 @@ data "aws_iam_policy_document" "plan_state" {
     actions   = ["s3:PutObject", "s3:DeleteObject"]
     resources = ["${aws_s3_bucket.state.arn}/*.tflock"]
   }
+  statement {
+    sid       = "SiteBucketSettings" # the bucket's own settings, not the files in it
+    actions   = ["s3:Get*", "s3:List*"]
+    resources = ["arn:aws:s3:::${local.site_bucket}"]
+  }
+  statement {
+    sid       = "CloudFrontAndCertificateRead" # configuration only; certificates' private keys are never readable
+    actions   = ["cloudfront:Get*", "cloudfront:List*", "cloudfront:Describe*", "acm:Describe*", "acm:Get*", "acm:List*"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "DnsZone"
+    actions   = ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"]
+    resources = [data.aws_route53_zone.site.arn]
+  }
+  statement {
+    sid       = "DnsLookup"
+    actions   = ["route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:GetChange"]
+    resources = ["*"]
+  }
 }
-resource "aws_iam_role_policy" "plan_state" {
-  name   = "wonder-lab-plan-state"
+resource "aws_iam_role_policy" "plan" {
+  name   = "wonder-lab-plan"
   role   = aws_iam_role.plan.id
-  policy = data.aws_iam_policy_document.plan_state.json
+  policy = data.aws_iam_policy_document.plan.json
 }
 
 data "aws_iam_policy_document" "assume" {
@@ -186,21 +209,88 @@ data "aws_iam_policy_document" "deploy" {
     actions   = ["s3:*"]
     resources = ["arn:aws:s3:::${local.site_bucket}", "arn:aws:s3:::${local.site_bucket}/*"]
   }
+  # The account is shared, so anything that changes or deletes CloudFront or ACM resources is limited to this
+  # site's: the distribution and certificate by their Project tag (the site's provider adds it to everything),
+  # functions by name. Creating can't be scoped (there's no resource yet) and harms nothing else.
   statement {
-    sid = "CloudFront" # CloudFront and ACM don't support resource-level scoping for create calls
-    actions = [
-      "cloudfront:*Distribution*", "cloudfront:*OriginAccessControl*", "cloudfront:*Function*",
-      "cloudfront:CreateInvalidation", "cloudfront:GetInvalidation", "cloudfront:ListInvalidations",
-      "cloudfront:GetCachePolicy", "cloudfront:ListCachePolicies",
-      "cloudfront:GetResponseHeadersPolicy", "cloudfront:ListResponseHeadersPolicies",
-      "cloudfront:TagResource", "cloudfront:UntagResource", "cloudfront:ListTagsForResource"
-    ]
+    sid       = "CloudFrontAndCertificateRead"
+    actions   = ["cloudfront:Get*", "cloudfront:List*", "cloudfront:Describe*", "acm:Describe*", "acm:Get*", "acm:List*"]
     resources = ["*"]
   }
   statement {
-    sid       = "Certificate"
-    actions   = ["acm:RequestCertificate", "acm:DescribeCertificate", "acm:DeleteCertificate", "acm:ListCertificates", "acm:ListTagsForCertificate", "acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate", "acm:GetCertificate"]
+    sid       = "CloudFrontCreate"
+    actions   = ["cloudfront:CreateDistribution", "cloudfront:CreateFunction", "cloudfront:CreateOriginAccessControl"]
     resources = ["*"]
+  }
+  statement {
+    sid       = "Distribution"
+    actions   = ["cloudfront:UpdateDistribution", "cloudfront:DeleteDistribution", "cloudfront:CreateInvalidation", "cloudfront:TagResource", "cloudfront:UntagResource"]
+    resources = ["arn:aws:cloudfront::${local.account}:distribution/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = local.owned_tags
+    }
+  }
+  statement {
+    sid       = "DistributionTagNew" # tags a distribution as it's created; can't relabel another project's
+    actions   = ["cloudfront:TagResource"]
+    resources = ["arn:aws:cloudfront::${local.account}:distribution/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [local.project]
+    }
+    condition {
+      test     = "Null"
+      variable = "aws:ResourceTag/Project"
+      values   = ["true"]
+    }
+  }
+  statement {
+    sid       = "Functions"
+    actions   = ["cloudfront:UpdateFunction", "cloudfront:PublishFunction", "cloudfront:DeleteFunction", "cloudfront:TestFunction", "cloudfront:TagResource", "cloudfront:UntagResource"]
+    resources = ["arn:aws:cloudfront::${local.account}:function/${local.prefix}-*"]
+  }
+  statement {
+    sid       = "OriginAccessControl" # these support neither tags nor names in their ARN
+    actions   = ["cloudfront:UpdateOriginAccessControl", "cloudfront:DeleteOriginAccessControl"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "CertificateRequest" # only for this site's names
+    actions   = ["acm:RequestCertificate"]
+    resources = ["*"]
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "acm:DomainNames"
+      values   = local.site_names
+    }
+  }
+  statement {
+    sid       = "Certificate"
+    actions   = ["acm:DeleteCertificate", "acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate"]
+    resources = ["arn:aws:acm:us-east-1:${local.account}:certificate/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = local.owned_tags
+    }
+  }
+  statement {
+    sid       = "CertificateTagNew" # tags a certificate as it's requested; can't relabel another project's
+    actions   = ["acm:AddTagsToCertificate"]
+    resources = ["arn:aws:acm:us-east-1:${local.account}:certificate/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [local.project]
+    }
+    condition {
+      test     = "Null"
+      variable = "aws:ResourceTag/Project"
+      values   = ["true"]
+    }
   }
   statement {
     sid       = "DnsRecords"
@@ -225,9 +315,10 @@ output "state_bucket" { value = aws_s3_bucket.state.id }
 output "deploy_role_arn" { value = aws_iam_role.deploy.arn }
 output "plan_role_arn" { value = aws_iam_role.plan.arn }
 output "github_variable_commands" {
-  description = "Run these once: create the production environment and point the workflows at this account"
+  description = "Run these once: create the production environment (deploys from main only) and point the workflows at this account"
   value       = <<-EOT
-    gh api -X PUT repos/${var.github_repo}/environments/production
+    gh api -X PUT repos/${var.github_repo}/environments/production -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'
+    gh api -X POST repos/${var.github_repo}/environments/production/deployment-branch-policies -f name=main -f type=branch
     gh variable set TF_STATE_BUCKET --repo ${var.github_repo} --body "${aws_s3_bucket.state.id}"
     gh variable set AWS_PLAN_ROLE_ARN --repo ${var.github_repo} --body "${aws_iam_role.plan.arn}"
     gh variable set AWS_DEPLOY_ROLE_ARN --repo ${var.github_repo} --env production --body "${aws_iam_role.deploy.arn}"
