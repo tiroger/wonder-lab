@@ -6,7 +6,6 @@ Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
 **Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15). Space and Weather in the tables are examples until those topics exist.
-Mockups: https://claude.ai/artifact/8mD2F3fKfsMHX11TgtKtLP (private to Roger; read it with the Artifact tool).
 
 ---
 

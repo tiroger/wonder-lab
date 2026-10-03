@@ -12,3 +12,4 @@ tests/last-run.png
 infra/bootstrap/.terraform/
 infra/bootstrap/terraform.tfstate*
 node_modules/
+docs/internal.md
