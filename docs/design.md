@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** sections 1–14 describe the app as built. Sections 15–16 are decided but not built yet: per-topic accent colors and Pip costumes (section 15) and a **Lab campus map** home page (section 16).
+**Status (2026-10-03):** sections 1–14 describe the app as built. Sections 15–16 are decided but not built yet: per-topic accent colors and Pip costumes (section 15) and a **Lab campus map** home page with a **Trophy Hall** (section 16).
 Mockups: https://claude.ai/artifact/8mD2F3fKfsMHX11TgtKtLP (private to Roger; read it with the Artifact tool).
 
 ---
@@ -281,7 +281,7 @@ The platform owns everything that stays the same whatever the subject. A topic o
 
 **Platform (shared by every topic):**
 - the header and logo
-- the home page, Settings and the routing
+- the home page, the Trophy Hall, Settings and the routing
 - Pip and the narration rules
 - stars, badges, the trophy shelf and the reward choreography
 - the sticker style, fonts, sounds, and the "on/go" green
@@ -349,12 +349,12 @@ The mockup's other boards (A topic cards, B lab shelf) were not chosen.
    - **Topic buildings:** one per topic, each matching its subject. In the mockup: a greenhouse for Plants & Seeds, an observatory for Space, a weather station with a wind sock for Weather.
    - **Name pills:** each building has a pill under it with the topic name and progress (a star and "12/37"), or "NEW!" for a topic not started.
    - **Coming soon:** an empty lot with a fence, a crane and a "?" sign, its pill dashed and soft.
+   - **The Trophy Hall:** a platform building (not a topic) near the gate, on its own trail branch. It has columns, a gold trophy on the roof and a door in the bold platform color. Its pill reads "Trophy Hall" with the badge count, and it sparkles when a badge was earned since the last visit. It opens the Trophy Hall page (below).
    - **The entrance gate** with a "Wonder Lab" sign at the bottom of the trail.
    - **Small Pip** stands by the last building visited, under a "Last stop" flag.
    - **Decoration:** trees, a pond and flowers, never on the trail or a building.
 4. **Keep going.** A strip under the map: the last activity, its building and stars, and a big "Jump back in" button.
-5. **My trophies.** One master badge per topic, as on the current badge shelf.
-6. **Footer** note that progress is saved on this device.
+5. **Footer** note that progress is saved on this device.
 
 ### How it's built
 Follows the layering rule in section 2: pictures on a canvas, controls in HTML.
@@ -381,6 +381,27 @@ The landscape map doesn't fit a phone. Below 720 px the same buildings are drawn
 - **Motion:** gentle, from `t`, and still when `RM` is on.
 - **Small version:** the same art scaled down is used for the Keep going strip and the trophy shelf.
 
+### The Trophy Hall page (`#/trophies`)
+Every badge and trophy across all topics, in one room. Mockup board "Trophy Hall".
+- **Header:** breadcrumb Home › Trophy Hall, and the all-stars pill.
+- **Pip's line:** welcomes the kid and says to tap a badge.
+- **The room** sits in a stage-like frame. The background is warm striped wallpaper (`#F3E3C3` / `#EEDAB4`), a pennant garland strung across the top in the palette colors, and a wood plank floor (`#C9955A`).
+- **Display cases:** one per topic, in `TOPICS` order.
+  - **Case:** a wooden case (4 px ink, `0 6px 0` shadow) with a name plate in the topic's accent color.
+  - **Badges:** behind glass (`rgba(221,243,247,.85)`), on wooden shelves, three per row. An earned badge is its `--sun-soft` disc with the activity's icon. A locked one is a dashed grey disc with "?", and its name stays visible so the kid knows what to aim for.
+  - **Master trophy:** on a pedestal on top of the case, with a plaque ("Botanist · 2 of 6"). It's gold when earned, grey at 45% when not.
+  - **A topic not started yet:** frosted glass with a "Not started yet" sticker.
+- **Coming soon:** a pedestal under a cloth with a "?".
+- **Totals strip** under the room: stars, badges and trophies as pills.
+- **Tapping a badge:** an instant sound, the disc hops, and Pip explains it.
+  - **Earned:** Pip says the recorded badge line ("You earned the **Plant Pal** badge! You found every part of a plant!").
+  - **Locked:** Pip says how to earn it ("Not yet! Find every part of the plant in **Meet the Plant**."). That needs a new `how` line per badge, recorded like any other line.
+  - **Locked master trophy:** "Earn every Plants & Seeds badge to win the **Botanist** trophy." Recorded per topic.
+  - Tapping during an explanation follows listen first, as everywhere.
+- **Celebration:** a badge earned since the last visit glows and spins in (`spinin`) the first time the Hall is opened afterwards.
+- **Phone:** cases stack one per row. The badge grid stays three across, discs 56 px.
+- **Inside a topic:** the badge shelf under the activity stays (that topic's badges only), with a small "See the Trophy Hall" link.
+
 ### Pip on the home page
 - Pip in the bubble wears no costume on the home page. Small Pip on the map doesn't either.
 - Every line must be recorded, static where possible, and checked by the `kid-content-reviewer` agent.
@@ -395,8 +416,8 @@ The landscape map doesn't fit a phone. Below 720 px the same buildings are drawn
 - **Switching routes** must call the activity's `destroy()`, stop Pip (`Voice.stop()`, clear `App.sayQ`, `stopListening()`) and stop sound loops, as `mount()` does today.
 
 ### Building it: checklist
-- **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip, trophy shelf) hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.
-- **Logic:** in `src/09_app.js`: routing, the campus canvas and its lots, the link overlay, per-topic CSS variables and Pip costumes. Each topic's `building(c, t)` lives with the topic. Plants & Seeds gets the greenhouse.
+- **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.
+- **Logic:** in `src/09_app.js`: routing (including `#/trophies`), the campus canvas and its lots, the Trophy Hall building and room, the link overlay, per-topic CSS variables and Pip costumes. Each topic's `building(c, t)` lives with the topic, and each badge gains a `how` line for the Trophy Hall. Plants & Seeds gets the greenhouse.
 - **Drawing:** the flask logo replaces `drawIcon(logo, 'grow')`.
 - **Voice:** run the pipeline for the new lines. "Every line recorded in every voice" must pass.
 - **Tests** in `tests/walkthrough.js`:
@@ -407,6 +428,7 @@ The landscape map doesn't fit a phone. Below 720 px the same buildings are drawn
   - a refresh on `#/plants/grow` reopens Grow a Bean
   - the first-tap narration check still passes
   - at phone width the map stacks vertically with no sideways scrolling
+  - the Trophy Hall opens from the map, shows every badge in the right state, and tapping a locked badge plays its recorded "how" line
 
 ## 17. Checklist for anything new
 
