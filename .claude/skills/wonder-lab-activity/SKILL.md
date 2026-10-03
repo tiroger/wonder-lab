@@ -12,7 +12,8 @@ Each activity is a `const` in its own `src/0N_name.js`, listed in a topic's `act
 ```js
 const A_example = {
   id: 'example', name: 'Tab Name', icon: 'plant',          // icon = key in ICONS (src/07_quiz.js), drawn in a 100x100 box
-  badge: { id: 'b.example', name: 'Badge Name', desc: 'You did the thing!' },
+  badge: { id: 'b.example', name: 'Badge Name', desc: 'You did the thing!',
+           how: 'Not yet! Do the thing in <b>Tab Name</b>.' },          // how: what Pip says in the Trophy Hall before it's earned (recorded)
   stars: [{ id: 'example.first', name: 'First idea' }, ...],   // 3-6, each a real concept; ids are saved, never rename them
                                                             // in a new topic, prefix every id with the topic id: 'space.example', 'space.example.first'
   badgeNeed: 10,                                            // optional; default = all stars

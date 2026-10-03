@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** sections 1–14 describe the app as built, and so do the **Lab campus map** home page and the **Trophy Hall** in section 16. Still decided but not built: per-topic accent colors and Pip costumes (section 15).
+**Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15). Space and Weather in the tables are examples until those topics exist.
 Mockups: https://claude.ai/artifact/8mD2F3fKfsMHX11TgtKtLP (private to Roger; read it with the Artifact tool).
 
 ---
@@ -304,11 +304,10 @@ These need a neutral version (or a topic-supplied one) once more topics exist:
 
 Leaf green as the shared "on/go" color (switches, `.go`, listen bar) can stay: green means go in any subject.
 
-### Topic entry (to build)
+### Topic entry (as built)
 ```js
-{ id: 'space', name: 'Space & Planets', tagline: 'Short line for the home card.',
-  accent: { ground: '#E7E8F7', dot: '#D4D7F0', tab: '#AEB6F2', stage: '#2E3A6B', bold: '#3F4FB8' },
-  pip: 'helmet',            // costume key, or null for plain Pip
+{ id: 'space', name: 'Space & Planets', pip: 'helmet',
+  accent: { ground: '#E7E8F7', dot: '#D4D7F0', tab: '#AEB6F2', stage: '#2E3A6B', bold: '#3F4FB8', plate: '#3F4FB8' },
   building(c, t) { /* its building on the campus map, about 220x170; section 16 */ },
   activities: [...], master: { id: 'space.b.master', name: '...', icon: '...', desc: '...' } }
 ```
@@ -325,10 +324,11 @@ Accent rules:
 - Text on an accent is always `--ink`, at 4.5:1 or better.
 - The bold word color reaches 4.5:1 on `--card`.
 - Accents that sit side by side differ in lightness.
-- A topic applies its accent by setting CSS variables on `body` when it opens (`--ground`, `--dot`, a tab variable, a bold variable). Shared styles read the variables, so a topic changes nothing else.
+- `applyAccent(tp)` (`src/09_app.js`) sets `--ground`, `--dot`, `--tab-on`, `--stage-bg` and `--bold` on the root element when a topic opens, and removes them on the map and in the Trophy Hall. `plate` colors the topic's name plate in the Hall (white text, so it must reach 4.5:1 with white). Shared styles read the variables, so a topic changes nothing else.
+- `checkIds()` reports, at startup, a topic missing its `building`, any accent color, or with an unknown costume; the walkthrough fails on it.
 
 **Pip's costumes:**
-- **Drawing:** drawn after Pip in `drawPip`, chosen by the open topic, with no costume on the home page. Examples from the mockups: a glass space helmet (a translucent circle with a white shine), a yellow rain hat (crown plus brim, which hides the sprout), and lab goggles.
+- **Drawing:** `PIP_COSTUMES` in `src/09_app.js`: `helmet` (a glass space helmet with a shine and a blinking light), `rainhat` (a yellow rain hat; `hidesSprout`), `goggles` (lab goggles with tinted lenses). `pipFigure` draws the costume over Pip, only inside a topic (never on the map or in the Hall). A new costume is one more entry, drawn around Pip's origin.
 - **Pip must stay readable.** Never cover his eyes or mouth, which carry his expressions. Keep the 3 px outline. Respect `RM`.
 
 ### IDs must be unique across topics

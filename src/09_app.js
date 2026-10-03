@@ -1,6 +1,10 @@
 /* ============ topics: add new ones here ============ */
 const TOPICS = [
-  { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
+  // accent: the page ground and dots, the selected tab, the stage backdrop, Pip's bold words, the Trophy Hall name plate (docs/design.md, section 15)
+  // pip: a costume key from PIP_COSTUMES, or null
+  { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, pip: null,
+    accent: { ground: '#E8F3E1', dot: '#D3E8CB', tab: '#FFC93C', stage: '#BFE6F4', bold: '#2A7340', plate: '#2A7340' },
+    activities: [A_parts, A_seed, A_flower, A_grow, A_travel, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
       how: 'Not yet! Earn all 6 Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } }
 ];
@@ -15,17 +19,20 @@ function drawPip(c, t) {
   // eyes follow your finger on the stage
   const st = App.inst && App.inst.stage;
   const look = st && st.p.inside ? [clamp((st.p.x / W - .5) * 5, -2.5, 2.5), clamp((st.p.y / H - .2) * 3, -2, 2.5)] : null;
-  c.save(); c.translate(54, 64); pipFigure(c, t, { talking: t < Pip.talkUntil, wow: t < Pip.wowUntil, poke: t - Pip.pokeT < .6, look }); c.restore();
+  // inside a topic, Pip wears its costume; on the map and in the Trophy Hall he's just Pip
+  c.save(); c.translate(54, 64); pipFigure(c, t, { talking: t < Pip.talkUntil, wow: t < Pip.wowUntil, poke: t - Pip.pokeT < .6, look, costume: App.view === 'topic' && App.topic ? App.topic.pip : null }); c.restore();
 }
 // Pip at the origin (body center; feet near y 29, shadow at y 36). Used by the guide and on the campus map.
-function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0 } = {}) {
+function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0, costume = null } = {}) {
   const bob = RM ? 0 : Math.sin(t * 2.2) * 2 - (talking ? Math.abs(Math.sin(t * 10)) * 3 : 0) - (wow || poke ? Math.abs(Math.sin(t * 12)) * 6 : 0) - hop;
   c.save();
   c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 36, Math.max(10, 26 - bob), 5, 0, 0, TAU); c.fill();
   c.translate(0, bob);
-  const sw = RM ? 0 : Math.sin(t * 1.7) * 6;
-  c.strokeStyle = C.leafDeep; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(3, -24); c.quadraticCurveTo(1, -36, 3 + sw * .4, -44); c.stroke();
-  drawLeaf(c, 3 + sw * .4, -44, -150 + sw, .22); drawLeaf(c, 3 + sw * .4, -44, -30 + sw, .24);
+  const sw = RM ? 0 : Math.sin(t * 1.7) * 6, dress = costume && PIP_COSTUMES[costume];
+  if (!(dress && dress.hidesSprout)) {
+    c.strokeStyle = C.leafDeep; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(3, -24); c.quadraticCurveTo(1, -36, 3 + sw * .4, -44); c.stroke();
+    drawLeaf(c, 3 + sw * .4, -44, -150 + sw, .22); drawLeaf(c, 3 + sw * .4, -44, -30 + sw, .24);
+  }
   c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28); g.addColorStop(0, '#F8E6AE'); g.addColorStop(1, '#E3C27A');
   c.fillStyle = g; c.fill(body); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(body); c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-16, -16, 12, 5, -.4, 0, TAU); c.fill(); c.restore();
   const lx = look ? look[0] : Math.sin(t * .7) * 1.5, ly = look ? look[1] : 0;
@@ -40,8 +47,26 @@ function pipFigure(c, t, { talking = false, wow = false, poke = false, look = nu
   else if (talking) { const o = 2 + Math.abs(Math.sin(t * 14)) * 4.5; c.beginPath(); c.ellipse(0, 12, 6, o, 0, 0, TAU); c.fill(); c.stroke(); }
   else { c.beginPath(); c.arc(0, 7, 7, .15 * PI, .85 * PI); c.stroke(); }
   c.fillStyle = '#D9B866'; c.strokeStyle = C.ink; for (const fx of [-11, 11]) { c.beginPath(); c.ellipse(fx, 29, 7, 4, 0, 0, TAU); c.fill(); c.stroke(); }
+  if (dress) { c.save(); dress.draw(c, t); c.restore(); }
   c.restore();
 }
+// Pip's costumes, one per topic that wants one. Drawn over Pip; never cover his eyes or mouth (docs/design.md, section 15).
+const PIP_COSTUMES = {
+  helmet: { draw(c, t) { // a glass space helmet with a shine and a little light on top
+    c.fillStyle = 'rgba(169,221,241,.28)'; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.arc(0, -12, 50, 0, TAU); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(0, -12, 40, 3.5, 4.3); c.stroke();
+    c.fillStyle = (RM || Math.sin(t * 4) > 0) ? C.carrot : '#FFD7B8'; c.lineWidth = 2.5; c.strokeStyle = C.ink; c.beginPath(); c.arc(32, -50, 5, 0, TAU); c.fill(); c.stroke();
+  } },
+  rainhat: { hidesSprout: true, draw(c) { // a yellow rain hat: crown and brim
+    c.fillStyle = C.sun; c.strokeStyle = C.ink; c.lineWidth = 3; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(-21, -28); c.quadraticCurveTo(-20, -52, 0, -53); c.quadraticCurveTo(20, -52, 21, -28); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-38, -26); c.quadraticCurveTo(0, -38, 38, -26); c.quadraticCurveTo(0, -16, -38, -26); c.closePath(); c.fill(); c.stroke();
+  } },
+  goggles: { draw(c) { // lab goggles: a strap and two tinted lenses (his eyes show through)
+    c.strokeStyle = C.ink; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(-36, -6); c.lineTo(-23, -5); c.moveTo(23, -5); c.lineTo(36, -6); c.moveTo(-1, -5); c.lineTo(1, -5); c.stroke();
+    c.fillStyle = 'rgba(169,221,241,.35)'; c.lineWidth = 3.5; for (const ex of [-12, 12]) { c.beginPath(); c.arc(ex, -4, 11.5, 0, TAU); c.fill(); c.stroke(); }
+  } }
+};
 
 /* ============ confetti + flying stars ============ */
 const FX = { c: null, g: null, parts: [], dpr: 1, dirty: false };
@@ -212,6 +237,9 @@ function makeUI(intro) {
   return ui;
 }
 // lead: a line Pip says just before the intro (after a reset), so the two don't cut each other off
+// a topic's accent colors go on the page as CSS variables; the map and the Trophy Hall use the platform's (no accent)
+const ACCENT_VARS = { ground: '--ground', dot: '--dot', tab: '--tab-on', stage: '--stage-bg', bold: '--bold' };
+function applyAccent(tp) { const st = document.documentElement.style; for (const [k, v] of Object.entries(ACCENT_VARS)) tp && tp.accent ? st.setProperty(v, tp.accent[k]) : st.removeProperty(v); }
 // stop whatever is running: the activity, Pip mid-sentence, queued lines, the listen hold, sound loops
 function leaveActivity() {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
@@ -249,7 +277,7 @@ function route() {
   const a = tp.activities.find(x => x.id === aid) || (last.topic === tp.id && tp.activities.find(x => x.id === last.activity)) || tp.activities[0];
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
   if (App.view !== 'topic' || App.topic !== tp) {
-    App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name;
+    App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name; applyAccent(tp);
     document.documentElement.classList.remove('at-home', 'at-hall'); document.documentElement.classList.add('in-topic');
   }
   if (App.act !== a) mount(a);
@@ -261,7 +289,12 @@ function checkIds() {
     const ids = [...tp.activities.flatMap(a => [a.id, a.badge.id, ...a.stars.map(s => s.id)]), tp.master.id];
     for (const id of ids) { if (seen.has(id)) bad.push(`duplicate id ${id}`); seen.add(id); if (tp.id !== 'plants' && !id.startsWith(tp.id + '.')) bad.push(`${id} should start with ${tp.id}.`); }
   }
-  if (bad.length) console.error('Topic ids: ' + bad.join(', '));
+  for (const tp of TOPICS) {
+    if (typeof tp.building !== 'function') bad.push(`${tp.id} needs a building(c, t) for the map`);
+    for (const k of Object.keys(ACCENT_VARS).concat('plate')) if (!(tp.accent && /^#[0-9A-F]{6}$/i.test(tp.accent[k]))) bad.push(`${tp.id} accent needs ${k}`);
+    if (tp.pip != null && !PIP_COSTUMES[tp.pip]) bad.push(`${tp.id} has an unknown costume ${tp.pip}`);
+  }
+  if (bad.length) console.error('Topics: ' + bad.join(', '));
   return bad;
 }
 
