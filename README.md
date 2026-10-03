@@ -25,6 +25,18 @@ Pip reads every line aloud. Discoveries earn stars and badges, finished topics e
 - **Tested by playing:** an automated playthrough runs every activity on each change.
 - **Ready for more topics:** a [design guide](docs/design.md) keeps the look consistent as new ones are added.
 
+## Claude Code setup
+
+The repo comes with a Claude Code setup in `.claude/`, so new topics and changes follow the same rules:
+
+- **`/new-topic` and `/new-activity`:** plan and build a new class topic or activity in the house style.
+- **`/record-voice`:** record Pip's new lines and check every clip.
+- **`/walkthrough`:** play through every activity in a headless browser.
+- **`/ship`:** take a change from branch to pull request to deploy.
+- **Activity skill:** how an activity is put together.
+- **Kid-content reviewer:** an agent that checks new text for a third grader.
+- **Build check:** a hook that rebuilds and checks the page after every edit.
+
 ## How it's hosted
 
 A static site on AWS, defined in Terraform and deployed by GitHub Actions on every merge.
@@ -51,8 +63,9 @@ voice/    Pip's narration
 tests/    the automated playthrough
 infra/    Terraform
 docs/     the design guide
+.claude/  the Claude Code setup
 ```
 
 ## Built with
 
-JavaScript (Canvas 2D, Web Audio), Python, OpenAI text-to-speech, Terraform, AWS, GitHub Actions, Playwright.
+JavaScript (Canvas 2D, Web Audio), Python, OpenAI text-to-speech, Terraform, AWS, GitHub Actions, Playwright, Claude Code.
