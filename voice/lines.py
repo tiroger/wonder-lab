@@ -35,6 +35,9 @@ combos = [f'Yes! {w}' for w in whys] + [f'You got it! {w}' for w in whys] + [f'N
 descs = dict(re.findall(r"badge: \{ id: '[^']+', name: '([^']+)', desc: '((?:[^'\\]|\\.)*)'", code))
 descs['Botanist'] = re.search(r"name: 'Botanist', icon: 'trophy', desc: '((?:[^'\\]|\\.)*)'", code).group(1)
 combos += [f'You earned the {n} badge! ' + d.replace("\\'", "'") for n, d in descs.items()]
+# a topic's top badge is a trophy: "You won the Botanist trophy! ..."
+masters = re.findall(r"master: \{ id: '[^']+', name: '([^']+)', icon: '[^']+', desc: '((?:[^'\\]|\\.)*)'", code)
+combos += [f'You won the {n} trophy! ' + d.replace("\\'", "'") for n, d in masters]
 out = {}
 for s in cands + extra + combos:
     t = ' '.join(sentences(plain(s)))
