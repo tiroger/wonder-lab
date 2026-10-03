@@ -211,6 +211,42 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .keepgoing b{display:block;font-family:var(--display);font-weight:600;font-size:24px;line-height:1.15}
 .keepgoing small{font-size:15px;color:var(--ink-soft)}
 .keepgoing .btn{background:var(--sun)}
+/* the Trophy Hall (docs/design.md, section 16) */
+:root.at-hall{--ground:#F6F1E4;--dot:#E6DCC4}
+:root.at-hall .crumbs{display:flex}
+:root.at-hall #tabs,:root.at-hall .stage,:root.at-hall .below,:root.at-hall #badgeCard,:root.at-hall .home{display:none}
+:root.at-hall .bubble p b{color:#B4500F}
+.hall{display:none;flex-direction:column;gap:16px}
+:root.at-hall .hall{display:flex}
+.hall-link{margin-left:10px;font-size:15px;font-weight:600;color:#B4500F}
+.lot.trophy-lot .name{background:var(--sun-soft)}
+.hall-room{border:4px solid var(--ink);border-radius:26px;box-shadow:0 6px 0 var(--ink);overflow:hidden;background:repeating-linear-gradient(90deg,#F3E3C3 0 44px,#EEDAB4 44px 88px)}
+.garland{display:block;width:100%;height:60px}
+.cases{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:28px;padding:4px 20px 0}
+.case{flex:1 1 360px;max-width:470px;display:flex;flex-direction:column;align-items:center}
+.pedestal{display:flex;flex-direction:column;align-items:center;margin-bottom:-4px}
+.plaque{min-width:150px;padding:0 10px;height:24px;box-sizing:border-box;background:var(--card);border:3px solid var(--ink);border-radius:6px 6px 0 0;display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:13px;white-space:nowrap}
+.case-body{width:100%;box-sizing:border-box;background:#C9955A;border:4px solid var(--ink);border-radius:18px 18px 8px 8px;padding:10px;box-shadow:0 6px 0 var(--ink)}
+.nameplate{background:var(--leaf-deep);border:3px solid var(--ink);border-radius:10px;padding:2px 10px;margin:0 0 10px;text-align:center;font-family:var(--display);font-weight:600;font-size:18px;color:#fff}
+.glass{background:rgba(221,243,247,.85);border:3px solid var(--ink);border-radius:10px;padding:14px 10px 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 8px}
+.hb{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:4px 0;cursor:pointer;font-family:var(--display);color:var(--ink);min-height:44px;border-radius:12px}
+.hb .disc{width:66px;height:66px;box-sizing:border-box;border-radius:50%;border:3px solid var(--ink);background:var(--sun-soft);box-shadow:0 3px 0 var(--ink);display:grid;place-items:center;font-weight:700;font-size:26px;color:#8C9A8F}
+.hb .disc canvas{width:44px;height:44px}
+.hb.locked .disc{background:#EEF1EA;border-style:dashed;box-shadow:none}
+.hb b{font-weight:600;font-size:13px;line-height:1.1}
+.hb.locked b{color:var(--ink-soft)}
+.hb.hop .disc{animation:bump .45s ease}
+.hb.fresh .disc{animation:spinin .7s ease;box-shadow:0 3px 0 var(--ink),0 0 0 5px var(--sun)}
+.hb.trophy .disc{width:96px;height:96px;border:0;background:none;box-shadow:none}
+.hb.trophy .disc canvas{width:88px;height:88px}
+.hb.trophy.locked .disc canvas{filter:grayscale(1);opacity:.45}
+.soon-case{flex:0 1 190px;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink-soft)}
+.soon-case canvas{width:170px;height:150px}
+.hall-floor{margin-top:22px;height:46px;border-top:4px solid var(--ink);background:repeating-linear-gradient(90deg,#C9955A 0 120px,#BF8B50 120px 240px)}
+.hall-totals{display:flex;flex-wrap:wrap;gap:12px}
+.hall-totals span{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:3px solid var(--ink);border-radius:999px;padding:6px 16px;box-shadow:0 3px 0 var(--ink);font-family:var(--display);font-weight:600;font-size:17px}
+.hall-totals svg{width:22px;height:22px}
+@media (max-width:720px){.glass{gap:12px 4px}.hb .disc{width:56px;height:56px}.hb .disc canvas{width:38px;height:38px}}
 </style>
 
 <dialog id="settings" aria-labelledby="settingsTitle">
@@ -297,6 +333,15 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     <a class="keepgoing" id="keepGoing" href="#/" hidden></a>
   </section>
 
+  <section class="hall" id="hall" aria-label="Trophy Hall">
+    <div class="hall-room">
+      <canvas class="garland" id="garland" aria-hidden="true"></canvas>
+      <div class="cases" id="cases"></div>
+      <div class="hall-floor" aria-hidden="true"></div>
+    </div>
+    <div class="hall-totals" id="hallTotals"></div>
+  </section>
+
   <section class="stage" id="stage"></section>
 
   <section class="below">
@@ -304,7 +349,7 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     <div class="card"><h2>Things to discover</h2><ul class="finds" id="finds"></ul></div>
   </section>
 
-  <section class="card" id="badgeCard"><h2>My badges</h2><div class="shelf" id="shelf"></div></section>
+  <section class="card" id="badgeCard"><h2>My badges <a class="hall-link" href="#/trophies">See the Trophy Hall</a></h2><div class="shelf" id="shelf"></div></section>
 
   <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span></footer>
 </div>

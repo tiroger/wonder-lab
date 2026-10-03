@@ -30,7 +30,7 @@ function drawBeanHalf(c, x, y, sc, { embryo = true, mirror = false, glow = null,
 /* ============ Activity: Open a Seed ============ */
 const A_seed = {
   id: 'seed', name: 'Open a Seed', icon: 'seed',
-  badge: { id: 'b.seed', name: 'Seed Scientist', desc: 'You dissected a bean seed and found the baby plant!' },
+  badge: { id: 'b.seed', name: 'Seed Scientist', desc: 'You dissected a bean seed and found the baby plant!', how: 'Not yet! Open the bean and find every part in <b>Open a Seed</b>.' },
   stars: [{ id: 'seed.coat', name: 'Seed coat' }, { id: 'seed.cot', name: 'Cotyledon' }, { id: 'seed.embryo', name: 'Embryo' }, { id: 'seed.root', name: 'Baby root' }, { id: 'seed.leaves', name: 'Baby leaves' }],
   intro: 'Scientists open seeds to see what\'s inside, just like your class! First, <b>tap the dry bean</b> to soak it in water overnight.',
   mount(host, ui) {

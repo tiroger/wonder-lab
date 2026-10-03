@@ -1,7 +1,7 @@
 /* ============ Activity: Grow a Bean (life cycle) ============ */
 const A_grow = {
   id: 'grow', name: 'Grow a Bean', icon: 'grow',
-  badge: { id: 'b.grow', name: 'Green Thumb', desc: 'You grew a bean plant through its whole life cycle!' },
+  badge: { id: 'b.grow', name: 'Green Thumb', desc: 'You grew a bean plant through its whole life cycle!', how: 'Not yet! Grow a bean all the way to new seeds in <b>Grow a Bean</b>.' },
   stars: [{ id: 'grow.1', name: 'Germination' }, { id: 'grow.2', name: 'Sprout' }, { id: 'grow.3', name: 'Seedling' }, { id: 'grow.4', name: 'Adult plant' }, { id: 'grow.5', name: 'Flowers' }, { id: 'grow.6', name: 'Fruit & seeds' }],
   intro: 'We planted a bean seed! To wake up, a seed needs <b>water</b>, <b>air</b> and <b>warmth</b>. <b>Tap the watering can</b> to give it a drink.',
   mount(host, ui) {

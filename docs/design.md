@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** sections 1–14 describe the app as built, and so does the **Lab campus map** home page in section 16. Still decided but not built: the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15).
+**Status (2026-10-03):** sections 1–14 describe the app as built, and so do the **Lab campus map** home page and the **Trophy Hall** in section 16. Still decided but not built: per-topic accent colors and Pip costumes (section 15).
 Mockups: https://claude.ai/artifact/8mD2F3fKfsMHX11TgtKtLP (private to Roger; read it with the Artifact tool).
 
 ---
@@ -337,7 +337,7 @@ Activity, star and badge IDs and `Store.data.last` are global today (`quiz`, `qu
 - Plants & Seeds keeps its current IDs, so saved stars survive.
 - `Store.data.last` becomes `{ topic, activity }`. Read the old string form as a Plants & Seeds activity.
 
-## 16. The home page: the Lab campus map (built; the Trophy Hall is next)
+## 16. The home page: the Lab campus map and the Trophy Hall (built)
 
 Roger chose the **Lab campus map** (mockup board C) on 2026-10-03. Wonder Lab's home is a map of the Lab's grounds seen from above. Each topic is a building, and a sandy trail joins them.
 The mockup's other boards (A topic cards, B lab shelf) were not chosen.
@@ -350,7 +350,7 @@ The mockup's other boards (A topic cards, B lab shelf) were not chosen.
    - **Topic buildings:** one per topic, each matching its subject. In the mockup: a greenhouse for Plants & Seeds, an observatory for Space, a weather station with a wind sock for Weather.
    - **Name pills:** each building has a pill under it with the topic name and progress (a star and "12/37"), or "NEW!" for a topic not started.
    - **Coming soon:** an empty lot with a fence, a crane and a "?" sign, its pill dashed and soft.
-   - **The Trophy Hall:** a platform building (not a topic) near the gate, on its own trail branch. It has columns, a gold trophy on the roof and a door in the bold platform color. Its pill reads "Trophy Hall" with the badge count, and it sparkles when a badge was earned since the last visit. It opens the Trophy Hall page (below).
+   - **The Trophy Hall:** a platform building (not a topic) at the end of the trail, after the topics and coming-soon lots. It has columns, a gold trophy on the roof and a door in the bold platform color. Its pill reads "Trophy Hall" with the badge count, and it sparkles when a badge was earned since the last visit. It opens the Trophy Hall page (below).
    - **The entrance gate** with a "Wonder Lab" sign at the bottom of the trail.
    - **Small Pip** stands by the last building visited, under a "Last stop" flag.
    - **Decoration:** trees, a pond and flowers, never on the trail or a building.
@@ -391,13 +391,12 @@ Every badge and trophy across all topics, in one room. Mockup board "Trophy Hall
   - **Case:** a wooden case (4 px ink, `0 6px 0` shadow) with a name plate in the topic's accent color.
   - **Badges:** behind glass (`rgba(221,243,247,.85)`), on wooden shelves, three per row. An earned badge is its `--sun-soft` disc with the activity's icon. A locked one is a dashed grey disc with "?", and its name stays visible so the kid knows what to aim for.
   - **Master trophy:** on a pedestal on top of the case, with a plaque ("Botanist · 2 of 6"). It's gold when earned, grey at 45% when not.
-  - **A topic not started yet:** frosted glass with a "Not started yet" sticker.
 - **Coming soon:** a pedestal under a cloth with a "?".
 - **Totals strip** under the room: stars, badges and trophies as pills.
 - **Tapping a badge:** an instant sound, the disc hops, and Pip explains it.
-  - **Earned:** Pip says the recorded badge line ("You earned the **Plant Pal** badge! You found every part of a plant!").
-  - **Locked:** Pip says how to earn it ("Not yet! Find every part of the plant in **Meet the Plant**."). That needs a new `how` line per badge, recorded like any other line.
-  - **Locked master trophy:** "Earn every Plants & Seeds badge to win the **Botanist** trophy." Recorded per topic.
+  - **Earned:** Pip says the recorded badge line ("You earned the **Plant Pal** badge! You found every part of a plant!"). A topic's top badge is a **trophy** everywhere: "You won the **Botanist** trophy! …", and its popup says "New trophy!" (`earnedLine` in `src/09_app.js`).
+  - **Locked:** Pip says how to earn it ("Not yet! Find every part of the plant in **Meet the Plant**."). Each badge has a `how` line next to its `desc`, recorded like any other line.
+  - **Locked trophy:** "Not yet! Earn all 6 Plants and Seeds badges to win the **Botanist** trophy. A botanist is a scientist who studies plants." (the master's `how`).
   - Tapping during an explanation follows listen first, as everywhere.
 - **Celebration:** a badge earned since the last visit glows and spins in (`spinin`) the first time the Hall is opened afterwards.
 - **Phone:** cases stack one per row. The badge grid stays three across, discs 56 px.
@@ -422,7 +421,8 @@ Every badge and trophy across all topics, in one room. Mockup board "Trophy Hall
 - Links (`.lot`) are positioned in percentages over each building and its name pill; the canvas is `aria-hidden`.
 - Tapping a building plays a door sound and little Pip (`pipFigure`, scaled .5–.55) walks the trail samples to the door in 0.5–1.3 s, then `go('#/<topic>')`; with reduced motion he skips the walk.
 - Lines: `HOME_HELLO` and `PIP_HELLO` on a first visit, "Welcome back!" plus `HOME_BACK` on a return, `HOME_NEXT` when coming back from a topic, `HOME_SOON` for a construction lot. All are said with `{ lock: false }`.
-- `showHome()` and `route()` (in `src/09_app.js`) switch views: `:root.at-home` or `:root.in-topic`, `App.view`, and `leaveActivity()` stops everything before switching.
+- `showHome()`, `showHall()` (`src/08d_hall.js`) and `route()` (in `src/09_app.js`) switch views: `:root.at-home`, `:root.at-hall` or `:root.in-topic`, `App.view`, and `leaveActivity()` stops everything before switching.
+- The Trophy Hall (`src/08d_hall.js`): `drawTrophyHall` on the map (it sparkles while `hallNew()`), `renderHall()` builds the cases as HTML buttons with canvas icons, `Store.data.hallSeen` remembers which earned badges were shown, so new ones glow (`spinin`) once.
 
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.

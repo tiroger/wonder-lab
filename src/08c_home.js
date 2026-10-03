@@ -45,11 +45,12 @@ function trailPath(P) {
   const last = P[P.length - 1]; p.lineTo(last.x, last.y); return p;
 }
 
-// the lots: one per topic, then "coming soon" sites to round out the map
+// the lots: one per topic, then "coming soon" sites, and the Trophy Hall at the end of the trail
 function homeLots(cols) {
-  const lots = TOPICS.map(tp => ({ tp, draw: tp.building }));
-  const soon = cols === 1 ? 1 : clamp((3 - lots.length % 3) % 3, 1, 2);
-  for (let i = 0; i < soon; i++) lots.push({ tp: null, draw: drawConstruction });
+  const lots = TOPICS.map(tp => ({ tp, href: `#/${tp.id}`, draw: tp.building }));
+  const soon = cols === 1 ? 1 : clamp((3 - (lots.length + 1) % 3) % 3, 1, 2);
+  for (let i = 0; i < soon; i++) lots.push({ soon: true, draw: drawConstruction });
+  lots.push({ hall: true, href: '#/trophies', draw: drawTrophyHall });
   return lots;
 }
 function topicStars(tp) { const st = Store.data.stars, all = tp.activities.flatMap(a => a.stars); return [all.filter(s => st[s.id]).length, all.length]; }
@@ -68,12 +69,17 @@ function renderHome() {
   const lotsEl = $('#lots'); lotsEl.innerHTML = '';
   Home.lots.forEach((lot, i) => {
     const p = L.lots[i], bw = 230 * L.scale, top = p.y - 180 * L.scale, bottom = p.y + (cols === 1 ? 118 : 130);
-    const el = document.createElement(lot.tp ? 'a' : 'button'); el.className = 'lot' + (lot.tp ? '' : ' soon');
+    const el = document.createElement(lot.soon ? 'button' : 'a'); el.className = 'lot' + (lot.soon ? ' soon' : lot.hall ? ' trophy-lot' : '');
     Object.assign(el.style, { left: (p.x - bw / 2) / L.w * 100 + '%', width: bw / L.w * 100 + '%', top: top / L.h * 100 + '%', height: (bottom - top) / L.h * 100 + '%' });
     if (lot.tp) {
       const [have, total] = topicStars(lot.tp); el.href = `#/${lot.tp.id}`; el.dataset.topic = lot.tp.id;
       el.innerHTML = `<span class="name">${lot.tp.name}${have || last.topic === lot.tp.id ? `${STAR_SVG(true)}<small>${have}/${total}</small>` : '<span class="new">NEW!</span>'}</span>`;
-      el.onclick = e => { e.preventDefault(); enterTopic(i); };
+      el.onclick = e => { e.preventDefault(); enterLot(i); };
+    } else if (lot.hall) {
+      const n = TOPICS.flatMap(hallBadges).filter(b => Store.data.badges[b.id]).length;
+      el.href = lot.href; el.dataset.hall = '1';
+      el.innerHTML = `<span class="name">Trophy Hall<small>${n} badge${n === 1 ? '' : 's'}</small></span>`;
+      el.onclick = e => { e.preventDefault(); enterLot(i); };
     } else {
       el.type = 'button'; el.innerHTML = '<span class="name">Coming soon</span>';
       el.onclick = () => { Sound.tap(1); Sound.hop(); say(HOME_SOON, { lock: false }); };
@@ -93,10 +99,10 @@ function renderKeepGoing() {
   drawIcon(el.querySelector('canvas'), a.icon);
   el.onclick = () => Sound.pop();
 }
-// tapping a building: a door sound, little Pip walks along the trail to it, then the topic opens
-function enterTopic(i) {
+// tapping a building: a door sound, little Pip walks along the trail to it, then it opens
+function enterLot(i) {
   if (Home.walk) return;
-  const href = `#/${Home.lots[i].tp.id}`; Sound.ensure(); Sound.plunk(); setTimeout(() => Sound.pop(), 120);
+  const href = Home.lots[i].href; Sound.ensure(); Sound.plunk(); setTimeout(() => Sound.pop(), 120);
   const from = Home.pipIdx, to = Home.doors[i];
   if (RM || from === to) { Home.pipIdx = to; go(href); return; }
   Home.walk = { from, to, t0: Loop.t, dur: clamp(.35 + Math.abs(to - from) / 70, .5, 1.3), href };
@@ -172,7 +178,7 @@ function homeInit() {
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null;
-  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic');
+  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
   renderHome(); refresh();
   let line = HOME_NEXT;
   if (!App.greeted) {
