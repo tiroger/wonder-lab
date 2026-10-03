@@ -11,7 +11,7 @@ A playful learning web app for Roger's son (3rd grade). Each class topic becomes
 - Terraform: `terraform fmt -recursive infra && (cd infra && terraform validate)`
 
 ## Layout
-- `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `09_app.js` (TOPICS, Pip, stars, badges, tabs, `say`).
+- `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `08c_home.js` (the home page: the Lab campus map), `09_app.js` (TOPICS, routes, Pip, stars, badges, tabs, `say`).
 - `voice/` narration pipeline; `voice/packs/<voice>.{mp3,json}` are the recorded packs.
 - `infra/` site Terraform (S3 + CloudFront + ACM + Route 53); `infra/bootstrap/` one-time state bucket + OIDC roles.
 - `docs/design.md` design guide: visual language, platform vs topic theming, home page plan. Read it before changing the look or adding a topic.

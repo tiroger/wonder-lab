@@ -32,6 +32,7 @@ src/               page source, concatenated in file-name order
   07_quiz.js       Plant Quiz + tab/badge icons
   08_voice.js      Pip's voice: plays the recorded messages for the chosen voice
   08b_settings.js  Settings dialog: name, voice, volumes, progress resets
+  08c_home.js      Home page: the Lab campus map (a building per topic), Keep going
   09_app.js        TOPICS list, Pip, stars, badges, tabs, controls
 build.py           builds dist/index.html (full page) and dist/artifact.html (for publishing as a Claude artifact)
 infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records; infra/bootstrap: state bucket + CI roles
@@ -44,7 +45,7 @@ dist/              built page + hashed voice file
 ## How an activity works
 Each activity is an object `{ id, name, icon, badge, stars[], intro, mount(host, ui) }`. `mount` creates a `Stage` (an 800x560 canvas that scales to fit) and returns `{ stage, destroy() }`. The `ui` object gives it `say(html)`, `award(starId, x, y)`, `button()`, `hint()` and `extraEl()`.
 
-To add a topic: write new activity objects, add an entry to `TOPICS` in `09_app.js`, and drop the "coming soon" option from the dropdown.
+To add a topic: write new activity objects and add an entry to `TOPICS` in `09_app.js` with a `building(c, t)` drawing; it appears as a building on the home map (see `docs/design.md`).
 
 ## Pip's voice
 Every line Pip says is recorded ahead of time with OpenAI's `gpt-4o-mini-tts`, steered to sound like a warm, playful teacher. There are four voices to pick from in **Settings**: Marin (default), Coral, Nova and Cedar. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. Nothing falls back to the device's robotic voice: a line without a recording stays silent, and the walkthrough test fails on it.
@@ -54,6 +55,7 @@ Each voice is a pack: `voice/packs/<voice>.mp3` (all clips back to back) and `vo
 After adding or changing any text Pip says, re-record (only new or changed lines cost anything):
 ```
 # .env at the repo root holds OPENAI_API_KEY=sk-...   (git-ignored)
+python3 voice/unpack.py             # fresh checkout only: rebuild the clip cache from the packs
 python3 voice/lines.py              # collect every message from src/
 python3 voice/synth_openai.py       # record new lines in every voice
 python3 voice/check.py --fix        # transcribe each clip, re-record any that came out wrong

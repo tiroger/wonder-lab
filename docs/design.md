@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** sections 1–14 describe the app as built. Sections 15–16 are decided but not built yet: per-topic accent colors and Pip costumes (section 15) and a **Lab campus map** home page with a **Trophy Hall** (section 16).
+**Status (2026-10-03):** sections 1–14 describe the app as built, and so does the **Lab campus map** home page in section 16. Still decided but not built: the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15).
 Mockups: https://claude.ai/artifact/8mD2F3fKfsMHX11TgtKtLP (private to Roger; read it with the Artifact tool).
 
 ---
@@ -140,8 +140,9 @@ The sticker look comes from three things used together: an ink outline, a solid 
 All styles live in `src/00_markup.html`. Reuse these before inventing new ones.
 
 - **Header (`.top`).**
-  - The brand: a 58 px animated logo canvas and the title. Each title letter is a span that hops and plays a note on hover or tap, with "Wonder" in leaf-deep and "Lab" in carrot, and a small caps subtitle, "Explore · Tinker · Discover".
-  - Controls on the right, each under a small caps label: the topic select, the stars pill, and `.icon-btn` toggles (voice, sound, music, settings). Toggles show their on or off icon with `aria-pressed`.
+  - The brand is a link home (`#homeLink`): a 58 px animated logo canvas (the bubbling flask, `ICONS.flask`) and the title. Each title letter is a span that hops and plays a note on hover or tap, with "Wonder" in leaf-deep and "Lab" in carrot, and a small caps subtitle, "Explore · Tinker · Discover".
+  - Inside a topic, a breadcrumb (`#crumbs`): a Home button, then the topic name.
+  - Controls on the right, each under a small caps label: the stars pill (all topics on the map, the open topic inside one) and `.icon-btn` toggles (voice, sound, music, settings). Toggles show their on or off icon with `aria-pressed`.
 - **Stars pill (`.pill`):** a star icon, the count, and "of N" at 55% opacity. It bumps when a star lands.
 - **Tabs (`.tab`):** one per activity, with a 48 px icon canvas, the name, and "n of N stars". Selected is `--sun`, and a finished tab's count turns leaf-deep and bold.
 - **Pip's guide (`.guide`):**
@@ -295,8 +296,8 @@ The platform owns everything that stays the same whatever the subject. A topic o
 
 ### Plant touches in today's shared interface
 These need a neutral version (or a topic-supplied one) once more topics exist:
-- **The logo** is the growing plant icon. It becomes a bubbling flask (section 16).
-- **The page ground** is mint. The mockups propose warm paper (`#F6F1E4`, dots `#E6DCC4`), or the topic's ground when inside a topic.
+- **The logo** was the growing plant icon; it's now the bubbling flask.
+- **The page ground** is warm paper on the map (`#F6F1E4`, dots `#E6DCC4`, set by `:root.at-home`) and still mint inside Plants & Seeds; per-topic grounds come with the accents.
 - **The music toggle** says "Garden music".
 - **Confetti** includes leaf shapes. A topic could supply its own confetti shape.
 - **Settings section dividers** are tinted green (`#CFE0C8`).
@@ -336,7 +337,7 @@ Activity, star and badge IDs and `Store.data.last` are global today (`quiz`, `qu
 - Plants & Seeds keeps its current IDs, so saved stars survive.
 - `Store.data.last` becomes `{ topic, activity }`. Read the old string form as a Plants & Seeds activity.
 
-## 16. The home page: the Lab campus map (chosen, not built)
+## 16. The home page: the Lab campus map (built; the Trophy Hall is next)
 
 Roger chose the **Lab campus map** (mockup board C) on 2026-10-03. Wonder Lab's home is a map of the Lab's grounds seen from above. Each topic is a building, and a sandy trail joins them.
 The mockup's other boards (A topic cards, B lab shelf) were not chosen.
@@ -414,6 +415,14 @@ Every badge and trophy across all topics, in one room. Mockup board "Trophy Hall
 - **Every visit** lands on home. Keep going is the one-tap path back.
 - **Topic pages** get a breadcrumb: a "Home" button (house icon, at least 44 px) › the topic name. The stars pill switches to that topic's stars, the page takes the topic's accent colors (section 15), and Pip puts on the topic's costume.
 - **Switching routes** must call the activity's `destroy()`, stop Pip (`Voice.stop()`, clear `App.sayQ`, `stopListening()`) and stop sound loops, as `mount()` does today.
+
+### As built (src/08c_home.js)
+- `campusLayout(cols, count)` places lots: three per row on a wide map (1600 logical px, building scale 1.3), one per row alternating left and right on a narrow one (600 px, scale .95, below 600 CSS px of map width). The trail is a smooth curve through the gate, each door and turn points, rising and dipping between buildings.
+- `homeLots` adds "coming soon" lots to round out a row (one or two; one on a phone). `drawConstruction` draws them.
+- Links (`.lot`) are positioned in percentages over each building and its name pill; the canvas is `aria-hidden`.
+- Tapping a building plays a door sound and little Pip (`pipFigure`, scaled .5–.55) walks the trail samples to the door in 0.5–1.3 s, then `go('#/<topic>')`; with reduced motion he skips the walk.
+- Lines: `HOME_HELLO` and `PIP_HELLO` on a first visit, "Welcome back!" plus `HOME_BACK` on a return, `HOME_NEXT` when coming back from a topic, `HOME_SOON` for a construction lot. All are said with `{ lock: false }`.
+- `showHome()` and `route()` (in `src/09_app.js`) switch views: `:root.at-home` or `:root.in-topic`, `App.view`, and `leaveActivity()` stops everything before switching.
 
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.

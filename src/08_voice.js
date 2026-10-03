@@ -26,6 +26,7 @@ const Voice = {
     const map = this.map, k = vkey(s); if (map[k]) return k;
     if (/^hi\b.*!$/i.test(s)) return vkey('Hi!');
     if (/^nice to meet you/i.test(s)) return vkey('Nice to meet you!');
+    if (/^welcome back\b.*!$/i.test(s)) return vkey('Welcome back!');
     return null;
   },
   async clip(key) {

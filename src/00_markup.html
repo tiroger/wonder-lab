@@ -179,6 +179,38 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .nudge-tip svg{width:22px;height:22px}
 @keyframes tipin{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}15%{opacity:1;transform:translate(-50%,-120%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* home: the Lab campus map (docs/design.md, section 16) */
+:root.at-home{--ground:#F6F1E4;--dot:#E6DCC4}
+.brand{text-decoration:none;color:inherit;border-radius:14px}
+.crumbs{display:none;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:18px;flex-wrap:wrap}
+:root.in-topic .crumbs{display:flex}
+.crumbs a{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:3px solid var(--ink);border-radius:12px;padding:4px 12px;box-shadow:0 3px 0 var(--ink);text-decoration:none;color:var(--ink);min-height:44px;box-sizing:border-box}
+.crumbs a:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+.crumbs svg{width:20px;height:20px}
+.home{display:none;flex-direction:column;gap:16px}
+:root.at-home .home{display:flex}
+:root.at-home #tabs,:root.at-home .stage,:root.at-home .below,:root.at-home #badgeCard{display:none}
+:root.at-home .bubble p b{color:#B4500F}
+.campus{position:relative;border:4px solid var(--ink);border-radius:26px;overflow:hidden;background:#CDEBAE;box-shadow:0 6px 0 var(--ink)}
+.campus canvas{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.lots{position:absolute;inset:0;pointer-events:none}
+.lot{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;pointer-events:auto;text-decoration:none;color:var(--ink);border-radius:20px;-webkit-tap-highlight-color:transparent;cursor:pointer;background:none;border:0;padding:0;font:inherit}
+.lot .name{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:3px solid var(--ink);border-radius:999px;padding:3px 12px;box-shadow:0 3px 0 var(--ink);font-family:var(--display);font-weight:600;font-size:16px;white-space:nowrap;min-height:40px;box-sizing:border-box;transition:transform .15s}
+.lot:hover .name,.lot:focus-visible .name{transform:translateY(-2px)}
+.lot:active .name{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+.lot .name svg{width:16px;height:16px}
+.lot .name small{font-size:14px;color:var(--ink-soft)}
+.lot .new{font-size:13px;font-weight:700;color:#B4500F;letter-spacing:.04em}
+.lot.soon .name{background:#F3F1EA;border-style:dashed;border-color:var(--ink-soft);color:var(--ink-soft);box-shadow:none}
+.keepgoing{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;background:var(--card-2);border:3px solid var(--ink);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--shadow);text-decoration:none;color:var(--ink)}
+.keepgoing[hidden]{display:none}
+.keepgoing:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.keepgoing canvas{width:60px;height:60px;flex:none;border-radius:50%;border:3px solid var(--ink);background:var(--card)}
+.keepgoing .kg-text{flex:1 1 220px;min-width:0}
+.keepgoing .kicker{display:block;font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.keepgoing b{display:block;font-family:var(--display);font-weight:600;font-size:24px;line-height:1.15}
+.keepgoing small{font-size:15px;color:var(--ink-soft)}
+.keepgoing .btn{background:var(--sun)}
 </style>
 
 <dialog id="settings" aria-labelledby="settingsTitle">
@@ -218,12 +250,12 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="wrap">
   <header class="top">
-    <div class="brand">
+    <a class="brand" id="homeLink" href="#/" aria-label="Wonder Lab home">
       <canvas id="logo" width="116" height="116" aria-hidden="true"></canvas>
       <div><h1 id="title" aria-label="Wonder Lab"></h1><small>Explore · Tinker · Discover</small></div>
-    </div>
+    </a>
+    <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"><a href="#/" id="crumbHome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 V21 H14 V15 H10 V21 H3 Z" fill="#FFC93C" stroke="#243628" stroke-width="2" stroke-linejoin="round"/></svg>Home</a><span aria-hidden="true">›</span><span id="crumbTopic"></span></nav>
     <div class="controls">
-      <div class="field"><label for="topic">Topic</label><select id="topic" class="select"></select></div>
       <div class="field"><span class="lab">Stars</span><div class="pill" id="starPill" aria-live="polite"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="#FFC93C" stroke="#243628" stroke-width="1.8" stroke-linejoin="round"/></svg><span id="starCount">0</span><span class="of">/ <span id="starTotal">0</span></span></div></div>
       <div class="field"><span class="lab">Voice · Sound · Music · Settings</span>
         <div class="icons">
@@ -260,6 +292,11 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     </div>
   </section>
 
+  <section class="home" id="home" aria-label="The Lab">
+    <div class="campus" id="campus"><canvas id="campusCanvas" aria-hidden="true"></canvas><div class="lots" id="lots"></div></div>
+    <a class="keepgoing" id="keepGoing" href="#/" hidden></a>
+  </section>
+
   <section class="stage" id="stage"></section>
 
   <section class="below">
@@ -267,7 +304,7 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     <div class="card"><h2>Things to discover</h2><ul class="finds" id="finds"></ul></div>
   </section>
 
-  <section class="card"><h2>My badges</h2><div class="shelf" id="shelf"></div></section>
+  <section class="card" id="badgeCard"><h2>My badges</h2><div class="shelf" id="shelf"></div></section>
 
   <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span></footer>
 </div>

@@ -159,3 +159,25 @@ const A_parts = {
     return { stage: st, destroy() { Sound.buzz(false); st.destroy(); } };
   }
 };
+
+/* ============ the greenhouse: Plants & Seeds' building on the campus map (base center at 0,0; about 220x170) ============ */
+function drawGreenhouse(c, t) {
+  const sw = RM ? 0 : Math.sin(t * 1.3) * 4;
+  c.save(); c.translate(-110, -160);
+  c.fillStyle = 'rgba(36,54,40,.18)'; c.beginPath(); c.ellipse(110, 156, 98, 10, 0, 0, TAU); c.fill();
+  const glass = new Path2D('M26 124 V78 A84 64 0 0 1 194 78 V124 Z');
+  c.fillStyle = '#DDF3F7'; c.fill(glass);
+  c.save(); c.clip(glass);
+  drawLeaf(c, 50, 124, -78 + sw, .42); drawLeaf(c, 66, 124, -112 - sw, .36); drawLeaf(c, 38, 124, -58 + sw * .5, .3);
+  c.strokeStyle = C.leafDeep; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(150, 124); c.quadraticCurveTo(146, 98, 150 + sw * .5, 74); c.stroke();
+  drawLeaf(c, 148, 104, -30 + sw, .22); drawFlowerHead(c, 150 + sw * .5, 68, .36, t);
+  c.restore();
+  c.strokeStyle = 'rgba(36,54,40,.45)'; c.lineWidth = 2.5; c.beginPath();
+  c.moveTo(68, 23); c.lineTo(68, 124); c.moveTo(110, 14); c.lineTo(110, 124); c.moveTo(152, 23); c.lineTo(152, 124); c.moveTo(26, 92); c.lineTo(194, 92); c.stroke();
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(42, 62); c.quadraticCurveTo(52, 36, 82, 26); c.stroke();
+  c.strokeStyle = C.ink; c.lineWidth = 4; c.lineJoin = 'round'; c.stroke(glass);
+  const base = rrect(18, 122, 184, 30, 5); c.fillStyle = '#C9955A'; c.fill(base); c.stroke(base);
+  const door = rrect(96, 96, 28, 56, 4); c.fillStyle = '#A87445'; c.fill(door); c.lineWidth = 3.5; c.stroke(door);
+  c.fillStyle = C.sun; c.beginPath(); c.arc(118, 126, 2.5, 0, TAU); c.fill();
+  c.restore();
+}

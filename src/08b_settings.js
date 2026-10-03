@@ -44,18 +44,21 @@ const Settings = {
   },
   resetActivity(a) {
     for (const s of a.stars) delete Store.data.stars[s.id];
-    delete Store.data.badges[a.badge.id]; delete Store.data.badges[App.topic.master.id]; Store.save();
+    const tp = TOPICS.find(t => t.activities.includes(a));
+    delete Store.data.badges[a.badge.id]; delete Store.data.badges[tp.master.id]; Store.save();
     Sound.whoosh(); refresh(); this.renderProgress();
     const msg = 'Fresh start! Every star in this activity is ready to be found again.';
     if (App.act === a) mount(a, msg); else say(msg); // said with the intro, so one doesn't cut off the other
   },
   resetAll() {
     Store.data.stars = {}; Store.data.badges = {}; Store.save();
-    Sound.whoosh(); refresh(); this.renderProgress(); mount(App.act, 'All clear! Every star is ready to be found again.');
+    Sound.whoosh(); refresh(); this.renderProgress();
+    const msg = 'All clear! Every star is ready to be found again.';
+    if (App.act) mount(App.act, msg); else say(msg);
   },
   renderProgress() {
     const ul = $('#progressList'); ul.innerHTML = '';
-    for (const a of App.topic.activities) {
+    for (const a of TOPICS.flatMap(t => t.activities)) {
       const n = a.stars.filter(s => Store.data.stars[s.id]).length;
       const li = document.createElement('li');
       li.innerHTML = `<canvas width="68" height="68" aria-hidden="true"></canvas><span>${a.name}</span><small>${n} of ${a.stars.length} stars</small>`;

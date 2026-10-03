@@ -25,7 +25,7 @@ for m in re.finditer(r"`([^`]*)`", code):
 cands = [s for s in raw if len(s) > 10 and ' ' in s and ('<b>' in s or re.search(r'[.!?…]$', s)) and not s.startswith('A ') and not s.startswith('→') and 'Stars and badges' not in s]
 # templated lines
 quiz = re.findall(r"hint: '((?:[^'\\]|\\.)*)'", code)
-extra = ['Okay!', "I'll read everything out loud for you.", 'Yes!', 'You got it!', 'Not quite.', 'Hi!', "I'm Pip, a bean seed.", 'Nice to meet you!', "Let's explore together.", "Sorry, this browser can't read out loud."]
+extra = ['Okay!', "I'll read everything out loud for you.", 'Yes!', 'You got it!', 'Not quite.', 'Hi!', "I'm Pip, a bean seed.", 'Nice to meet you!', 'Welcome back!', "Let's explore together.", "Sorry, this browser can't read out loud."]
 extra += ['Hint: ' + h.replace("\\'", "'") for h in quiz]
 for name in re.findall(r"badge: \{ id: '[^']+', name: '([^']+)'", code) + ['Botanist']:
     extra.append(f'You earned the {name} badge!')
