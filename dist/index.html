@@ -1969,6 +1969,14 @@ function mount(a, lead = '') {
   App.inst = a.mount(host, makeUI(intro)) || {};
   if (!a.html) say(intro);
 }
+// The page opens before the first tap allows sound, so Pip's opening line is shown but not heard.
+// The first tap reads it out loud, and the listen-first hold waits for his voice instead of reading time.
+// Taps on the read button, Pip or the voice toggle are left alone: those already decide what Pip says.
+function hearOpening(e) {
+  if (!Voice.auto || !App.current || (e.target.closest && e.target.closest('#readBtn, #pip, #talkBtn'))) return;
+  App.sayT = Loop.t; Voice.speak(App.current);
+  if (plainText(App.current).split(' ').length >= 8) startListening(App.current);
+}
 function selectTopic(tp) { App.topic = tp; renderTabs(); const last = tp.activities.find(a => a.id === Store.data.last); mount(last || tp.activities[0]); }
 
 function init() {
@@ -1986,7 +1994,8 @@ function init() {
   sel.onchange = () => { const tp = TOPICS.find(t => t.id === sel.value); if (tp) { Sound.whoosh(); selectTopic(tp); } };
   $('#readBtn').onclick = () => { if (Voice.speaking) Voice.stop(); else Voice.speak(App.current); };
   Settings.init();
-  const unlock = () => { Sound.unlocked = true; Sound.ensure(); Sound.levels(); Voice.load(); if (Store.data.music && !Music.on) Settings.setMusic(true); };
+  if (Voice.auto) Voice.load(); // fetching needs no tap, so the opening line can play as soon as sound is allowed
+  const unlock = e => { Sound.unlocked = true; Sound.ensure(); Sound.levels(); Voice.load(); if (Store.data.music && !Music.on) Settings.setMusic(true); hearOpening(e); };
   document.addEventListener('pointerdown', unlock, { capture: true, once: true }); document.addEventListener('keydown', unlock, { capture: true, once: true });
   // ambient birds now and then
   setInterval(() => { if (Sound.on && Sound.ctx && !document.hidden && App.act && App.act.id !== 'quiz' && Math.random() < .5) Sound.chirp(); }, 9000);
