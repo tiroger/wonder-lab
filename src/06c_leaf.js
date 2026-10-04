@@ -3,7 +3,7 @@
 // tap the air bubbles; then the leaf makes sugar (it travels down to feed the plant) and lets out oxygen.
 const A_leaf = {
   id: 'leaf', name: 'Leaf Factory', icon: 'leaf',
-  badge: { id: 'b.leaf', name: 'Sun Chef', desc: 'You helped a leaf cook its food with sunlight!', how: 'Not yet! Help the leaf make food in <b>Leaf Factory</b>.' },
+  badge: { id: 'b.leaf', name: 'Sun Chef', desc: 'You helped a leaf cook its food with sunlight!', how: 'Not yet! Help the leaf make food in <b>Leaf Factory</b>.', reward: 'appleTree' },
   stars: [{ id: 'leaf.sun', name: 'Sunlight' }, { id: 'leaf.water', name: 'Water' }, { id: 'leaf.air', name: 'Carbon dioxide' },
     { id: 'leaf.sugar', name: 'Sugar' }, { id: 'leaf.oxygen', name: 'Oxygen' }, { id: 'leaf.green', name: 'Chlorophyll' }],
   intro: 'Leaves are food factories! This leaf needs three things to make food: <b>sunlight</b>, <b>water</b> and <b>air</b>. First, move the cloud off the sun.',

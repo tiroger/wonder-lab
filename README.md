@@ -6,7 +6,7 @@ Live at **https://wonderlab.camp**
 
 ## What it's like
 
-You start on a map of the Lab's grounds. Each topic is a building along a winding trail (a greenhouse for **Plants & Seeds**), and a little bean seed named **Pip** walks to whichever one you tap. The grounds are full of things to poke: a pond with a frog, a flower bed that calls a bee, a rock with a pill bug under it. Tap Pip and he shares a fact from something you've already explored. Inside, every activity is a small hands-on scene:
+You start on a map of the Lab's grounds. Each topic is a building along a winding trail (a greenhouse for **Plants & Seeds**), and a little bean seed named **Pip** walks to whichever one you tap. The grounds are full of things to poke: a pond with a frog, a flower bed that calls a bee, a rock with a pill bug under it. Tap Pip and he shares a fact from something you've already explored. Every badge plants something new in a Badge Garden on the map, and the greenhouse fills with plants as the stars add up. Inside, every activity is a small hands-on scene:
 
 - **Meet the Plant:** tap roots, stem, leaves, flower and pod to learn their jobs.
 - **Open a Seed:** soak a bean, peel it, split it, and find the baby plant inside.

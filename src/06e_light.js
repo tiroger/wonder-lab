@@ -3,7 +3,7 @@
 // bend toward the light over the days; tip the cup over and the stem turns back up while the roots turn down.
 const A_light = {
   id: 'light', name: 'Light Seeker', icon: 'lamp',
-  badge: { id: 'b.light', name: 'Light Seeker', desc: 'You found out that stems grow toward light and roots follow gravity down!', how: 'Not yet! Move the lamp and tip the cup in <b>Light Seeker</b>.' },
+  badge: { id: 'b.light', name: 'Light Seeker', desc: 'You found out that stems grow toward light and roots follow gravity down!', how: 'Not yet! Move the lamp and tip the cup in <b>Light Seeker</b>.', reward: 'beanTeepee' },
   stars: [{ id: 'light.bend', name: 'Bends to the light' }, { id: 'light.follow', name: 'Follows the light' }, { id: 'light.up', name: 'Stem turns up' }, { id: 'light.roots', name: 'Roots grow down' }],
   intro: 'Plants love light! <b>Drag the lamp</b> to one side and watch what the plant does.',
   facts: ['Did you know? Stems grow toward light, and roots grow down. Roots can feel <b>gravity</b>, the pull that makes things fall, so they know which way is down!', 'Did you know? A plant by a window leans toward the glass to catch more light.'],

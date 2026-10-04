@@ -58,7 +58,7 @@ function worm(c, x, y, t, fast = 0) {
 /* ============ Activity: Meet the Plant ============ */
 const A_parts = {
   id: 'parts', name: 'Meet the Plant', icon: 'plant',
-  badge: { id: 'b.parts', name: 'Plant Pal', desc: 'You found every part of a plant!', how: 'Not yet! Find all 5 parts of the plant in <b>Meet the Plant</b>.' },
+  badge: { id: 'b.parts', name: 'Plant Pal', desc: 'You found every part of a plant!', how: 'Not yet! Find all 5 parts of the plant in <b>Meet the Plant</b>.', reward: 'birdhouse' },
   stars: [{ id: 'parts.roots', name: 'Roots' }, { id: 'parts.stem', name: 'Stem' }, { id: 'parts.leaves', name: 'Leaves' }, { id: 'parts.flower', name: 'Flower' }, { id: 'parts.fruit', name: 'Fruit & seeds' }],
   intro: 'Every plant has parts with special jobs. <b>Tap each part</b> of this plant to learn its job. Can you find all 5?',
   facts: ['Did you know? Roots drink water from the soil, and they hold the plant in place like an anchor.', 'Did you know? A stem works like a straw. It carries water up to the leaves.'],
@@ -162,7 +162,8 @@ const A_parts = {
 };
 
 /* ============ the greenhouse: Plants & Seeds' building on the campus map (base center at 0,0; about 220x170) ============ */
-function drawGreenhouse(c, t) {
+// p: the share of the topic's stars earned; the greenhouse fills with plants as it grows
+function drawGreenhouse(c, t, p = 0) {
   const sw = RM ? 0 : Math.sin(t * 1.3) * 4;
   c.save(); c.translate(-110, -160);
   c.fillStyle = 'rgba(36,54,40,.18)'; c.beginPath(); c.ellipse(110, 156, 98, 10, 0, 0, TAU); c.fill();
@@ -172,6 +173,10 @@ function drawGreenhouse(c, t) {
   drawLeaf(c, 50, 124, -78 + sw, .42); drawLeaf(c, 66, 124, -112 - sw, .36); drawLeaf(c, 38, 124, -58 + sw * .5, .3);
   c.strokeStyle = C.leafDeep; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(150, 124); c.quadraticCurveTo(146, 98, 150 + sw * .5, 74); c.stroke();
   drawLeaf(c, 148, 104, -30 + sw, .22); drawFlowerHead(c, 150 + sw * .5, 68, .36, t);
+  if (p >= .85) { c.strokeStyle = '#A87445'; c.lineWidth = 3; c.beginPath(); c.moveTo(134, 124); c.lineTo(134, 40); c.stroke(); c.strokeStyle = C.leafDeep; c.lineWidth = 2.5; c.beginPath(); for (let u = 0; u <= 1.001; u += .05) { const x = 134 + Math.sin(u * 16) * 5, y = 124 - u * 82; u ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); drawLeaf(c, 138, 70, -20 + sw, .14); drawLeaf(c, 130, 92, -160 - sw, .14); }
+  if (p >= .15) { const pot = rrect(76, 110, 20, 14, 3); c.fillStyle = '#C8653A'; c.fill(pot); c.strokeStyle = C.ink; c.lineWidth = 2; c.stroke(pot); drawLeaf(c, 86, 110, -130 + sw, .14); drawLeaf(c, 86, 110, -50 - sw, .14); }
+  if (p >= .35) { c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.beginPath(); c.moveTo(178, 124); c.quadraticCurveTo(174, 100, 178 + sw * .4, 84); c.stroke(); drawLeaf(c, 177, 104, -160 + sw, .18); drawLeaf(c, 178, 92, -20 - sw, .16); c.fillStyle = '#E04B4B'; c.strokeStyle = C.ink; c.lineWidth = 2; for (const [x, y] of [[170, 98], [184, 108]]) { c.beginPath(); c.arc(x, y, 5, 0, TAU); c.fill(); c.stroke(); } }
+  if (p >= .6) { c.strokeStyle = 'rgba(36,54,40,.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(102, 14); c.lineTo(110, 44); c.lineTo(118, 14); c.stroke(); const bk = new Path2D('M96 44 H124 A14 12 0 0 1 96 44 Z'); c.fillStyle = '#C9955A'; c.fill(bk); c.strokeStyle = C.ink; c.lineWidth = 2.5; c.stroke(bk); drawLeaf(c, 100, 50, 110 + sw, .16); drawLeaf(c, 120, 50, 70 - sw, .16); c.fillStyle = C.petal; c.beginPath(); c.arc(110, 44, 4, 0, TAU); c.fill(); }
   c.restore();
   c.strokeStyle = 'rgba(36,54,40,.45)'; c.lineWidth = 2.5; c.beginPath();
   c.moveTo(68, 23); c.lineTo(68, 124); c.moveTo(110, 14); c.lineTo(110, 124); c.moveTo(152, 23); c.lineTo(152, 124); c.moveTo(26, 92); c.lineTo(194, 92); c.stroke();

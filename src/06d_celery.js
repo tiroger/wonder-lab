@@ -3,7 +3,7 @@
 // the stalk's tiny tubes to the leaves. Sunshine makes it faster. Cut the stalk to see the colored tubes.
 const A_celery = {
   id: 'celery', name: 'Thirsty Celery', icon: 'celery',
-  badge: { id: 'b.celery', name: 'Water Tracker', desc: 'You watched water climb all the way up a celery stalk!', how: 'Not yet! Watch the colored water climb in <b>Thirsty Celery</b>.' },
+  badge: { id: 'b.celery', name: 'Water Tracker', desc: 'You watched water climb all the way up a celery stalk!', how: 'Not yet! Watch the colored water climb in <b>Thirsty Celery</b>.', reward: 'sprinkler' },
   stars: [{ id: 'celery.color', name: 'Colored water' }, { id: 'celery.climb', name: 'Water climbs' }, { id: 'celery.leaves', name: 'To the leaves' },
     { id: 'celery.sun', name: 'Sunshine helps' }, { id: 'celery.tubes', name: 'Tiny tubes' }],
   intro: 'Plants drink water through tiny tubes. Let\'s watch it happen! <b>Tap a color</b> to add it to the water.',

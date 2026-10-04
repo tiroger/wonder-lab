@@ -34,7 +34,7 @@ function drawQuizPic(cv, pic) {
 }
 const A_quiz = {
   id: 'quiz', name: 'Plant Quiz', icon: 'quiz', html: true, badgeNeed: 10,
-  badge: { id: 'b.quiz', name: 'Quiz Champ', desc: 'You earned 10 quiz stars. You really know your plants!', how: 'Not yet! Earn 10 stars in the <b>Plant Quiz</b>. You get a star when you answer right on the first try.' },
+  badge: { id: 'b.quiz', name: 'Quiz Champ', desc: 'You earned 10 quiz stars. You really know your plants!', how: 'Not yet! Earn 10 stars in the <b>Plant Quiz</b>. You get a star when you answer right on the first try.', reward: 'starFlag' },
   stars: QUIZ.map(q => ({ id: 'quiz.' + q.id, name: q.name })),
   intro: 'Ready for a challenge? Get it right on the <b>first try</b> to earn a star. Collect 10 quiz stars for the Quiz Champ badge!',
   mount(host, ui) {

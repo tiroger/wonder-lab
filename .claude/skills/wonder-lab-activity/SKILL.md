@@ -13,7 +13,8 @@ Each activity is a `const` in its own `src/0N_name.js`, listed in a topic's `act
 const A_example = {
   id: 'example', name: 'Tab Name', icon: 'plant',          // icon = key in ICONS (src/07_quiz.js), drawn in a 100x100 box
   badge: { id: 'b.example', name: 'Badge Name', desc: 'You did the thing!',
-           how: 'Not yet! Do the thing in <b>Tab Name</b>.' },          // how: what Pip says in the Trophy Hall before it's earned (recorded)
+           how: 'Not yet! Do the thing in <b>Tab Name</b>.',            // how: what Pip says in the Trophy Hall before it's earned (recorded)
+           reward: 'beehive' },                                    // the piece it plants in the Badge Garden: a key in GARDEN (src/08f_garden.js)
   stars: [{ id: 'example.first', name: 'First idea' }, ...],   // 3-6, each a real concept; ids are saved, never rename them
                                                             // in a new topic, prefix every id with the topic id: 'space.example', 'space.example.first'
   badgeNeed: 10,                                            // optional; default = all stars
@@ -51,7 +52,7 @@ const A_example = {
 - Rapid taps are handled for you: the newest line wins after a short settle pause, the old one fades out, and repeating the line that's playing doesn't restart it. Pair every tap with an instant `Sound.*` effect.
 - Reminders: show the need on screen first (bouncing label, visual change). Speak it once with `{ polite: true }`, and again only if it's been ignored for 20+ seconds.
 - For tests, return `state: () => s` from `mount` so `tests/walkthrough.js` can set up a situation directly.
-- Every string Pip says must be recorded (`/record-voice`). `voice/lines.py` finds them in single quotes or backticks; it skips the scene description given to `new Stage`. Check `git diff voice/lines.json` shows every new line. Write text Pip doesn't say (canvas labels, hints) in double quotes so it isn't recorded. Keep lines static; if one must vary, add each variant in `voice/lines.py`.
+- Every string Pip says must be recorded (`/record-voice`). `voice/lines.py` finds them in single quotes or backticks; it skips the scene description given to `new Stage`. Check `git diff voice/lines.json` shows every new line. Write text Pip doesn't say (canvas labels, hints) in double quotes so it isn't recorded. Keep lines static; if one must vary, add each variant in `voice/lines.py`. Keep a badge's keys in the order `id, name, desc, …`: `voice/lines.py` reads the badge lines with a pattern that expects it.
 - When a stage ends (parts removed, used up, transformed), those parts must stop responding to taps and hover.
 - Show found parts with `tag(...)` and support `ui.showAll` (a "Show all labels" button) for learning.
 

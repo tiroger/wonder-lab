@@ -2,7 +2,8 @@
 const TOPICS = [
   // accent: the page ground and dots, the selected tab, the stage backdrop, Pip's bold words, the Trophy Hall name plate (docs/design.md, section 15)
   // pip: a costume key from PIP_COSTUMES, or null
-  { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, pip: null,
+  // landmark: a GARDEN piece raised beside the building when the topic's trophy is won (src/08f_garden.js)
+  { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, landmark: 'sunflower', pip: null,
     accent: { ground: '#E8F3E1', dot: '#D3E8CB', tab: '#FFC93C', stage: '#BFE6F4', bold: '#2A7340', plate: '#2A7340' },
     activities: [A_parts, A_seed, A_flower, A_produce, A_grow, A_travel, A_leaf, A_celery, A_light, A_needs, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
@@ -293,6 +294,7 @@ function checkIds() {
     if (typeof tp.building !== 'function') bad.push(`${tp.id} needs a building(c, t) for the map`);
     for (const k of Object.keys(ACCENT_VARS).concat('plate')) if (!(tp.accent && /^#[0-9A-F]{6}$/i.test(tp.accent[k]))) bad.push(`${tp.id} accent needs ${k}`);
     if (tp.pip != null && !PIP_COSTUMES[tp.pip]) bad.push(`${tp.id} has an unknown costume ${tp.pip}`);
+    for (const k of [tp.landmark, ...tp.activities.map(a => a.badge.reward)]) if (k != null && !GARDEN[k]) bad.push(`${tp.id} has an unknown garden piece ${k}`);
   }
   if (bad.length) console.error('Topics: ' + bad.join(', '));
   return bad;
