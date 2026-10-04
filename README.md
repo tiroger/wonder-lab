@@ -1,109 +1,71 @@
 # Wonder Lab
 
-A playful learning web app for a 3rd grader, live at https://wonderlab.camp. Each class topic becomes a set of hands-on activities drawn entirely in JavaScript (Canvas 2D), with sound effects, a guide character (Pip the bean seed), stars and badges.
+**A hands-on science lab for a third grader.** Each topic his class covers becomes a set of small experiments he can tap, drag and pour his way through, with a friendly guide who explains everything out loud.
 
-Live version (private Claude artifact): https://claude.ai/artifact/SG45qnd4mhnkxyjtpB3f1N
+Live at **https://wonderlab.camp**
 
-## Topic 1: Plants & Seeds
-1. **Meet the Plant**: roots, stem, leaves, flower, fruit. Bonus worm, butterfly and sun.
-2. **Open a Seed**: soak, peel the seed coat, split the bean, find the cotyledons, embryo, baby root and baby leaves. Magnifying glass and a sprouting animation.
-3. **Flower Lab**: drag off petals and sepals, explore the stamen (anther, filament) and pistil (stigma, style, ovary), then help a bee pollinate.
-4. **Grow a Bean**: water and sunlight meters, life cycle from seed to fruit and seeds.
-5. **Seed Travel**: wind, animals, water, pop.
-6. **Plant Quiz**: 12 questions, 8 per round, stars for first-try answers.
+## What it's like
 
-## Run it
-The page loads its voice file with `fetch`, so open it through a small web server (not by double-clicking the file):
+You start on a map of the Lab's grounds. Each topic is a building along a winding trail (a greenhouse for **Plants & Seeds**), and a little bean seed named **Pip** walks to whichever one you tap. Inside, every activity is a small hands-on scene:
 
-```
-./serve.sh        # local preview only: builds, serves at localhost:8000 and opens your browser (Ctrl+C to stop)
-```
+- **Meet the Plant:** tap roots, stem, leaves, flower and pod to learn their jobs.
+- **Open a Seed:** soak a bean, peel it, split it, and find the baby plant inside.
+- **Flower Lab:** take a flower apart, then help a bee pollinate it.
+- **Grow a Bean:** water it, give it sun, and watch it go from seed to pods.
+- **Seed Travel:** four ways seeds get around.
+- **Plant Quiz:** stars for answers right on the first try.
 
-## Layout
-```
-src/               page source, concatenated in file-name order
-  00_markup.html   title, fonts, CSS and page markup
-  01_core.js       helpers, colors, storage, Sound (all effects synthesized with Web Audio), Music, Stage class, shared drawing
-  02_parts.js      Meet the Plant (+ drawPlant, shared with the quiz)
-  03_seed.js       Open a Seed
-  04_flower.js     Flower Lab
-  05_grow.js       Grow a Bean
-  06_travel.js     Seed Travel
-  07_quiz.js       Plant Quiz + tab/badge icons
-  08_voice.js      Pip's voice: plays the recorded messages for the chosen voice
-  08b_settings.js  Settings dialog: name, voice, volumes, progress resets
-  08c_home.js      Home page: the Lab campus map (a building per topic), Keep going
-  09_app.js        TOPICS list, Pip, stars, badges, tabs, controls
-build.py           builds dist/index.html (full page) and dist/artifact.html (for publishing as a Claude artifact)
-infra/             Terraform: S3 bucket, CloudFront, ACM certificate, Route 53 records; infra/bootstrap: state bucket + CI roles
-.github/workflows/ CI (pull requests) and Deploy (main)
-voice/             narration pipeline: lines.py, synth_openai.py, check.py, lines.json (every message), packs/ (one mp3 + index per voice)
-tests/             walkthrough.js end-to-end test
-dist/              built page + hashed voice file
-```
+Pip reads every line aloud. Discoveries earn stars and badges, finished topics earn trophies, and they're all on display in the **Trophy Hall**.
 
-## How an activity works
-Each activity is an object `{ id, name, icon, badge, stars[], intro, mount(host, ui) }`. `mount` creates a `Stage` (an 800x560 canvas that scales to fit) and returns `{ stage, destroy() }`. The `ui` object gives it `say(html)`, `award(starId, x, y)`, `button()`, `hint()` and `extraEl()`.
+## How it's built
 
-To add a topic: write new activity objects and add an entry to `TOPICS` in `09_app.js` with a `building(c, t)` drawing; it appears as a building on the home map (see `docs/design.md`).
+- **Drawn and voiced in the browser:** every picture is drawn in code and every sound effect is synthesized, with no images and no libraries.
+- **Recorded narration:** Pip's lines are pre-recorded with AI text-to-speech in four voices.
+- **Paced for a young kid:** Pip finishes explaining before the next tap counts.
+- **Tested by playing:** an automated playthrough runs every activity on each change.
+- **Ready for more topics:** a [design guide](docs/design.md) keeps the look consistent as new ones are added.
 
-## Pip's voice
-Every line Pip says is recorded ahead of time with OpenAI's `gpt-4o-mini-tts`, steered to sound like a warm, playful teacher. There are four voices to pick from in **Settings**: Marin (default), Coral, Nova and Cedar. Each message is recorded in one take so it flows naturally, plus a few short pieces ("Hi!", "Nice to meet you!") for lines that include the explorer's name. Nothing falls back to the device's robotic voice: a line without a recording stays silent, and the walkthrough test fails on it.
+## Claude Code setup
 
-Each voice is a pack: `voice/packs/<voice>.mp3` (all clips back to back) and `voice/packs/<voice>.json` (byte offsets). `build.py` publishes them as `dist/voice/<voice>.<hash>.mp3`, so a new recording never mixes with an old cached one.
+The repo comes with a Claude Code setup in `.claude/`, so new topics and changes follow the same rules:
 
-After adding or changing any text Pip says, re-record (only new or changed lines cost anything):
-```
-# .env at the repo root holds OPENAI_API_KEY=sk-...   (git-ignored)
-python3 voice/unpack.py             # fresh checkout only: rebuild the clip cache from the packs
-python3 voice/lines.py              # collect every message from src/
-python3 voice/synth_openai.py       # record new lines in every voice
-python3 voice/check.py --fix        # transcribe each clip, re-record any that came out wrong
-python3 build.py
-```
-Templated lines (quiz feedback, badge messages, greetings) are built in `voice/lines.py`. To add a voice, add it to `VOICES` in `voice/synth_openai.py` and `VOICE_CHOICES` in `src/08_voice.js`.
+- **`/new-topic` and `/new-activity`:** plan and build a new class topic or activity in the house style.
+- **`/record-voice`:** record Pip's new lines and check every clip.
+- **`/walkthrough`:** play through every activity in a headless browser.
+- **`/ship`:** take a change from branch to pull request to deploy.
+- **Activity skill:** how an activity is put together.
+- **Kid-content reviewer:** an agent that checks new text for a third grader.
+- **Build check:** a hook that rebuilds and checks the page after every edit.
 
-## Settings
-The gear button opens Settings: explorer name, Pip's voice, read-aloud on/off, voice/effects/music volume, and progress with a reset button per activity plus **Start over** for everything. Resets ask for a second tap.
+## How it's hosted
 
-## Test
-`tests/walkthrough.js` plays every activity start to finish in a headless browser: it earns every star and badge, checks each Grow a Bean stage in order, checks that withered flower parts stop responding after pollination, that reminders never cut Pip off, and that every line said has a recording in every voice. It runs on every pull request and fails the check if anything is off.
-```
-python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js
+A static site on AWS, defined in Terraform and deployed by GitHub Actions on every merge.
+
+```mermaid
+flowchart LR
+  visitor([Browser]) --> dns[Route 53]
+  dns --> cdn[CloudFront]
+  cert[ACM certificate] -.-> cdn
+  cdn --> bucket[(S3)]
+  gh[GitHub Actions] -->|deploy| bucket
 ```
 
-## Deploy: CI/CD with GitHub Actions + Terraform
-Everything ships through GitHub Actions, with no AWS keys on a laptop or in GitHub. The site is served from a private S3 bucket through CloudFront at https://wonderlab.camp (www redirects to the root), with an ACM certificate and Route 53 records, all defined in `infra/`.
+- **S3:** stores the site.
+- **CloudFront:** serves it over HTTPS.
+- **ACM:** the certificate.
+- **Route 53:** DNS for `wonderlab.camp`.
 
-| Workflow | When | What it does |
-|---|---|---|
-| `.github/workflows/ci.yml` | every pull request | builds the page, checks the script, `terraform fmt` + `validate`, plays every activity end to end (`tests/walkthrough.js`), and posts a `terraform plan` to the run summary using the read-only plan role |
-| `.github/workflows/deploy.yml` | push to `main` (or run by hand) | in the `production` environment: `terraform apply`, build, upload to S3, refresh CloudFront |
+## Repo
 
-AWS access comes from two roles the workflows assume through GitHub OIDC with short-lived sessions. Workflow actions are pinned to commit SHAs (Dependabot proposes updates):
-- `wonder-lab-ci-plan`: trusted only for pull requests from this repo. Reads the Terraform state and this site's settings, nothing else in the account.
-- `wonder-lab-ci-deploy`: trusted only for the repo's `production` environment. It can change only this site's resources: the site bucket, the wonderlab.camp DNS records, and CloudFront and certificate resources tagged `Project = wonderlab` (functions by name). It has no IAM permissions.
-
-### One-time bootstrap (by hand)
-`infra/bootstrap/` creates the Terraform state bucket and the two roles. It reuses the account's existing GitHub OIDC provider (an account has only one). It is the only thing ever applied from a laptop, because CI can't create the role it logs in with.
 ```
-aws sso login
-aws sts get-caller-identity                 # confirm the account first
-cd infra/bootstrap
-terraform init
-terraform plan                              # read it: it creates IAM roles
-terraform apply
+src/      the app
+voice/    Pip's narration
+tests/    the automated playthrough
+infra/    Terraform
+docs/     the design guide
+.claude/  the Claude Code setup
 ```
-Then create the GitHub repo and point it at the account:
-```
-gh repo create tiroger/wonder-lab --private
-git remote add origin git@github.com-personal:tiroger/wonder-lab.git
-terraform output -raw github_variable_commands    # run the commands it prints
-git push -u origin main                           # first deploy
-```
-Keep `infra/bootstrap/terraform.tfstate` (git-ignored) somewhere safe; it only matters if the bootstrap ever changes.
 
-After that, every change ships by merging to `main`.
+## Built with
 
-## Progress
-Stars, badges, the explorer name and sound settings are saved in the browser's localStorage, on that device only.
+JavaScript (Canvas 2D, Web Audio), Python, OpenAI text-to-speech, Terraform, AWS, GitHub Actions, Playwright, Claude Code.
