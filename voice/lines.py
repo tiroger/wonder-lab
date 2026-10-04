@@ -22,7 +22,9 @@ raw = []
 for m in re.finditer(r"'((?:[^'\\\n]|\\.)*)'", code): raw.append(m.group(1).replace("\\'", "'"))
 for m in re.finditer(r"`([^`]*)`", code):
     if '${' not in m.group(1): raw.append(m.group(1))
-cands = [s for s in raw if len(s) > 10 and ' ' in s and ('<b>' in s or re.search(r'[.!?…]$', s)) and not s.startswith('A ') and not s.startswith('→') and 'Stars and badges' not in s]
+# scene descriptions for screen readers (the text given to `new Stage`) are never spoken
+stage_descs = {d.replace("\\'", "'") for d in re.findall(r"new Stage\(host, '((?:[^'\\]|\\.)*)'", code)}
+cands = [s for s in raw if len(s) > 10 and ' ' in s and ('<b>' in s or re.search(r'[.!?…]$', s)) and s not in stage_descs and not s.startswith('→') and 'Stars and badges' not in s]
 # templated lines
 quiz = re.findall(r"hint: '((?:[^'\\]|\\.)*)'", code)
 extra = ['Okay!', "I'll read everything out loud for you.", 'Yes!', 'You got it!', 'Not quite.', 'Hi!', "I'm Pip, a bean seed.", 'Nice to meet you!', 'Welcome back!', "Let's explore together.", "Sorry, this browser can't read out loud."]
