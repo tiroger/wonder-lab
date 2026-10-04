@@ -104,6 +104,7 @@ const Sound = {
   squish() { this.wobble(110, .4, .15, 9, 25, 'sine', 0, 1.6); this.noise(.3, .06, 'lowpass', 500); },
   chirp(when = 0) { const f = rand(2200, 3000); for (let i = 0; i < 3; i++) this.tone(f, .07, 'sine', .05, when + i * .09, 1.35); },
   grow(k = 0) { for (let i = 0; i < 5; i++) this.xylo(PENTA[(k + i) % PENTA.length] * (i > 4 ? 2 : 1), i * .06, .09); this.wobble(300, .5, .06, 8, 20, 'sine', .1, 2); },
+  croak() { this.wobble(150, .16, .16, 45, 40, 'triangle', 0, .7); this.wobble(135, .2, .16, 45, 40, 'triangle', .2, .7); },
   ptoo() { this.tone(500, .12, 'square', .06, 0, 2.5); },
   babble(n = 4) { for (let i = 0; i < n; i++) this.tone(PENTA[Math.floor(rand(2, 8))] * .75, .06, 'triangle', .07, i * .085, rand(.9, 1.2)); },
   buzz(on) { // continuous bee buzz

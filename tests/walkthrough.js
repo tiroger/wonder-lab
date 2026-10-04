@@ -376,6 +376,45 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     await done(ctx, p);
   }
   {
+    // the grounds: things to poke, little Pip strolls the trail, and tapping him gets a fact from an activity you've played
+    const { ctx, p } = await fresh(null, { viewport: { width: 1100, height: 1400 } });
+    const spot = () => p.evaluate(() => {
+      const r = Home.cv.getBoundingClientRect(), L = Home.L, c = (x, y) => [r.left + x / L.w * r.width, r.top + y / L.h * r.height], f = frogAt(Loop.t + 1);
+      const mid = Math.round((Home.doors[0] + Home.doors[1]) / 2), s = Home.samples[mid];
+      return { tree: c(L.trees[0].x, L.trees[0].cy), frog: c(f.x, f.y), water: c(L.pond.x + L.pond.rx * .5, L.pond.y + L.pond.ry * .45), flowers: L.flowers.map(q => c(q.x, q.y)),
+        rock: c(L.rock.x, L.rock.y), bug: c(L.rock.x, L.rock.y + 4), trail: c(s.x, s.y), mid };
+    });
+    const grounds = {};
+    await p.click('#pipBtn'); await sleep(300);
+    grounds.tickle = await p.evaluate(() => App.current === PIP_TICKLE);
+    await quiet(p);
+    await p.evaluate(() => { Store.data.stars['parts.roots'] = 1; });
+    await p.click('#pipBtn'); await sleep(300);
+    grounds.fact = await p.evaluate(() => A_parts.facts.includes(App.current));
+    await quiet(p);
+    let g = await spot();
+    for (let i = 0; i < 3; i++) { await p.mouse.click(...g.tree); await sleep(150); }
+    grounds.tree = await p.evaluate(() => ({ shook: Grounds.shake[0] != null, leaves: Grounds.leaves.length, birds: Grounds.birds.length }));
+    const pad0 = await p.evaluate(() => Grounds.frog.pad); await sleep(1100); g = await spot();
+    await p.mouse.click(...g.frog); await sleep(100);
+    grounds.frogHopped = await p.evaluate(pad0 => Grounds.frog.pad !== pad0, pad0);
+    await p.mouse.click(...g.water); await sleep(100);
+    grounds.ripple = await p.evaluate(() => Grounds.ripples.length > 0);
+    for (const f of g.flowers) { await p.mouse.click(...f); await sleep(120); }
+    grounds.bloom = await p.evaluate(() => Grounds.bloom.every(Boolean) && !!Grounds.bee);
+    await p.mouse.click(...g.rock); await sleep(700);
+    grounds.rock = await p.evaluate(() => Grounds.rock.open);
+    await sleep(1800); await p.mouse.click(...g.bug); await sleep(100);
+    grounds.bugCurled = await p.evaluate(() => Loop.t - Grounds.curlT < .5);
+    await p.mouse.click(...g.trail); await sleep(100);
+    grounds.stroll = await p.evaluate(() => ({ walking: !!Home.walk && !Home.walk.href, hash: location.hash }));
+    await p.click('.lot[data-topic="plants"]');                              // a building tapped mid-stroll still opens
+    grounds.entered = await p.waitForFunction(() => location.hash.startsWith('#/plants/'), null, { timeout: 4000 }).then(() => true, () => false);
+    grounds.buzzOff = await p.evaluate(() => !Sound.buzzNode);
+    home.grounds = grounds;
+    await done(ctx, p);
+  }
+  {
     // a link straight into an activity: the first tap reads its intro and taps wait for Pip
     const { ctx, p } = await fresh(null, { hash: '#/plants/parts' });
     const c0 = await p.evaluate(() => window.__clips);
@@ -560,6 +599,11 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Home: Keep going opens the last activity': report.home.keepGoing === '#/plants/parts',
     'Home: the logo goes home': report.home.logo === 'home',
     'Home: coming soon says so': report.home.soon.startsWith('That lab is still being built'),
+    'Grounds: tapping Pip tickles him, then gets a fact from an activity played': report.home.grounds.tickle && report.home.grounds.fact,
+    'Grounds: a tree shakes, drops leaves, and a bird flies out on the third tap': report.home.grounds.tree.shook && report.home.grounds.tree.leaves > 0 && report.home.grounds.tree.birds === 1,
+    'Grounds: the frog hops, the pond ripples, the rock flips and the pill bug curls': report.home.grounds.frogHopped && report.home.grounds.ripple && report.home.grounds.rock && report.home.grounds.bugCurled,
+    'Grounds: every flower blooms and a bee comes to visit': report.home.grounds.bloom,
+    'Grounds: Pip strolls the trail, and a building tapped mid-stroll still opens': report.home.grounds.stroll.walking && report.home.grounds.stroll.hash === '#/' && report.home.grounds.entered && report.home.grounds.buzzOff,
     'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,
     'Home: a returning visitor is welcomed back': report.home.returning.line.startsWith('Welcome back') && report.home.returning.keep.includes('Grow a Bean') && report.home.returning.pill.includes(`1/${report.totals.stars}`) && report.home.returning.pipAtDoor,
     'Home: phone map is one column, no sideways scrolling': report.home.phone.tall && report.home.phone.cols === 1 && !report.home.phone.sideways && report.home.phone.minLot >= 44 && report.home.phone.entered === '#/plants/parts',

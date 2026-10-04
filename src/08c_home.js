@@ -58,7 +58,7 @@ function topicStars(tp) { const st = Store.data.stars, all = tp.activities.flatM
 function renderHome() {
   const box = $('#campus'), cssW = box.clientWidth; if (!cssW) return;
   const cols = cssW < 600 ? 1 : 3;
-  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length);
+  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L);
   Home.samples = trailSamples(L.trail);
   Home.doors = L.lots.map(p => { let best = 0, bd = 1e9; Home.samples.forEach((s, i) => { const d = dist(s.x, s.y, p.x, p.y + 45); if (d < bd) { bd = d; best = i; } }); return best; });
   const last = lastPlace(), li = Home.lots.findIndex(l => l.tp && l.tp.id === last.topic);
@@ -82,7 +82,7 @@ function renderHome() {
       el.onclick = e => { e.preventDefault(); enterLot(i); };
     } else {
       el.type = 'button'; el.innerHTML = '<span class="name">Coming soon</span>';
-      el.onclick = () => { Sound.tap(1); Sound.hop(); say(HOME_SOON, { lock: false }); };
+      el.onclick = () => { Sound.tap(1); Sound.hop(); Grounds.craneT = Loop.t; say(HOME_SOON, { lock: false }); };
     }
     el.onpointerenter = el.onfocus = () => { if (Home.hover !== i) Sound.tone(PENTA[(i + 2) % 10] * 2, .05, 'sine', .04); Home.hover = i; };
     el.onpointerleave = el.onblur = () => { if (Home.hover === i) Home.hover = -1; };
@@ -101,9 +101,9 @@ function renderKeepGoing() {
 }
 // tapping a building: a door sound, little Pip walks along the trail to it, then it opens
 function enterLot(i) {
-  if (Home.walk) return;
+  if (Home.walk && Home.walk.href) return;
   const href = Home.lots[i].href; Sound.ensure(); Sound.plunk(); setTimeout(() => Sound.pop(), 120);
-  const from = Home.pipIdx, to = Home.doors[i];
+  const from = pipIdxNow(), to = Home.doors[i];  // a stroll along the trail turns toward the building
   if (RM || from === to) { Home.pipIdx = to; go(href); return; }
   Home.walk = { from, to, t0: Loop.t, dur: clamp(.35 + Math.abs(to - from) / 70, .5, 1.3), href };
 }
@@ -114,11 +114,12 @@ function homeDraw(t) {
   // lawn
   c.fillStyle = '#CDEBAE'; c.fillRect(0, 0, L.w, L.h);
   const r = seeded(5); c.fillStyle = '#B8DF93'; for (let i = 0; i < L.w * L.h / 12000; i++) { c.beginPath(); c.arc(r() * L.w, r() * L.h, 3 + r() * 4, 0, TAU); c.fill(); }
+  drawGroundsUnder(c, t);
   // trail
   const P = trailPath(L.trail); c.lineCap = 'round'; c.lineJoin = 'round';
   c.strokeStyle = C.ink; c.lineWidth = 40; c.stroke(P); c.strokeStyle = '#F1DDB0'; c.lineWidth = 32; c.stroke(P);
   c.setLineDash([14, 18]); c.strokeStyle = '#FFFDF5'; c.lineWidth = 5; c.stroke(P); c.setLineDash([]);
-  for (const tr of L.trees) campusTree(c, tr.x, tr.y, tr.s, t);
+  L.trees.forEach((tr, i) => campusTree(c, tr.x, tr.y, tr.s, t, treeShake(i, t)));
   campusGate(c, L.gate.x, L.gate.y, L.cols === 1);
   // buildings
   Home.lots.forEach((lot, i) => {
@@ -126,17 +127,19 @@ function homeDraw(t) {
     if (Home.hover === i) { c.translate(0, RM ? 0 : -Math.abs(Math.sin(t * 7)) * 4); glowOn(c); }
     lot.draw(c, t); c.restore();
   });
-  // little Pip, walking when a building was tapped
+  // little Pip, walking to a building that was tapped or to a spot on the trail
   let idx = Home.pipIdx, hop = 0;
   if (Home.walk) {
     const w = Home.walk, e = clamp((t - w.t0) / w.dur, 0, 1); idx = lerp(w.from, w.to, ease(e)); hop = Math.abs(Math.sin(e * w.dur * 14)) * 10;
-    if (e >= 1) { Home.pipIdx = w.to; Home.walk = null; go(w.href); }
+    if (e >= 1) { Home.pipIdx = w.to; Home.walk = null; if (w.href) go(w.href); }
   }
   const S = Home.samples, s0 = S[Math.floor(idx)], s1 = S[Math.min(S.length - 1, Math.ceil(idx))], f = idx % 1, sc = L.cols === 1 ? .5 : .55;
-  c.save(); c.translate(lerp(s0.x, s1.x, f), lerp(s0.y, s1.y, f) - 30 * sc); c.scale(sc, sc); pipFigure(c, t, { hop }); c.restore();
+  const px = lerp(s0.x, s1.x, f), py = lerp(s0.y, s1.y, f) - 30 * sc; Home.pipAt = { x: px, y: py }; placePipBtn(px, py);
+  c.save(); c.translate(px, py); c.scale(sc, sc); pipFigure(c, t, { hop, poke: t - Grounds.pokeT < .7 }); c.restore();
+  drawGroundsAbove(c, t);
 }
-function campusTree(c, x, y, s, t) {
-  const sw = RM ? 0 : Math.sin(t * 1.2 + x) * 2;
+function campusTree(c, x, y, s, t, shake = 0) {
+  const sw = (RM ? 0 : Math.sin(t * 1.2 + x) * 2) + shake;
   c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = C.ink; c.lineWidth = 4;
   c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 48, 34, 7, 0, 0, TAU); c.fill();
   c.fillStyle = C.soil; c.fillRect(-7, 6, 14, 42); c.strokeRect(-7, 6, 14, 42);
@@ -161,7 +164,7 @@ function drawConstruction(c, t) {
   c.fillStyle = 'rgba(36,54,40,.1)'; c.beginPath(); c.ellipse(100, 150, 88, 12, 0, 0, TAU); c.fill();
   c.lineCap = 'round'; c.lineJoin = 'round';
   const crane = new Path2D('M150 150 V30 M150 32 H66'); c.strokeStyle = C.ink; c.lineWidth = 12; c.stroke(crane); c.strokeStyle = C.sun; c.lineWidth = 6; c.stroke(crane);
-  const sw = RM ? 0 : Math.sin(t * 1.5) * 4; c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(80, 32); c.lineTo(80 + sw, 62); c.stroke();
+  const e = t - Grounds.craneT, sw = RM ? 0 : Math.sin(t * 1.5) * 4 + (e < 2.5 ? Math.sin(e * 5) * 22 * (1 - e / 2.5) : 0); c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(80, 32); c.lineTo(80 + sw, 62); c.stroke();
   c.lineWidth = 3; c.beginPath(); c.arc(80 + sw, 68, 6, -PI / 2, PI * .9); c.stroke();
   c.fillStyle = '#E6C48E'; c.lineWidth = 2.5; for (const [bx, by, bh] of [[20, 100, 50], [44, 96, 54], [68, 100, 50], [92, 96, 54], [116, 100, 50]]) { const b = rrect(bx, by, 20, bh, 3); c.fill(b); c.stroke(b); }
   const sign = rrect(36, 56, 56, 40, 6); c.fillStyle = '#FFFDF5'; c.fill(sign); c.lineWidth = 3; c.stroke(sign);
@@ -172,7 +175,11 @@ function drawConstruction(c, t) {
 function homeInit() {
   Home.cv = $('#campusCanvas'); Home.g = Home.cv.getContext('2d');
   new ResizeObserver(() => { if (App.view === 'home') renderHome(); }).observe($('#campus'));
-  Home.cv.addEventListener('pointerdown', e => { const r = Home.cv.getBoundingClientRect(); Sound.ensure(); Sound.tap(Math.floor((e.clientX - r.left) / r.width * 8)); });
+  // a tap on the grounds pokes whatever is there (src/08e_grounds.js); plain grass plays a note
+  const at = e => { const r = Home.cv.getBoundingClientRect(), L = Home.L; return [(e.clientX - r.left) / r.width * L.w, (e.clientY - r.top) / r.height * L.h]; };
+  Home.cv.addEventListener('pointerdown', e => { if (!Home.L) return; Sound.ensure(); const [x, y] = at(e); if (!groundsTap(x, y)) Sound.tap(Math.floor(x / Home.L.w * 8)); });
+  $('#pipBtn').onclick = pokePip;
+  Home.cv.addEventListener('pointermove', e => { if (Home.L) Home.cv.style.cursor = groundsHit(...at(e)) ? 'pointer' : ''; });
   Loop.add(homeDraw);
 }
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.

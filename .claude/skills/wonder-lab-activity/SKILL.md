@@ -19,6 +19,7 @@ const A_example = {
   badgeNeed: 10,                                            // optional; default = all stars
   html: true,                                               // optional; activity builds DOM instead of a canvas (the quiz); it must say ui.intro itself
   intro: 'What Pip says when the tab opens. <b>Bold</b> the action.',
+  facts: ['Did you know? …', 'Did you know? …'],             // two standalone facts Pip shares on the campus map once the activity has a star
   mount(host, ui) {
     const st = new Stage(host, 'Plain description of the scene for screen readers.');
     const s = { /* all state lives here; reset() rebuilds it */ };

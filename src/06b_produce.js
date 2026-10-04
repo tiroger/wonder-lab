@@ -173,6 +173,7 @@ const A_produce = {
   stars: [{ id: 'produce.fruit', name: 'Seeds mean fruit' }, { id: 'produce.outside', name: 'Seeds outside' }, { id: 'produce.root', name: 'Root' },
     { id: 'produce.stem', name: 'Stalk' }, { id: 'produce.leaf', name: 'Leaves' }, { id: 'produce.flower', name: 'Flower buds' }],
   intro: 'Your class cut open <b>produce</b>, which means fruits and vegetables, to look for seeds. Let\'s try it! <b>Tap a food</b> in the basket to put it on the cutting board.',
+  facts: ['Did you know? A tomato is a fruit, because it has seeds inside!', 'Did you know? When you eat a carrot, you are eating a root!'],
   mount(host, ui) {
     const st = new Stage(host, 'A kitchen counter with a basket of produce, a cutting board, and two crates labeled Fruit and Vegetable. Cut each food open, look for seeds, and sort it.');
     const BOARD = [420, 410], SLOTS = [[40, 372], [88, 366], [136, 364], [184, 366], [232, 372], [44, 422], [90, 418], [136, 416], [182, 418], [228, 422]];

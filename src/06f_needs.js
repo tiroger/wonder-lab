@@ -7,6 +7,7 @@ const A_needs = {
   stars: [{ id: 'needs.predict', name: 'Make a guess' }, { id: 'needs.best', name: 'Water and light' }, { id: 'needs.water', name: 'No water' },
     { id: 'needs.light', name: 'No light' }, { id: 'needs.fair', name: 'Fair test' }],
   intro: 'Scientists do a <b>fair test</b>. They change just one thing and keep everything else the same. These bean plants are the same, except for water and light. <b>Tap the plant</b> you think will grow the healthiest!',
+  facts: ['Did you know? Plants need water and light to grow healthy and strong.', 'Did you know? In a <b>fair test</b>, scientists change just one thing, so they know what made the difference.'],
   mount(host, ui) {
     const st = new Stage(host, 'Four bean plants in pots on a windowsill, labeled water and light, no water, no light, and neither, with a wall calendar to let a week go by.');
     const POTS = [{ x: 130, water: true, light: true, label: "Water and light" }, { x: 310, water: false, light: true, label: "No water" }, { x: 490, water: true, light: false, label: "No light" }, { x: 670, water: false, light: false, label: "Neither" }];

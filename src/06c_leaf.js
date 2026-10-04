@@ -7,6 +7,7 @@ const A_leaf = {
   stars: [{ id: 'leaf.sun', name: 'Sunlight' }, { id: 'leaf.water', name: 'Water' }, { id: 'leaf.air', name: 'Carbon dioxide' },
     { id: 'leaf.sugar', name: 'Sugar' }, { id: 'leaf.oxygen', name: 'Oxygen' }, { id: 'leaf.green', name: 'Chlorophyll' }],
   intro: 'Leaves are food factories! This leaf needs three things to make food: <b>sunlight</b>, <b>water</b> and <b>air</b>. First, move the cloud off the sun.',
+  facts: ['Did you know? Leaves make food from sunlight, air and water. Making food with light is called <b>photosynthesis</b>.', 'Did you know? Leaves give off <b>oxygen</b>, the gas we need to breathe!'],
   mount(host, ui) {
     const st = new Stage(host, 'A plant with one big leaf in the sun. A cloud covers the sun, a watering can sits on the ground, and air bubbles float by. Help the leaf make food.');
     const GY = 470, SUN = [712, 92], CAN = [96, 420], LEAF_AT = [300, 268], LEAF_ROT = -12, LEAF_S = 3.2;
