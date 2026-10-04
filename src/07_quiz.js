@@ -92,6 +92,7 @@ const A_quiz = {
 
 /* ============ little icons for tabs and badges (drawn in a 100x100 box) ============ */
 const ICONS = {
+  critter(c, t = 0) { c.save(); c.translate(50, 52); drawCritter(c, 'ladybug', t, 3.2); c.restore(); },
   plant(c, t = 0) { c.fillStyle = C.soil; c.beginPath(); c.ellipse(50, 90, 30, 8, 0, 0, TAU); c.fill(); c.strokeStyle = C.leafDeep; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(50, 88); c.quadraticCurveTo(45, 62, 50, 38); c.stroke(); drawLeaf(c, 48, 70, -155, .33); drawLeaf(c, 49, 56, -25, .33); drawFlowerHead(c, 50, 30, .42, 0); },
   seed(c) { drawBeanHalf(c, 50, 50, .34, {}); },
   flower(c) { c.strokeStyle = C.leafDeep; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(50, 95); c.lineTo(50, 55); c.stroke(); drawLeaf(c, 50, 80, -30, .3); drawFlowerHead(c, 50, 42, .6, 0); },

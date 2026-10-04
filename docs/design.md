@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15). Space and Weather in the tables are examples until those topics exist.
+**Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15), plus campus life: the grounds, the Badge Garden, the living sky and the critter hunt (section 16). Space and Weather in the tables are examples until those topics exist.
 
 ---
 
@@ -450,8 +450,19 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 - **Layers:** the rainbow and puddles sit on the lawn, under everything; the light tint, cloud shadows and fireflies go over the buildings and under Pip; rain and clouds are on top. Cloud taps come first; puddle taps come last.
 - No speech, so nothing to record. With `RM` on, clouds stay still, rain and snow aren't drawn (the cloud still greys), and fireflies don't move.
 
-### Next for the campus (planned with Roger, 2026-10-03)
-1. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
+### The critter hunt (as built, src/08h_critters.js)
+- **Six critters** hide in the grounds. Each one comes out when you play with its hiding place, and you find it by tapping it while it's out:
+  - the **ladybug** lands on the middle flower once it blooms.
+  - the **snail** crawls out when the pond reeds are tapped.
+  - the **pill bug** is under the rock.
+  - the **owl** peeks out of the lowest tree when it's shaken, and shows all night.
+  - the **earthworm** pokes out of the flower bed's soil when it's tapped, and after a shower.
+  - a **fish** jumps on every third tap on the pond.
+- **Finding one:** a sparkle sound, and Pip says its `found` line, a fact ("Owls sleep in the day…"). Saved in `Store.data.critters`.
+- **The Critter hunt strip** under the map: six round buttons (a grey silhouette with "?" until found). An unfound one gives its `tip` (a hint); a found one repeats its fact. On a phone it's three across.
+- **The Explorer badge:** finding all six earns it (toast plus the recorded badge line). It sits in the Trophy Hall's **Campus** case, after the topic cases; `CAMPUS_BADGES` holds badges for the map itself, and `hallAll()` counts them everywhere the hall counts badges.
+- Critter taps come before the grounds' own taps, so a critter sitting on a flower or tree gets found rather than poked.
+- **Voice note:** don't name a key `hint` outside the quiz. `voice/lines.py` turns every `hint:` into "Hint: …" and "Not quite. Hint: …" lines.
 
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.

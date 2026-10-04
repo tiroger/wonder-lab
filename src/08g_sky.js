@@ -36,6 +36,7 @@ function skyStep(t) {
       spots.sort((a, b) => a.d - b.d); let n = 0;   // the two nearest patches of open lawn
       for (const q of spots) { if (n === 2 || q.d > 600) break; if (openGrass(q.x, q.y, 45)) { Sky.puddles.push({ x: q.x, y: q.y, r: rand(28, 38), t0: t, splashT: -99 }); n++; } }
       if (Sky.night() < .5) Sky.rainbowT = t;
+      critterRain();
     }
     if (raining(k, t)) k.done = false;
   }
