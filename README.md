@@ -15,6 +15,7 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 - **Grow a Bean:** water it, give it sun, and watch it go from seed to pods.
 - **Seed Travel:** four ways seeds get around.
 - **Leaf Factory:** give a leaf sunlight, water and air, and watch it make sugar and oxygen (photosynthesis).
+- **Thirsty Celery:** color the water and watch it climb a celery stalk to the leaves.
 - **Plant Quiz:** stars for answers right on the first try.
 
 Pip reads every line aloud. Discoveries earn stars and badges, finished topics earn trophies, and they're all on display in the **Trophy Hall**.

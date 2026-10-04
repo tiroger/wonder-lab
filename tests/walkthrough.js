@@ -150,6 +150,29 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   await page.mouse.move(...await at(...LG.leaf)); await sleep(1200);
   report.leaf = { ...leaf, stars: await stars('leaf.') };
 
+  // ---------- Thirsty Celery ----------
+  await tab('celery');
+  const cg = await page.evaluate(() => App.inst.geo);
+  const cstate = () => page.evaluate(() => { const s = App.inst.state(); return { hours: s.hours, climb: s.climb, dye: s.dye }; });
+  const cutStalk = () => drag([[cg.stalk[0] - 110, cg.stalk[1]], [cg.stalk[0] + 110, cg.stalk[1]]], 12);
+  const cel = {};
+  await tap(...cg.clock);                                                    // no color yet: the clock waits
+  cel.needsColor = (await page.evaluate(() => App.current)).includes('Add a color') && (await cstate()).hours === 0;
+  await tap(...cg.bottles.blue); await sleep(300); await tap(...cg.bottles.red);
+  cel.oneColor = (await page.evaluate(() => App.current)).includes('One color at a time') && (await cstate()).dye === 'blue';
+  await tap(...cg.clock); await sleep(300);
+  await cutStalk(); await sleep(300);                                        // too soon: no colored tubes yet
+  cel.tooSoon = (await page.evaluate(() => App.current)).includes('not up here yet') && !(await stars('celery.')).includes('celery.tubes');
+  let h0 = (await cstate()).climb; await tap(...cg.clock); const shade = (await cstate()).climb - h0;
+  await tap(...cg.window); await sleep(300);
+  h0 = (await cstate()).climb; await tap(...cg.clock); const sunny = (await cstate()).climb - h0;
+  cel.faster = sunny > shade;
+  for (let i = 0; i < 6 && (await cstate()).climb < 1; i++) { await tap(...cg.clock); await sleep(250); }
+  await sleep(2500);
+  await cutStalk(); await sleep(500);
+  cel.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('from the glass to the leaves')), null, { timeout: 20000 }).then(() => true, () => false);
+  report.celery = { ...cel, stars: await stars('celery.') };
+
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
   await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
@@ -474,6 +497,11 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Leaf Factory: 6 stars': report.leaf.stars.length === 6,
     'Leaf Factory: no food without air; sunlight makes it faster': report.leaf.needsAir && report.leaf.making,
     'Leaf Factory: a cloud over the sun slows the factory down': report.leaf.covered && report.leaf.slowed && report.leaf.darkLine,
+    'Thirsty Celery: 5 stars': report.celery.stars.length === 5,
+    'Thirsty Celery: add a color first, one color at a time': report.celery.needsColor && report.celery.oneColor,
+    'Thirsty Celery: no colored tubes before the water climbs': report.celery.tooSoon,
+    'Thirsty Celery: sunshine makes the water climb faster': report.celery.faster,
+    'Thirsty Celery: Pip wraps up': report.celery.wrapUp,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',

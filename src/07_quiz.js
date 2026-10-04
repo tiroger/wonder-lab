@@ -16,6 +16,7 @@ const QUIZ = [
   { id: 'q15', name: 'Flower buds', q: 'Broccoli is made of tiny…', a: ['Flower buds', 'Seeds', 'Roots'], hint: 'If they opened up, they would be flowers!', why: 'Broccoli is a bunch of tiny flower buds.' },
   { id: 'q16', name: 'Oxygen', q: 'Leaves let out a gas that we breathe in. What is it?', a: ['Oxygen', 'Carbon dioxide', 'Smoke'], hint: 'You are breathing it right now!', why: 'Leaves let out oxygen, and we breathe it in.' },
   { id: 'q17', name: 'Chlorophyll', q: 'What makes leaves green?', a: ['Chlorophyll', 'Sugar', 'Water'], hint: 'It catches sunlight, like a solar panel.', why: 'Chlorophyll is the green stuff that catches sunlight.' },
+  { id: 'q18', name: 'Water tubes', q: 'How does water get from the roots up to the leaves?', a: ['Through tiny tubes in the stem', 'Bees carry it up', 'The flower pumps it'], hint: 'Think of a drinking straw!', why: 'Tiny tubes in the stem carry water up, like straws.' },
   { id: 'q12', name: 'Photosynthesis', q: 'Leaves use sunlight, air and water to make food. This is called…', a: ['Photosynthesis', 'Pollination', 'Germination'], hint: '"Photo" means light!', why: 'Photo means light, synthesis means making. Making food with light!' }
 ];
 function drawQuizPic(cv, pic) {
@@ -104,6 +105,12 @@ const ICONS = {
     c.restore();
     c.strokeStyle = C.ink; c.lineWidth = 5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(P); c.beginPath(); c.moveTo(35, 8); c.lineTo(65, 8); c.stroke();
   },
+  // a celery stalk in a glass of colored water
+  celery(c) { c.save(); c.fillStyle = 'rgba(59,111,214,.55)'; c.beginPath(); c.moveTo(30, 62); c.lineTo(70, 62); c.lineTo(66, 94); c.lineTo(34, 94); c.closePath(); c.fill();
+    c.fillStyle = '#B8E094'; c.strokeStyle = '#4E8C3A'; c.lineWidth = 3; c.fill(rrect(43, 24, 14, 66, 6)); c.stroke(rrect(43, 24, 14, 66, 6));
+    c.strokeStyle = '#3B6FD6'; c.lineWidth = 2.5; for (const x of [47, 53]) { c.beginPath(); c.moveTo(x, 90); c.lineTo(x, 48); c.stroke(); }
+    for (const r of [-130, -90, -50]) drawLeaf(c, 50, 26, r, .2);
+    c.strokeStyle = 'rgba(36,54,40,.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(26, 48); c.lineTo(34, 96); c.lineTo(66, 96); c.lineTo(74, 48); c.stroke(); c.restore(); },
   // a leaf in the sun making a sugar cube
   leaf(c, t = 0) { c.save(); c.translate(70, 24); sun(c, 0, 0, 14, t, { face: false }); c.restore(); drawLeaf(c, 18, 74, -32, .62); c.fillStyle = '#FFFDF5'; c.strokeStyle = C.ink; c.lineWidth = 3; c.fill(rrect(54, 62, 22, 22, 4)); c.stroke(rrect(54, 62, 22, 22, 4)); },
   // a tomato cut in half: seeds inside
