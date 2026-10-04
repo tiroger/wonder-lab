@@ -76,7 +76,7 @@ function renderHome() {
       el.innerHTML = `<span class="name">${lot.tp.name}${have || last.topic === lot.tp.id ? `${STAR_SVG(true)}<small>${have}/${total}</small>` : '<span class="new">NEW!</span>'}</span>`;
       el.onclick = e => { e.preventDefault(); enterLot(i); };
     } else if (lot.hall) {
-      const n = TOPICS.flatMap(hallBadges).filter(b => Store.data.badges[b.id]).length;
+      const n = hallAll().filter(b => Store.data.badges[b.id]).length;
       el.href = lot.href; el.dataset.hall = '1';
       el.innerHTML = `<span class="name">Trophy Hall<small>${n} badge${n === 1 ? '' : 's'}</small></span>`;
       el.onclick = e => { e.preventDefault(); enterLot(i); };
@@ -120,7 +120,7 @@ function homeDraw(t) {
   c.strokeStyle = C.ink; c.lineWidth = 40; c.stroke(P); c.strokeStyle = '#F1DDB0'; c.lineWidth = 32; c.stroke(P);
   c.setLineDash([14, 18]); c.strokeStyle = '#FFFDF5'; c.lineWidth = 5; c.stroke(P); c.setLineDash([]);
   L.trees.forEach((tr, i) => campusTree(c, tr.x, tr.y, tr.s, t, treeShake(i, t)));
-  drawGarden(c, t);
+  drawGarden(c, t); drawCritters(c, t);
   campusGate(c, L.gate.x, L.gate.y, L.cols === 1);
   // buildings
   Home.lots.forEach((lot, i) => {
@@ -182,7 +182,7 @@ function homeInit() {
   new ResizeObserver(() => { if (App.view === 'home') renderHome(); }).observe($('#campus'));
   // a tap on the grounds pokes whatever is there (src/08e_grounds.js); plain grass plays a note
   const at = e => { const r = Home.cv.getBoundingClientRect(), L = Home.L; return [(e.clientX - r.left) / r.width * L.w, (e.clientY - r.top) / r.height * L.h]; };
-  Home.cv.addEventListener('pointerdown', e => { if (!Home.L) return; Sound.ensure(); const [x, y] = at(e); if (!skyTap(x, y) && !gardenTap(x, y) && !groundsTap(x, y) && !skyTap(x, y, true)) Sound.tap(Math.floor(x / Home.L.w * 8)); });
+  Home.cv.addEventListener('pointerdown', e => { if (!Home.L) return; Sound.ensure(); const [x, y] = at(e); if (!skyTap(x, y) && !critterTap(x, y) && !gardenTap(x, y) && !groundsTap(x, y) && !skyTap(x, y, true)) Sound.tap(Math.floor(x / Home.L.w * 8)); });
   $('#pipBtn').onclick = pokePip;
   Home.cv.addEventListener('pointermove', e => { if (Home.L) Home.cv.style.cursor = cloudAt(...at(e)) || gardenHit(...at(e)) || groundsHit(...at(e)) ? 'pointer' : ''; });
   Loop.add(homeDraw);
@@ -191,7 +191,7 @@ function homeInit() {
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
   document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
-  renderHome(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
+  renderHome(); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};

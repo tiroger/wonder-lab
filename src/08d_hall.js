@@ -3,8 +3,10 @@
 // behind glass and its big trophy on top. Tapping a badge, Pip says how you earned it, or how to earn it.
 const HALL_HELLO = 'Welcome to the <b>Trophy Hall</b>! Tap any badge to hear about it.';
 const hallBadges = tp => [...tp.activities.map(a => ({ ...a.badge, icon: a.icon })), { ...tp.master, trophy: true }];
+// every badge in the hall: each topic's, then the campus ones (the Explorer badge, src/08h_critters.js)
+const hallAll = () => [...TOPICS.flatMap(hallBadges), ...CAMPUS_BADGES];
 // a badge earned since the last visit to the hall makes the building sparkle on the map
-function hallNew() { const seen = Store.data.hallSeen || {}; return TOPICS.some(tp => hallBadges(tp).some(b => Store.data.badges[b.id] && !seen[b.id])); }
+function hallNew() { const seen = Store.data.hallSeen || {}; return hallAll().some(b => Store.data.badges[b.id] && !seen[b.id]); }
 
 // the building: columns, steps, a gold trophy on the roof (base center at 0,0; about 220x180)
 function drawTrophyHall(c, t) {
@@ -66,11 +68,15 @@ function renderHall() {
     const glass = document.createElement('div'); glass.className = 'glass'; list.forEach(b => glass.appendChild(btn(b, tp, false)));
     body.appendChild(glass); box.append(ped, body); cases.appendChild(box);
   }
+  // the campus case: badges for exploring the map itself
+  { const box = document.createElement('div'), body = document.createElement('div'); box.className = 'case campus-case'; body.className = 'case-body';
+    body.innerHTML = '<h2 class="nameplate" style="background:#4A6355">Campus</h2>'; const glass = document.createElement('div'); glass.className = 'glass';
+    CAMPUS_BADGES.forEach(b => glass.appendChild(btn(b, null, false))); body.appendChild(glass); box.appendChild(body); cases.appendChild(box); }
   const soon = document.createElement('div'); soon.className = 'soon-case'; soon.innerHTML = '<canvas aria-label="A covered pedestal for a topic still to come" role="img"></canvas><span>Coming soon</span>';
   cases.appendChild(soon); drawClothPedestal(soon.querySelector('canvas'));
-  cases.querySelectorAll('.hb canvas').forEach(cv => { const b = TOPICS.flatMap(hallBadges).find(x => x.id === cv.closest('.hb').dataset.id); drawIcon(cv, b.icon); });
+  cases.querySelectorAll('.hb canvas').forEach(cv => { const b = hallAll().find(x => x.id === cv.closest('.hb').dataset.id); drawIcon(cv, b.icon); });
   // totals
-  const all = TOPICS.flatMap(hallBadges), masters = TOPICS.map(t => t.master), stars = TOPICS.flatMap(t => t.activities.flatMap(a => a.stars));
+  const all = hallAll(), masters = TOPICS.map(t => t.master), stars = TOPICS.flatMap(t => t.activities.flatMap(a => a.stars));
   const n = (list) => list.filter(b => B[b.id]).length;
   $('#hallTotals').innerHTML = `<span>${STAR_SVG(true)}${stars.filter(s => Store.data.stars[s.id]).length} of ${stars.length} stars</span><span>${n(all.filter(b => !masters.some(m => m.id === b.id)))} of ${all.length - masters.length} badges</span><span>${n(masters)} of ${masters.length} trophies</span>`;
   drawGarland($('#garland'));
@@ -87,7 +93,7 @@ function showHall() {
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();
   // everything earned so far is now seen; the map stops sparkling
-  Store.data.hallSeen = Object.fromEntries(TOPICS.flatMap(hallBadges).filter(b => Store.data.badges[b.id]).map(b => [b.id, 1])); Store.save();
+  Store.data.hallSeen = Object.fromEntries(hallAll().filter(b => Store.data.badges[b.id]).map(b => [b.id, 1])); Store.save();
   App.greeted = true; say(HALL_HELLO, { lock: false });
 }
 addEventListener('resize', () => { if (App.view === 'hall') drawGarland($('#garland')); });

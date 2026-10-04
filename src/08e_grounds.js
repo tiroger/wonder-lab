@@ -56,7 +56,7 @@ function groundsTap(x, y) {
     const tr = L.trees[h.i]; G.shake[h.i] = t; G.taps[h.i] = (G.taps[h.i] || 0) + 1; Sound.fwip(); Sound.tap(1);
     if (!RM) for (let k = 0; k < 2; k++) G.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy + rand(-14, 10), gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: Math.sign(rand(-1, 1)) || 1, color: seasonTree(tr.x).fill });
     if (G.taps[h.i] % 3 === 0) { G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
-  } else if (h.kind === 'water') { G.ripples.push({ x, y, t0: t }); Sound.drip(); }
+  } else if (h.kind === 'water') { G.ripples.push({ x, y, t0: t }); Sound.drip(); critterWater(x, y); }
   else if (h.kind === 'trail') strollTo(h.i);
   return true;
 }

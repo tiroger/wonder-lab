@@ -460,6 +460,35 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     await done(ctx, p);
   }
   {
+    // the critter hunt: each critter comes out when you play with its hiding place; the strip gives hints; all six earn the Explorer badge
+    const { ctx, p } = await fresh(null, { viewport: { width: 1100, height: 1700 } });
+    await p.evaluate(() => { Sky.clouds = []; Sky.autoT = null; Sky.fake = new Date(2026, 9, 3, 12); });
+    const hunt = {};
+    const at = (x, y) => p.evaluate(([x, y]) => { const r = Home.cv.getBoundingClientRect(), L = Home.L; return [r.left + x / L.w * r.width, r.top + y / L.h * r.height]; }, [x, y]);
+    const tapAt = async (x, y) => { await p.mouse.click(...await at(x, y)); await sleep(250); };
+    const find = async id => { const s = await p.evaluate(id => critterSpots()[id], id); if (s) await tapAt(s.x, s.y); return p.evaluate(id => critterFound(id), id); };
+    const G = await p.evaluate(() => ({ flower: Home.L.flowers[2], pond: Home.L.pond, bed: Home.L.bed, rock: Home.L.rock, tree: Home.L.trees[owlTree()] }));
+    hunt.hidden = await p.evaluate(() => Object.keys(critterSpots()).length === 0 && document.querySelectorAll('#critterRow .critter').length === 6);
+    await p.click('#critterRow .critter:nth-child(1)'); await sleep(300);
+    hunt.hint = await p.evaluate(() => App.current === CRITTERS[0].tip);
+    await quiet(p);
+    await tapAt(G.flower.x, G.flower.y); await sleep(700); hunt.ladybug = await find('ladybug');
+    hunt.line = await p.evaluate(() => App.current === CRITTERS[0].found && document.querySelector('#critterRow .critter').classList.contains('got'));
+    await tapAt(G.pond.x + .82 * G.pond.rx, G.pond.y - G.pond.ry * .2 - 40); await sleep(1300); hunt.snail = await find('snail');
+    await tapAt(G.rock.x, G.rock.y); await sleep(700); hunt.pillbug = await find('pillbug');
+    await tapAt(G.tree.x, G.tree.cy); await sleep(300); hunt.owl = await find('owl');
+    await tapAt(G.bed.x - 60, G.bed.y + 6); await sleep(300); hunt.worm = await find('worm');
+    for (let i = 0; i < 3; i++) await tapAt(G.pond.x - 60 + i * 5, G.pond.y + 20);
+    await sleep(1200); hunt.fish = await find('fish'); await sleep(400);
+    hunt.badge = await p.evaluate(() => ({ earned: !!Store.data.badges['b.explorer'], toast: !!document.querySelector('.toast'), count: document.querySelector('#critterCount').textContent }));
+    await p.waitForFunction(() => window.__said.some(h => h.includes('Explorer</b> badge')), null, { timeout: 25000 }).catch(() => {});
+    hunt.badgeLine = await p.evaluate(() => window.__said.some(h => h.includes('Explorer</b> badge')));
+    await p.evaluate(() => { document.querySelectorAll('.toast .btn').forEach(b => b.click()); go('#/trophies'); }); await sleep(800);
+    hunt.hall = await p.evaluate(() => { const b = document.querySelector('.campus-case .hb[data-id="b.explorer"]'); return !!b && !b.classList.contains('locked'); });
+    home.hunt = hunt;
+    await done(ctx, p);
+  }
+  {
     // a link straight into an activity: the first tap reads its intro and taps wait for Pip
     const { ctx, p } = await fresh(null, { hash: '#/plants/parts' });
     const c0 = await p.evaluate(() => window.__clips);
@@ -652,6 +681,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Badge Garden: the Botanist trophy raises a sunflower by the greenhouse': report.home.garden.trophy.landmark.join() === 'sunflower' && report.home.garden.trophy.pieces === 11 && report.home.garden.trophy.rows && report.home.garden.trophy.line === 'Look! Something new is growing on the map.',
     'Sky: tap a cloud and it rains; puddles on open grass, a splash, and a rainbow after': report.home.sky.rains && report.home.sky.after.puddles > 0 && report.home.sky.after.onGrass && report.home.sky.after.rainbow && report.home.sky.splash,
     'Sky: the clock sets day and night, the month sets the trees, and winter clouds snow': report.home.sky.light.noon.night === 0 && report.home.sky.light.late.night === 1 && report.home.sky.light.dusk.night > 0 && report.home.sky.light.dusk.night < 1 && report.home.sky.light.autumn.season === 'autumn' && report.home.sky.light.spring.tree.blossom && report.home.sky.snows,
+    'Critter hunt: critters stay hidden until you play with their hiding places; the strip gives hints': report.home.hunt.hidden && report.home.hunt.hint && report.home.hunt.line,
+    'Critter hunt: all six can be found (flower, reeds, rock, tree, soil, pond)': ['ladybug', 'snail', 'pillbug', 'owl', 'worm', 'fish'].every(k => report.home.hunt[k]),
+    'Critter hunt: finding all six earns the Explorer badge, shown in the Trophy Hall': report.home.hunt.badge.earned && report.home.hunt.badge.toast && report.home.hunt.badge.count === '6 of 6' && report.home.hunt.badgeLine && report.home.hunt.hall,
     'Grounds: every flower blooms and a bee comes to visit': report.home.grounds.bloom,
     'Grounds: Pip strolls the trail, and a building tapped mid-stroll still opens': report.home.grounds.stroll.walking && report.home.grounds.stroll.hash === '#/' && report.home.grounds.entered && report.home.grounds.buzzOff,
     'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,
@@ -660,10 +692,10 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Home: reduced motion skips the walk': report.home.rm.hash === '#/plants/parts' && !report.home.rm.walking,
     'First tap on a link into an activity reads its intro and holds taps': report.home.deepLink && report.home.deepLinkHold,
     'Trophy Hall: at the end of the trail, with a badge count and a sparkle for new badges': report.hall.map.last && /Trophy Hall\s*1 badge\b/.test(report.hall.map.pill) && report.hall.map.sparkle,
-    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 1 && report.hall.page.badges === report.totals.badges && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
+    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 2 && report.hall.page.badges === report.totals.badges + 1 && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
     'Trophy Hall: earned and locked badges shown right; new ones glow once': JSON.stringify(report.hall.page.earned) === '["b.parts"]' && JSON.stringify(report.hall.page.fresh) === '["b.parts"]' && report.hall.page.seen.includes('b.parts') && !report.hall.page.sparkle,
     'Trophy Hall: greeting': report.hall.page.line.startsWith('Welcome to the Trophy Hall'),
-    'Trophy Hall: totals': report.hall.page.totals.includes(`5 of ${report.totals.stars} stars`) && report.hall.page.totals.includes(`1 of ${report.totals.activities} badges`) && /0 of 1 trophies/.test(report.hall.page.totals),
+    'Trophy Hall: totals': report.hall.page.totals.includes(`5 of ${report.totals.stars} stars`) && report.hall.page.totals.includes(`1 of ${report.totals.activities + 1} badges`) && /0 of 1 trophies/.test(report.hall.page.totals),
     'Trophy Hall: a locked badge says how to earn it, an earned one how you earned it': report.hall.locked.line === 'Not yet! Take the flower apart and help the bee in Flower Lab.' && report.hall.earnedLine.startsWith('You earned the Plant Pal badge!') && report.hall.trophyLine.includes('win the Botanist trophy'),
     'Trophy Hall: listen first holds badge taps while Pip explains': report.hall.locked.holds && report.hall.held.still && report.hall.held.nudge,
     'Pacing: no line talks over another in the Trophy Hall': report.hall.talkover.length === 0,
