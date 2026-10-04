@@ -385,6 +385,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
         rock: c(L.rock.x, L.rock.y), bug: c(L.rock.x, L.rock.y + 4), trail: c(s.x, s.y), mid };
     });
     const grounds = {};
+    await p.evaluate(() => { Sky.clouds = []; Sky.autoT = null; });            // no cloud drifting over a tap
     await p.click('#pipBtn'); await sleep(300);
     grounds.tickle = await p.evaluate(() => App.current === PIP_TICKLE);
     await quiet(p);
@@ -418,6 +419,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     // the campus grows: each badge plants a piece in the Badge Garden (oldest first), Pip points out what's new once, a trophy raises a landmark
     const { ctx, p } = await fresh(() => { if (!localStorage.getItem('wonderlab.v1')) localStorage.setItem('wonderlab.v1', JSON.stringify({ last: { topic: 'plants', activity: 'flower' }, stars: { 'parts.roots': 1 }, badges: { 'b.flower': 3, 'b.parts': 1, 'b.seed': 2 } })); }, { viewport: { width: 1100, height: 1600 } });
     const garden = {};
+    await p.evaluate(() => { Sky.clouds = []; Sky.autoT = null; });
     garden.first = await p.evaluate(() => ({ line: plainText(App.current), kinds: Home.L.garden.map(g => g.kind), fresh: Home.fresh.size, landmarks: Home.L.landmarks.length, sign: !!Home.L.sign }));
     const piece = await p.evaluate(() => { const r = Home.cv.getBoundingClientRect(), L = Home.L, g = L.garden[2]; return [r.left + g.x / L.w * r.width, r.top + (g.y - 40) / L.h * r.height]; });
     await p.mouse.click(...piece); await sleep(200);
@@ -433,6 +435,28 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     await p.evaluate(() => go('#/')); await sleep(700);
     garden.trophy = await p.evaluate(() => ({ line: plainText(App.current), pieces: Home.L.garden.length, landmark: Home.L.landmarks.map(g => g.kind), rows: Home.L.garden.at(-1).y > Home.L.garden[0].y }));
     home.garden = garden;
+    await done(ctx, p);
+  }
+  {
+    // the sky: tap a cloud and it rains, puddles to splash and a rainbow after; the clock and the calendar set the light and the trees
+    const { ctx, p } = await fresh(null, { viewport: { width: 1100, height: 1600 } });
+    const sky = {};
+    const openCloud = () => p.evaluate(() => { const r = Home.cv.getBoundingClientRect(), L = Home.L;
+      for (const [i, k] of Sky.clouds.entries()) { const x = r.left + (cloudX(k, Loop.t + .15) + 30 * k.s) / L.w * r.width, y = r.top + k.y / L.h * r.height; if (document.elementFromPoint(x, y) === Home.cv) return { i, at: [x, y] }; } return null; });
+    await p.evaluate(() => { Sky.fake = new Date(2026, 9, 3, 12); Sky.autoT = null; });
+    let cl = await openCloud(); if (cl) await p.mouse.click(...cl.at); await sleep(200);
+    sky.rains = !!cl && await p.evaluate(i => raining(Sky.clouds[i], Loop.t) && !Sky.clouds[i].snow, cl.i);
+    await sleep(5400);
+    sky.after = await p.evaluate(() => ({ puddles: Sky.puddles.length, rainbow: Loop.t - Sky.rainbowT < 14, onGrass: Sky.puddles.every(q => { const pz = Sky.puddles; Sky.puddles = []; const ok = openGrass(q.x, q.y, 20); Sky.puddles = pz; return ok; }) }));
+    const pud = await p.evaluate(() => { const r = Home.cv.getBoundingClientRect(), L = Home.L, q = Sky.puddles[0]; return q && [r.left + q.x / L.w * r.width, r.top + q.y / L.h * r.height]; });
+    if (pud) await p.mouse.click(...pud); await sleep(100);
+    sky.splash = await p.evaluate(() => Loop.t - Sky.splashT < 1);
+    sky.light = await p.evaluate(() => { const at = (m, h) => { Sky.fake = new Date(2026, m, 3, h); return { night: Sky.night(), season: Sky.season(), tree: seasonTree(100) }; };
+      return { noon: at(9, 12), late: at(6, 22), dusk: at(0, 20), spring: at(3, 10), autumn: at(9, 10) }; });
+    await p.evaluate(() => { Sky.fake = new Date(2026, 0, 10, 12); });
+    cl = await openCloud(); if (cl) await p.mouse.click(...cl.at); await sleep(200);
+    sky.snows = !!cl && await p.evaluate(i => raining(Sky.clouds[i], Loop.t) && Sky.clouds[i].snow, cl.i);
+    home.sky = sky;
     await done(ctx, p);
   }
   {
@@ -626,6 +650,8 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Badge Garden: each badge plants a piece, oldest first, and Pip points it out once': report.home.garden.first.line === 'Welcome back! Look! Something new is growing on the map.' && report.home.garden.first.kinds.join() === 'birdhouse,wheelbarrow,beehive' && report.home.garden.first.fresh === 3 && report.home.garden.first.sign && report.home.garden.again.line === 'Welcome back! Where should we explore today?' && report.home.garden.again.fresh === 0,
     'Badge Garden: pieces react to a tap, and the sign explains the garden': report.home.garden.poked && report.home.garden.sign,
     'Badge Garden: the Botanist trophy raises a sunflower by the greenhouse': report.home.garden.trophy.landmark.join() === 'sunflower' && report.home.garden.trophy.pieces === 11 && report.home.garden.trophy.rows && report.home.garden.trophy.line === 'Look! Something new is growing on the map.',
+    'Sky: tap a cloud and it rains; puddles on open grass, a splash, and a rainbow after': report.home.sky.rains && report.home.sky.after.puddles > 0 && report.home.sky.after.onGrass && report.home.sky.after.rainbow && report.home.sky.splash,
+    'Sky: the clock sets day and night, the month sets the trees, and winter clouds snow': report.home.sky.light.noon.night === 0 && report.home.sky.light.late.night === 1 && report.home.sky.light.dusk.night > 0 && report.home.sky.light.dusk.night < 1 && report.home.sky.light.autumn.season === 'autumn' && report.home.sky.light.spring.tree.blossom && report.home.sky.snows,
     'Grounds: every flower blooms and a bee comes to visit': report.home.grounds.bloom,
     'Grounds: Pip strolls the trail, and a building tapped mid-stroll still opens': report.home.grounds.stroll.walking && report.home.grounds.stroll.hash === '#/' && report.home.grounds.entered && report.home.grounds.buzzOff,
     'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,
