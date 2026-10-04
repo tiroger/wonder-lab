@@ -4,7 +4,7 @@ const TOPICS = [
   // pip: a costume key from PIP_COSTUMES, or null
   { id: 'plants', name: 'Plants & Seeds', building: drawGreenhouse, pip: null,
     accent: { ground: '#E8F3E1', dot: '#D3E8CB', tab: '#FFC93C', stage: '#BFE6F4', bold: '#2A7340', plate: '#2A7340' },
-    activities: [A_parts, A_seed, A_flower, A_produce, A_grow, A_travel, A_quiz],
+    activities: [A_parts, A_seed, A_flower, A_produce, A_grow, A_travel, A_leaf, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
       how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } }
 ];

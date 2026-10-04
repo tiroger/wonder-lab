@@ -122,6 +122,34 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   produce.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('whole basket')), null, { timeout: 20000 }).then(() => true, () => false);
   report.produce = { ...produce, stars: await stars('produce.') };
 
+  // ---------- Leaf Factory ----------
+  await tab('leaf');
+  const lgeo = () => page.evaluate(() => ({ cloud: App.inst.geo.cloud(), can: App.inst.geo.can, leaf: App.inst.geo.leaf }));
+  const lstate = () => page.evaluate(() => { const s = App.inst.state(); return { made: s.made, o2: s.o2.filter(q => !q.pop && q.y > 40).map(q => [q.x, q.y]), bubble: [s.bubbles[0].x, s.bubbles[0].y] }; });
+  const leaf = {}; let LG = await lgeo();
+  await tap(...LG.can); await sleep(2000);
+  leaf.needsAir = (await lstate()).made === 0;                              // water but no air: nothing
+  for (let i = 0; i < 3; i++) { await tap(...(await lstate()).bubble); await sleep(700); }
+  let m = (await lstate()).made; await sleep(3500); leaf.dim = (await lstate()).made - m;   // under the cloud: slow
+  await tap(...LG.cloud); await sleep(1400);                                // a tap slides the cloud off the sun
+  m = (await lstate()).made; await sleep(4500); leaf.bright = (await lstate()).made - m;    // in the sun: faster
+  leaf.making = leaf.bright >= 2 && leaf.bright > leaf.dim;
+  await page.waitForFunction(() => App.inst.state().o2.some(q => !q.pop && q.y > 60), null, { timeout: 8000 }).catch(() => {});
+  const o2 = (await lstate()).o2[0]; if (o2) await tap(...o2);
+  // cover the sun again: tap a spot on the cloud with no oxygen bubble in front of it (bubbles take taps first)
+  const cloudSpot = await page.evaluate(() => { const [cx, cy] = App.inst.geo.cloud(), o = App.inst.state().o2.filter(q => !q.pop);
+    let best = [cx, cy], bd = -1; for (let a = 0; a < 12; a++) for (const r of [0, 25, 45]) { const p = [cx + Math.cos(a / 12 * 6.283) * r, cy + Math.sin(a / 12 * 6.283) * r * .6]; const d = Math.min(99, ...o.map(q => Math.hypot(q.x - p[0], q.y - p[1]))); if (d > bd) { bd = d; best = p; } } return best; });
+  await sleep(1200); const litNow = () => page.evaluate(() => { const s = App.inst.state(); return Math.abs(s.cloudX - App.inst.geo.sun[0]) > 95 || Math.abs(s.cloudY - App.inst.geo.sun[1]) > 70; });
+  if (await litNow()) { await tap(...cloudSpot); await sleep(1600); }   // (a tap meant for a drifting bubble may already have moved it)
+  leaf.covered = !(await litNow());
+  await tap(...LG.can); await tap(...(await lstate()).bubble); await sleep(600);   // top up, so only the light changes
+  const m0 = (await lstate()).made; await sleep(3500);
+  leaf.slowed = (await lstate()).made - m0 <= 1;
+  leaf.darkLine = await page.waitForFunction(() => window.__said.some(h => h.includes('Less sunlight, less food')), null, { timeout: 15000 }).then(() => true, () => false);
+  await page.click('text=Magnifying glass'); await sleep(300);
+  await page.mouse.move(...await at(...LG.leaf)); await sleep(1200);
+  report.leaf = { ...leaf, stars: await stars('leaf.') };
+
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
   await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
@@ -443,6 +471,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Produce Lab: one food on the board at a time': report.produce.busy,
     'Produce Lab: drag or tap a crate; the whole basket gets sorted': report.produce.dragged && report.produce.final.basket === 0 && !report.produce.final.board && report.produce.final.fruit.length === 5 && report.produce.final.veg.length === 5,
     'Produce Lab: Pip wraps up when the basket is empty': report.produce.wrapUp,
+    'Leaf Factory: 6 stars': report.leaf.stars.length === 6,
+    'Leaf Factory: no food without air; sunlight makes it faster': report.leaf.needsAir && report.leaf.making,
+    'Leaf Factory: a cloud over the sun slows the factory down': report.leaf.covered && report.leaf.slowed && report.leaf.darkLine,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
