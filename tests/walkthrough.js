@@ -186,6 +186,24 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   const ls2 = await lightState(); light.stemUp = ls2.tipped && ls2.stemA < Math.PI / 2 - .5; light.rootsDown = ls2.tipped && ls2.rootA < Math.PI * 1.22;
   report.light = { ...light, stars: await stars('light.') };
 
+  // ---------- Plant Needs ----------
+  await tab('needs');
+  const ng = await page.evaluate(() => App.inst.geo);
+  const nstate = () => page.evaluate(() => { const s = App.inst.state(); return { guess: s.guess, week: s.week, seen: s.seen }; });
+  const needs = {};
+  await tap(...ng.calendar);                                                 // no guess yet: the week waits
+  needs.guessFirst = (await page.evaluate(() => App.current)).includes('First, tap the plant') && (await nstate()).week === 0;
+  await tap(...ng.pots[2]); await tap(...ng.calendar);                       // guess the no-light plant, then let a week go by
+  needs.guessed = (await nstate()).guess === 2 && (await stars('needs.')).includes('needs.predict');
+  await tap(...ng.pots[0]);                                                  // still growing: the plants wait
+  needs.waits = !(await stars('needs.')).includes('needs.best');
+  await sleep(4000);
+  for (const pt of ng.pots) await tap(...pt);
+  needs.allSeen = (await nstate()).seen.every(Boolean);
+  needs.fairLine = await page.waitForFunction(() => window.__said.some(h => h.includes('Those were fair tests')), null, { timeout: 30000 }).then(() => true, () => false);
+  needs.inOrder = await page.evaluate(() => { const i = window.__said.findIndex(h => h.includes('One week later')), j = window.__said.findIndex(h => h.includes('hardly grew')); return i >= 0 && i < j; });
+  report.needs = { ...needs, stars: await stars('needs.') };
+
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
   await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
@@ -518,6 +536,10 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Light Seeker: 4 stars': report.light.stars.length === 4,
     'Light Seeker: the stem bends toward the lamp and follows it': report.light.bendsRight && report.light.followsLeft,
     'Light Seeker: tipped over, the stem turns up and the roots turn down': report.light.stemUp && report.light.rootsDown,
+    'Plant Needs: 5 stars': report.needs.stars.length === 5,
+    'Plant Needs: guess first, and the plants wait for the week to pass': report.needs.guessFirst && report.needs.guessed && report.needs.waits,
+    'Plant Needs: every plant tapped, then Pip explains the fair test': report.needs.allSeen && report.needs.fairLine,
+    'Plant Needs: the week line plays before the plant facts, not after': report.needs.inOrder,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',

@@ -18,6 +18,7 @@ const QUIZ = [
   { id: 'q17', name: 'Chlorophyll', q: 'What makes leaves green?', a: ['Chlorophyll', 'Sugar', 'Water'], hint: 'It catches sunlight, like a solar panel.', why: 'Chlorophyll is the green stuff that catches sunlight.' },
   { id: 'q18', name: 'Water tubes', q: 'How does water get from the roots up to the leaves?', a: ['Through tiny tubes in the stem', 'Bees carry it up', 'The flower pumps it'], hint: 'Think of a drinking straw!', why: 'Tiny tubes in the stem carry water up, like straws.' },
   { id: 'q19', name: 'Toward the light', q: 'A plant sits next to a sunny window for a few days. Which way will it lean?', a: ['Toward the window', 'Away from the window', 'Straight down'], hint: 'Plants love light!', why: 'Stems grow toward the light.' },
+  { id: 'q20', name: 'Fair test', q: 'In a fair test, how many things do you change?', a: ['Just one', 'All of them', 'None'], hint: 'If you change lots of things, can you tell which one mattered?', why: 'Change just one thing, so you know what made the difference.' },
   { id: 'q12', name: 'Photosynthesis', q: 'Leaves use sunlight, air and water to make food. This is called…', a: ['Photosynthesis', 'Pollination', 'Germination'], hint: '"Photo" means light!', why: 'Photo means light, synthesis means making. Making food with light!' }
 ];
 function drawQuizPic(cv, pic) {
@@ -106,6 +107,11 @@ const ICONS = {
     c.restore();
     c.strokeStyle = C.ink; c.lineWidth = 5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(P); c.beginPath(); c.moveTo(35, 8); c.lineTo(65, 8); c.stroke();
   },
+  // four little pots: one strong plant, one droopy, one pale, one bare
+  pots(c) { const P = [[18, 1, C.leaf, 0], [42, .55, '#B8A15A', 1], [66, 1.2, '#D9DE8A', 0], [90, .2, '#8A6B3E', 1]];
+    for (const [x, h, col, droop] of P) { c.strokeStyle = col; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, 70); c.quadraticCurveTo(x, 70 - 26 * h, x + droop * 8, 70 - 34 * h + droop * 10); c.stroke();
+      if (h > .3) drawLeaf(c, x + droop * 8, 70 - 34 * h + droop * 10, -120 + droop * 70, .12, col);
+      c.fillStyle = '#C8653A'; c.strokeStyle = C.ink; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 10, 70); c.lineTo(x + 10, 70); c.lineTo(x + 7, 88); c.lineTo(x - 7, 88); c.closePath(); c.fill(); c.stroke(); } },
   // a desk lamp, and a seedling leaning toward it
   lamp(c) { c.save(); c.translate(72, 24); c.rotate(.6); c.fillStyle = C.carrot; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(-14, 0); c.lineTo(14, 0); c.lineTo(8, -18); c.lineTo(-8, -18); c.closePath(); c.fill(); c.stroke(); c.restore();
     c.fillStyle = 'rgba(255,230,128,.5)'; c.beginPath(); c.moveTo(66, 34); c.lineTo(40, 80); c.lineTo(62, 86); c.closePath(); c.fill();
