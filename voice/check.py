@@ -15,7 +15,10 @@ def check(voice, item):
             f'name="file"; filename="a.mp3"\r\nContent-Type: audio/mpeg\r\n\r\n').encode() + audio + f'\r\n--{b}--\r\n'.encode()
     req = urllib.request.Request('https://api.openai.com/v1/audio/transcriptions', data=body, headers={'Authorization': 'Bearer ' + KEY, 'Content-Type': f'multipart/form-data; boundary={b}'})
     heard = json.load(urllib.request.urlopen(req, timeout=120))['text']
-    return k, text, heard, difflib.SequenceMatcher(None, norm(text), norm(heard)).ratio()
+    # transcripts often join names into one word ("Sunchef", "FlowerLab"), so also compare with the spaces taken out
+    words = difflib.SequenceMatcher(None, norm(text), norm(heard)).ratio()
+    chars = difflib.SequenceMatcher(None, ''.join(norm(text)), ''.join(norm(heard))).ratio()
+    return k, text, heard, max(words, chars)
 
 args = sys.argv[1:]; fix = '--fix' in args; voices = [a for a in args if a != '--fix'] or [os.path.basename(p)[:-5] for p in sorted(glob.glob('voice/packs/*.json'))]
 for voice in voices:
