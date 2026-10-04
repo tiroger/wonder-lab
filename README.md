@@ -16,6 +16,7 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 - **Seed Travel:** four ways seeds get around.
 - **Leaf Factory:** give a leaf sunlight, water and air, and watch it make sugar and oxygen (photosynthesis).
 - **Thirsty Celery:** color the water and watch it climb a celery stalk to the leaves.
+- **Light Seeker:** move a lamp and watch a seedling bend toward it; tip the cup and the roots still grow down.
 - **Plant Quiz:** stars for answers right on the first try.
 
 Pip reads every line aloud. Discoveries earn stars and badges, finished topics earn trophies, and they're all on display in the **Trophy Hall**.

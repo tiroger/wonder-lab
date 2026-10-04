@@ -17,6 +17,7 @@ const QUIZ = [
   { id: 'q16', name: 'Oxygen', q: 'Leaves let out a gas that we breathe in. What is it?', a: ['Oxygen', 'Carbon dioxide', 'Smoke'], hint: 'You are breathing it right now!', why: 'Leaves let out oxygen, and we breathe it in.' },
   { id: 'q17', name: 'Chlorophyll', q: 'What makes leaves green?', a: ['Chlorophyll', 'Sugar', 'Water'], hint: 'It catches sunlight, like a solar panel.', why: 'Chlorophyll is the green stuff that catches sunlight.' },
   { id: 'q18', name: 'Water tubes', q: 'How does water get from the roots up to the leaves?', a: ['Through tiny tubes in the stem', 'Bees carry it up', 'The flower pumps it'], hint: 'Think of a drinking straw!', why: 'Tiny tubes in the stem carry water up, like straws.' },
+  { id: 'q19', name: 'Toward the light', q: 'A plant sits next to a sunny window for a few days. Which way will it lean?', a: ['Toward the window', 'Away from the window', 'Straight down'], hint: 'Plants love light!', why: 'Stems grow toward the light.' },
   { id: 'q12', name: 'Photosynthesis', q: 'Leaves use sunlight, air and water to make food. This is called…', a: ['Photosynthesis', 'Pollination', 'Germination'], hint: '"Photo" means light!', why: 'Photo means light, synthesis means making. Making food with light!' }
 ];
 function drawQuizPic(cv, pic) {
@@ -105,6 +106,11 @@ const ICONS = {
     c.restore();
     c.strokeStyle = C.ink; c.lineWidth = 5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(P); c.beginPath(); c.moveTo(35, 8); c.lineTo(65, 8); c.stroke();
   },
+  // a desk lamp, and a seedling leaning toward it
+  lamp(c) { c.save(); c.translate(72, 24); c.rotate(.6); c.fillStyle = C.carrot; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(-14, 0); c.lineTo(14, 0); c.lineTo(8, -18); c.lineTo(-8, -18); c.closePath(); c.fill(); c.stroke(); c.restore();
+    c.fillStyle = 'rgba(255,230,128,.5)'; c.beginPath(); c.moveTo(66, 34); c.lineTo(40, 80); c.lineTo(62, 86); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(221,243,247,.7)'; c.strokeStyle = 'rgba(36,54,40,.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(20, 70); c.lineTo(48, 70); c.lineTo(44, 96); c.lineTo(24, 96); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = C.leafDeep; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(34, 70); c.quadraticCurveTo(34, 48, 52, 40); c.stroke(); drawLeaf(c, 52, 40, -110, .2); drawLeaf(c, 52, 40, 10, .2); },
   // a celery stalk in a glass of colored water
   celery(c) { c.save(); c.fillStyle = 'rgba(59,111,214,.55)'; c.beginPath(); c.moveTo(30, 62); c.lineTo(70, 62); c.lineTo(66, 94); c.lineTo(34, 94); c.closePath(); c.fill();
     c.fillStyle = '#B8E094'; c.strokeStyle = '#4E8C3A'; c.lineWidth = 3; c.fill(rrect(43, 24, 14, 66, 6)); c.stroke(rrect(43, 24, 14, 66, 6));
