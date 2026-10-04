@@ -98,6 +98,30 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   await tap(400, 300); const fruitTap = (await page.evaluate(() => App.current)).includes('grew into a');
   report.flower = { afterPieces, beeAppeared: beeHere, final: await stars('flower.'), witheredStamensStillTalk: lateSays > 0, fruitTapWorks: fruitTap };
 
+  // ---------- Produce Lab ----------
+  await tab('produce');
+  const geo = await page.evaluate(() => ({ board: App.inst.geo.board, bins: App.inst.geo.bins }));
+  const slot = id => page.evaluate(i => App.inst.geo.slot(i), id);
+  const pstate = () => page.evaluate(() => { const s = App.inst.state(); return { board: s.board && { id: s.board.id, cut: s.board.cut }, basket: s.basket.length, fruit: s.bins.fruit.slice(), veg: s.bins.veg.slice() }; });
+  const swipe = () => drag([[geo.board[0] - 135, geo.board[1] + 30], [geo.board[0] + 135, geo.board[1] + 30]], 14);
+  const produce = {};
+  await tap(...await slot('tomato')); await sleep(500);
+  await tap(...geo.board); produce.tapNoCut = !(await pstate()).board.cut;      // a tap isn't a cut
+  await swipe(); await sleep(400); produce.cut = (await pstate()).board.cut;
+  await tap(...geo.bins.veg); await sleep(300);                                // the wrong crate
+  produce.wrong = { hint: (await page.evaluate(() => App.current)).includes('Hint'), stays: ((await pstate()).board || {}).id === 'tomato' };
+  await tap(...await slot('carrot'));                                          // one food at a time
+  produce.busy = (await page.evaluate(() => App.current)).includes('first') && ((await pstate()).board || {}).id === 'tomato';
+  await drag([geo.board, geo.bins.fruit], 10); await sleep(900);               // drag the halves into a crate
+  produce.dragged = (await pstate()).fruit.includes('tomato');
+  for (const id of ['cucumber', 'zucchini', 'pepper', 'strawberry', 'celery', 'radish', 'carrot', 'lettuce', 'broccoli']) {
+    const fruit = await page.evaluate(i => PRODUCE.find(p => p.id === i).fruit, id);
+    await tap(...await slot(id)); await sleep(550); await swipe(); await sleep(300); await tap(...(fruit ? geo.bins.fruit : geo.bins.veg)); await sleep(800);
+  }
+  produce.final = await pstate();
+  produce.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('whole basket')), null, { timeout: 20000 }).then(() => true, () => false);
+  report.produce = { ...produce, stars: await stars('produce.') };
+
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
   await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
@@ -140,7 +164,10 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
 
   // ---------- Plant Quiz: two rounds ----------
   await tab('quiz');
-  for (let round = 0; round < 2; round++) {
+  // rounds of 8 until every question has earned its star (the first round answers two wrong on purpose)
+  for (let round = 0; round < 4; round++) {
+    if (round && (await stars('quiz.')).length === (await page.evaluate(() => QUIZ.length))) break;
+    if (round) { await page.click('.q-end .btn'); await sleep(300); }
     for (let q = 0; q < 8; q++) {
       const text = await page.textContent('.q-text');
       const answer = await page.evaluate(t => QUIZ.find(x => x.q === t).a[0], text);
@@ -148,9 +175,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
       await page.click(`.choice:text-is("${answer}")`); await sleep(300);
       await page.click('.q-foot .btn'); await sleep(300);
     }
-    if (round === 0) { await page.click('.q-end .btn'); await sleep(300); }
   }
-  report.quiz = (await stars('quiz.')).length + ' of 12';
+  report.totals = await page.evaluate(() => ({ stars: TOPICS.flatMap(t => t.activities.flatMap(a => a.stars)).length, activities: TOPICS.flatMap(t => t.activities).length, badges: TOPICS.reduce((n, t) => n + t.activities.length + 1, 0), quiz: QUIZ.length }));
+  report.quiz = (await stars('quiz.')).length + ' of ' + report.totals.quiz;
   await sleep(8000); // let badge pop-ups finish
 
   // ---------- Routing: every place has its own link (fresh sessions, so the main run's recorders stay clean) ----------
@@ -410,8 +437,14 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Grow a Bean: a pause before each stage fact': report.grow.gapsBeforeStageFacts.length >= 6 && report.grow.gapsBeforeStageFacts.every(g => g >= .8),
     'Grow a Bean: stages in order': JSON.stringify(stages) === JSON.stringify(['Seed', 'Germination', 'Sprout', 'Seedling', 'Adult plant', 'Flowers', 'Fruit & seeds']),
     'Seed Travel: 4 stars': report.travel.length === 4,
-    'Plant Quiz: 12 stars': report.quiz === '12 of 12',
-    'All 7 badges': report.badges.length === 7,
+    'Produce Lab: 6 stars': report.produce.stars.length === 6,
+    'Produce Lab: a tap is not a cut, a swipe cuts it open': report.produce.tapNoCut && report.produce.cut,
+    'Produce Lab: a wrong crate gives a hint and the food stays': report.produce.wrong.hint && report.produce.wrong.stays,
+    'Produce Lab: one food on the board at a time': report.produce.busy,
+    'Produce Lab: drag or tap a crate; the whole basket gets sorted': report.produce.dragged && report.produce.final.basket === 0 && !report.produce.final.board && report.produce.final.fruit.length === 5 && report.produce.final.veg.length === 5,
+    'Produce Lab: Pip wraps up when the basket is empty': report.produce.wrapUp,
+    'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
+    'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
     'Routing: back returns to the previous activity': report.routing.back.hash === '#/plants/seed' && report.routing.back.act === 'seed' && report.routing.back.tab === 'seed',
     'Routing: refresh keeps your place': report.routing.refresh === 'grow',
@@ -420,7 +453,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Old saves still open the last activity': report.routing.oldSave.act === 'flower' && report.routing.oldSave.hash === '#/plants/flower',
     'Home: a first visit opens on the map': report.home.first.hash === '#/' && report.home.first.view === 'home' && report.home.first.atHome && report.home.first.hidden && report.home.first.wide && !report.home.first.keepGoing,
     'Home: one building per topic, plus coming soon': report.home.first.lots.filter(l => l.topic).length === 1 && report.home.first.lots.some(l => !l.topic && /Coming soon/.test(l.text)) && report.home.first.lots.every(l => l.h >= 44),
-    'Home: stars pill counts every topic': report.home.first.total === 37,
+    'Home: stars pill counts every topic': report.home.first.total === report.totals.stars,
     'Home: first visit greeting': report.home.first.line.startsWith("Hi! I'm Pip") && report.home.first.line.includes('Tap a building'),
     'Pacing: the home greeting plays to the end': report.home.greetingDone && report.home.greeting.clips === report.home.greeting.pieces && !report.home.greeting.holds,
     'Pacing: tapping a building hands off to the topic intro within 3.5 s': report.home.walked && report.home.inTopic.hash === '#/plants/parts' && report.home.introAfter < 3.5,
@@ -430,16 +463,16 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Home: Keep going opens the last activity': report.home.keepGoing === '#/plants/parts',
     'Home: the logo goes home': report.home.logo === 'home',
     'Home: coming soon says so': report.home.soon.startsWith('That lab is still being built'),
-    'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === 6,
-    'Home: a returning visitor is welcomed back': report.home.returning.line.startsWith('Welcome back') && report.home.returning.keep.includes('Grow a Bean') && report.home.returning.pill.includes('1/37') && report.home.returning.pipAtDoor,
+    'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,
+    'Home: a returning visitor is welcomed back': report.home.returning.line.startsWith('Welcome back') && report.home.returning.keep.includes('Grow a Bean') && report.home.returning.pill.includes(`1/${report.totals.stars}`) && report.home.returning.pipAtDoor,
     'Home: phone map is one column, no sideways scrolling': report.home.phone.tall && report.home.phone.cols === 1 && !report.home.phone.sideways && report.home.phone.minLot >= 44 && report.home.phone.entered === '#/plants/parts',
     'Home: reduced motion skips the walk': report.home.rm.hash === '#/plants/parts' && !report.home.rm.walking,
     'First tap on a link into an activity reads its intro and holds taps': report.home.deepLink && report.home.deepLinkHold,
     'Trophy Hall: at the end of the trail, with a badge count and a sparkle for new badges': report.hall.map.last && /Trophy Hall\s*1 badge\b/.test(report.hall.map.pill) && report.hall.map.sparkle,
-    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 1 && report.hall.page.badges === 7 && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
+    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 1 && report.hall.page.badges === report.totals.badges && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
     'Trophy Hall: earned and locked badges shown right; new ones glow once': JSON.stringify(report.hall.page.earned) === '["b.parts"]' && JSON.stringify(report.hall.page.fresh) === '["b.parts"]' && report.hall.page.seen.includes('b.parts') && !report.hall.page.sparkle,
     'Trophy Hall: greeting': report.hall.page.line.startsWith('Welcome to the Trophy Hall'),
-    'Trophy Hall: totals': /5 of 37 stars/.test(report.hall.page.totals) && /1 of 6 badges/.test(report.hall.page.totals) && /0 of 1 trophies/.test(report.hall.page.totals),
+    'Trophy Hall: totals': report.hall.page.totals.includes(`5 of ${report.totals.stars} stars`) && report.hall.page.totals.includes(`1 of ${report.totals.activities} badges`) && /0 of 1 trophies/.test(report.hall.page.totals),
     'Trophy Hall: a locked badge says how to earn it, an earned one how you earned it': report.hall.locked.line === 'Not yet! Take the flower apart and help the bee in Flower Lab.' && report.hall.earnedLine.startsWith('You earned the Plant Pal badge!') && report.hall.trophyLine.includes('win the Botanist trophy'),
     'Trophy Hall: listen first holds badge taps while Pip explains': report.hall.locked.holds && report.hall.held.still && report.hall.held.nudge,
     'Pacing: no line talks over another in the Trophy Hall': report.hall.talkover.length === 0,

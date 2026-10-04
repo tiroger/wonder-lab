@@ -48,7 +48,7 @@ const A_example = {
 - Rapid taps are handled for you: the newest line wins after a short settle pause, the old one fades out, and repeating the line that's playing doesn't restart it. Pair every tap with an instant `Sound.*` effect.
 - Reminders: show the need on screen first (bouncing label, visual change). Speak it once with `{ polite: true }`, and again only if it's been ignored for 20+ seconds.
 - For tests, return `state: () => s` from `mount` so `tests/walkthrough.js` can set up a situation directly.
-- Every string Pip says must be recorded (`/record-voice`). Keep lines static; if one must vary, add each variant in `voice/lines.py`.
+- Every string Pip says must be recorded (`/record-voice`). `voice/lines.py` finds them in single quotes or backticks; it skips strings starting with "A " (scene descriptions), so never start a spoken line with "A ". Write text Pip doesn't say (canvas labels, hints) in double quotes so it isn't recorded. Keep lines static; if one must vary, add each variant in `voice/lines.py`.
 - When a stage ends (parts removed, used up, transformed), those parts must stop responding to taps and hover.
 - Show found parts with `tag(...)` and support `ui.showAll` (a "Show all labels" button) for learning.
 

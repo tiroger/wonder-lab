@@ -11,6 +11,7 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 - **Meet the Plant:** tap roots, stem, leaves, flower and pod to learn their jobs.
 - **Open a Seed:** soak a bean, peel it, split it, and find the baby plant inside.
 - **Flower Lab:** take a flower apart, then help a bee pollinate it.
+- **Produce Lab:** cut open tomatoes, celery, radishes and more, look for seeds, and sort fruits from vegetables.
 - **Grow a Bean:** water it, give it sun, and watch it go from seed to pods.
 - **Seed Travel:** four ways seeds get around.
 - **Plant Quiz:** stars for answers right on the first try.
