@@ -11,6 +11,9 @@ const QUIZ = [
   { id: 'q9', name: 'Sepals', q: 'What do the green sepals do?', a: ['Protect the flower bud', 'Make seeds', 'Carry water up the plant'], hint: 'They wrap around the flower before it opens.', why: 'Sepals protect the flower when it\'s a bud.' },
   { id: 'q10', name: 'Fruit', q: 'After pollination, the flower\'s ovary grows into a…', a: ['Fruit', 'Leaf', 'Root'], hint: 'Apples, beans and tomatoes are all this!', why: 'The ovary becomes the fruit that holds the seeds.' },
   { id: 'q11', name: 'Seed travel', q: 'How do dandelion seeds travel?', a: ['They float on the wind', 'They float on the ocean', 'They stick to fur'], hint: 'Their fluffy tops are like parachutes.', why: 'Their fluffy parachutes ride the wind.' },
+  { id: 'q13', name: 'Fruit or vegetable', q: 'You cut open a cucumber and find seeds. It is a…', a: ['Fruit', 'Vegetable', 'Root'], hint: 'Seeds grow inside fruits.', why: 'Seeds inside means it is a fruit.' },
+  { id: 'q14', name: 'Root vegetables', q: 'Which part of the plant is a carrot?', a: ['Root', 'Stem', 'Flower'], hint: 'It grows under the ground.', why: 'A carrot is a root that grows under the ground.' },
+  { id: 'q15', name: 'Flower buds', q: 'Broccoli is made of tiny…', a: ['Flower buds', 'Seeds', 'Roots'], hint: 'If they opened up, they would be flowers!', why: 'Broccoli is a bunch of tiny flower buds.' },
   { id: 'q12', name: 'Photosynthesis', q: 'Leaves use sunlight, air and water to make food. This is called…', a: ['Photosynthesis', 'Pollination', 'Germination'], hint: '"Photo" means light!', why: 'Photo means light, synthesis means making. Making food with light!' }
 ];
 function drawQuizPic(cv, pic) {
@@ -99,6 +102,8 @@ const ICONS = {
     c.restore();
     c.strokeStyle = C.ink; c.lineWidth = 5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(P); c.beginPath(); c.moveTo(35, 8); c.lineTo(65, 8); c.stroke();
   },
+  // a tomato cut in half: seeds inside
+  produce(c) { c.save(); c.translate(50, 52); c.scale(.62, .62); PRODUCE[0].face(c); c.restore(); },
   trophy(c) { c.fillStyle = C.sun; c.strokeStyle = C.ink; c.lineWidth = 4; c.beginPath(); c.moveTo(26, 16); c.lineTo(74, 16); c.quadraticCurveTo(74, 62, 50, 64); c.quadraticCurveTo(26, 62, 26, 16); c.fill(); c.stroke(); c.beginPath(); c.arc(22, 32, 11, PI * .5, PI * 1.5); c.moveTo(78, 21); c.arc(78, 32, 11, -PI * .5, PI * .5); c.stroke(); c.fillRect(44, 64, 12, 14); c.strokeRect(44, 64, 12, 14); c.fillStyle = C.soil; c.fillRect(32, 78, 36, 12); c.strokeRect(32, 78, 36, 12); drawLeaf(c, 50, 44, -120, .22); drawLeaf(c, 50, 44, -60, .22); }
 };
 function drawIcon(cv, name, t = 0) { const c = cv.getContext('2d'); c.setTransform(cv.width / 100, 0, 0, cv.width / 100, 0, 0); c.clearRect(0, 0, 100, 100); ICONS[name](c, t); }
