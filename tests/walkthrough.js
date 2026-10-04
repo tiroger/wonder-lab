@@ -173,6 +173,19 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   cel.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('from the glass to the leaves')), null, { timeout: 20000 }).then(() => true, () => false);
   report.celery = { ...cel, stars: await stars('celery.') };
 
+  // ---------- Light Seeker ----------
+  await tab('light');
+  const lgt = await page.evaluate(() => ({ lamp: App.inst.geo.lamp(), right: App.inst.geo.arcPoint(1.1), left: App.inst.geo.arcPoint(-1.1) }));
+  const lightState = () => page.evaluate(() => { const s = App.inst.state(); return { stemA: s.stemA, rootA: s.rootA, tipped: s.tipped }; });
+  const light = {};
+  await drag([lgt.lamp, lgt.right], 10); await sleep(3000);                  // drag the lamp to the right
+  light.bendsRight = (await lightState()).stemA > .35;
+  await tap(...lgt.left); await sleep(4500);                                   // tap the arc on the left: the lamp moves there
+  light.followsLeft = (await lightState()).stemA < -.3;
+  await page.click('text=Tip the cup'); await sleep(4500);
+  const ls2 = await lightState(); light.stemUp = ls2.tipped && ls2.stemA < Math.PI / 2 - .5; light.rootsDown = ls2.tipped && ls2.rootA < Math.PI * 1.22;
+  report.light = { ...light, stars: await stars('light.') };
+
   // ---------- Grow a Bean (with narration on, to catch interruptions) ----------
   await tab('grow'); await setVoiceAuto(true); await page.evaluate(() => { Loop.speed = 3; window.__cutoffs = []; window.__timeline = []; Store.data.waitForPip = true; });
   const t0 = Date.now(); let lastStage = '';
@@ -502,6 +515,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Thirsty Celery: no colored tubes before the water climbs': report.celery.tooSoon,
     'Thirsty Celery: sunshine makes the water climb faster': report.celery.faster,
     'Thirsty Celery: Pip wraps up': report.celery.wrapUp,
+    'Light Seeker: 4 stars': report.light.stars.length === 4,
+    'Light Seeker: the stem bends toward the lamp and follows it': report.light.bendsRight && report.light.followsLeft,
+    'Light Seeker: tipped over, the stem turns up and the roots turn down': report.light.stemUp && report.light.rootsDown,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
