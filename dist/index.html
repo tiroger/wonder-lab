@@ -469,6 +469,7 @@ const Sound = {
   squish() { this.wobble(110, .4, .15, 9, 25, 'sine', 0, 1.6); this.noise(.3, .06, 'lowpass', 500); },
   chirp(when = 0) { const f = rand(2200, 3000); for (let i = 0; i < 3; i++) this.tone(f, .07, 'sine', .05, when + i * .09, 1.35); },
   grow(k = 0) { for (let i = 0; i < 5; i++) this.xylo(PENTA[(k + i) % PENTA.length] * (i > 4 ? 2 : 1), i * .06, .09); this.wobble(300, .5, .06, 8, 20, 'sine', .1, 2); },
+  rain() { this.noise(5.2, .07, 'bandpass', 3200, 0, .6, 2400); for (let i = 0; i < 10; i++) this.tone(rand(900, 1500), .06, 'sine', .03, .3 + i * .45, .5); },
   bzz() { this.wobble(200, .7, .06, 28, 30, 'sawtooth', 0, 1.2); },
   croak() { this.wobble(150, .16, .16, 45, 40, 'triangle', 0, .7); this.wobble(135, .2, .16, 45, 40, 'triangle', .2, .7); },
   ptoo() { this.tone(500, .12, 'square', .06, 0, 2.5); },
@@ -2848,7 +2849,7 @@ function topicStars(tp) { const st = Store.data.stars, all = tp.activities.flatM
 function renderHome() {
   const box = $('#campus'), cssW = box.clientWidth; if (!cssW) return;
   const cols = cssW < 600 ? 1 : 3;
-  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L);
+  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L); skyLayout(L);
   Home.samples = trailSamples(L.trail);
   Home.doors = L.lots.map(p => { let best = 0, bd = 1e9; Home.samples.forEach((s, i) => { const d = dist(s.x, s.y, p.x, p.y + 45); if (d < bd) { bd = d; best = i; } }); return best; });
   const last = lastPlace(), li = Home.lots.findIndex(l => l.tp && l.tp.id === last.topic);
@@ -2900,11 +2901,11 @@ function enterLot(i) {
 
 function homeDraw(t) {
   const L = Home.L; if (!L || App.view !== 'home') return;
-  const c = Home.g, k = Home.cv.width / L.w; c.setTransform(k, 0, 0, k, 0, 0); c.clearRect(0, 0, L.w, L.h);
+  const c = Home.g, k = Home.cv.width / L.w; c.setTransform(k, 0, 0, k, 0, 0); c.clearRect(0, 0, L.w, L.h); skyStep(t);
   // lawn
   c.fillStyle = '#CDEBAE'; c.fillRect(0, 0, L.w, L.h);
   const r = seeded(5); c.fillStyle = '#B8DF93'; for (let i = 0; i < L.w * L.h / 12000; i++) { c.beginPath(); c.arc(r() * L.w, r() * L.h, 3 + r() * 4, 0, TAU); c.fill(); }
-  drawGroundsUnder(c, t);
+  drawSkyGround(c, t); drawGroundsUnder(c, t);
   // trail
   const P = trailPath(L.trail); c.lineCap = 'round'; c.lineJoin = 'round';
   c.strokeStyle = C.ink; c.lineWidth = 40; c.stroke(P); c.strokeStyle = '#F1DDB0'; c.lineWidth = 32; c.stroke(P);
@@ -2924,18 +2925,22 @@ function homeDraw(t) {
     const w = Home.walk, e = clamp((t - w.t0) / w.dur, 0, 1); idx = lerp(w.from, w.to, ease(e)); hop = Math.abs(Math.sin(e * w.dur * 14)) * 10;
     if (e >= 1) { Home.pipIdx = w.to; Home.walk = null; if (w.href) go(w.href); }
   }
+  drawSkyLight(c, t);
   const S = Home.samples, s0 = S[Math.floor(idx)], s1 = S[Math.min(S.length - 1, Math.ceil(idx))], f = idx % 1, sc = L.cols === 1 ? .5 : .55;
   const px = lerp(s0.x, s1.x, f), py = lerp(s0.y, s1.y, f) - 30 * sc; Home.pipAt = { x: px, y: py }; placePipBtn(px, py);
   c.save(); c.translate(px, py); c.scale(sc, sc); pipFigure(c, t, { hop, poke: t - Grounds.pokeT < .7 }); c.restore();
-  drawGroundsAbove(c, t);
+  drawGroundsAbove(c, t); drawSkyAbove(c, t);
 }
 function campusTree(c, x, y, s, t, shake = 0) {
+  const look = seasonTree(x);
   const sw = (RM ? 0 : Math.sin(t * 1.2 + x) * 2) + shake;
   c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = C.ink; c.lineWidth = 4;
   c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 48, 34, 7, 0, 0, TAU); c.fill();
   c.fillStyle = C.soil; c.fillRect(-7, 6, 14, 42); c.strokeRect(-7, 6, 14, 42);
-  c.fillStyle = C.leaf; c.beginPath(); c.arc(sw, -8, 36, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = look.fill; c.beginPath(); c.arc(sw, -8, 36, 0, TAU); c.fill(); c.stroke();
   c.fillStyle = 'rgba(255,255,255,.25)'; c.beginPath(); c.ellipse(sw - 12, -22, 12, 7, -.5, 0, TAU); c.fill();
+  if (look.blossom) { c.fillStyle = '#F8C8DC'; for (const [bx, by] of [[-14, -24], [12, -30], [20, -4], [-20, 2], [2, 10], [-2, -14]]) { c.beginPath(); c.arc(sw + bx, by, 4.5, 0, TAU); c.fill(); } }
+  if (look.snow) { c.fillStyle = '#fff'; c.lineWidth = 3; c.beginPath(); c.moveTo(sw - 33, -18); c.quadraticCurveTo(sw - 20, -50, sw, -44); c.quadraticCurveTo(sw + 22, -50, sw + 33, -18); c.quadraticCurveTo(sw + 16, -30, sw, -26); c.quadraticCurveTo(sw - 16, -30, sw - 33, -18); c.fill(); c.stroke(); c.lineWidth = 4; }
   c.fillStyle = C.petal; c.strokeStyle = C.ink; c.lineWidth = 2; for (const [fx, fy] of [[-40, 44], [44, 40]]) { c.beginPath(); c.arc(fx, fy, 6, 0, TAU); c.fill(); c.stroke(); }
   c.restore();
 }
@@ -2968,16 +2973,16 @@ function homeInit() {
   new ResizeObserver(() => { if (App.view === 'home') renderHome(); }).observe($('#campus'));
   // a tap on the grounds pokes whatever is there (src/08e_grounds.js); plain grass plays a note
   const at = e => { const r = Home.cv.getBoundingClientRect(), L = Home.L; return [(e.clientX - r.left) / r.width * L.w, (e.clientY - r.top) / r.height * L.h]; };
-  Home.cv.addEventListener('pointerdown', e => { if (!Home.L) return; Sound.ensure(); const [x, y] = at(e); if (!gardenTap(x, y) && !groundsTap(x, y)) Sound.tap(Math.floor(x / Home.L.w * 8)); });
+  Home.cv.addEventListener('pointerdown', e => { if (!Home.L) return; Sound.ensure(); const [x, y] = at(e); if (!skyTap(x, y) && !gardenTap(x, y) && !groundsTap(x, y) && !skyTap(x, y, true)) Sound.tap(Math.floor(x / Home.L.w * 8)); });
   $('#pipBtn').onclick = pokePip;
-  Home.cv.addEventListener('pointermove', e => { if (Home.L) Home.cv.style.cursor = gardenHit(...at(e)) || groundsHit(...at(e)) ? 'pointer' : ''; });
+  Home.cv.addEventListener('pointermove', e => { if (Home.L) Home.cv.style.cursor = cloudAt(...at(e)) || gardenHit(...at(e)) || groundsHit(...at(e)) ? 'pointer' : ''; });
   Loop.add(homeDraw);
 }
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
   document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
-  renderHome(); refresh();
+  renderHome(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};
@@ -3140,7 +3145,7 @@ function groundsTap(x, y) {
     else { G.wig[h.i] = t; Sound.tap(h.i + 5); }
   } else if (h.kind === 'tree') {
     const tr = L.trees[h.i]; G.shake[h.i] = t; G.taps[h.i] = (G.taps[h.i] || 0) + 1; Sound.fwip(); Sound.tap(1);
-    if (!RM) for (let k = 0; k < 2; k++) G.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy + rand(-14, 10), gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: Math.sign(rand(-1, 1)) || 1 });
+    if (!RM) for (let k = 0; k < 2; k++) G.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy + rand(-14, 10), gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: Math.sign(rand(-1, 1)) || 1, color: seasonTree(tr.x).fill });
     if (G.taps[h.i] % 3 === 0) { G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
   } else if (h.kind === 'water') { G.ripples.push({ x, y, t0: t }); Sound.drip(); }
   else if (h.kind === 'trail') strollTo(h.i);
@@ -3259,7 +3264,7 @@ function drawGroundsAbove(c, t) {
   G.leaves = G.leaves.filter(l => t - l.t0 < 3);
   for (const l of G.leaves) {
     const e = t - l.t0, f = clamp(e / 1.6, 0, 1), x = l.x + Math.sin(e * 5) * 12 * (1 - f) + l.dir * f * 18, y = lerp(l.y, l.gy, f);
-    c.save(); c.globalAlpha = clamp(3 - e, 0, 1); drawLeaf(c, x, y, l.rot + Math.sin(e * 6) * 40 * (1 - f), .16); c.restore();
+    c.save(); c.globalAlpha = clamp(3 - e, 0, 1); drawLeaf(c, x, y, l.rot + Math.sin(e * 6) * 40 * (1 - f), .16, l.color || C.leaf); c.restore();
   }
   // birds fly up and away
   G.birds = G.birds.filter(b => t - b.t0 < 2.2);
@@ -3459,6 +3464,119 @@ function drawGarden(c, t) {
     label(c, "Badge", x, y - 92, { size: 19, weight: 700, stroke: null }); label(c, "Garden", x, y - 70, { size: 19, weight: 700, stroke: null });
   }
   for (const g of [...L.garden, ...L.landmarks]) piece(g, g.s);
+}
+/* ============ Home: a living sky over the campus (docs/design.md, section 16) ============ */
+// The map follows the real clock and calendar: morning light, a sunset glow, fireflies at night, and trees that change
+// with the seasons. Clouds drift over with their shadows; tap one and it rains (snows in winter), leaving puddles to
+// splash, and a rainbow comes out after a daytime shower. Now and then a cloud rains on its own.
+const Sky = { fake: null, clouds: [], puddles: [], rainbowT: -99, splashT: -99, autoT: null, lastLeaf: 0 };
+Sky.now = () => Sky.fake || new Date();
+// 0 by day, 1 at night, easing through dusk and dawn
+Sky.night = () => { const d = Sky.now(), h = d.getHours() + d.getMinutes() / 60; return h >= 21 || h < 5.5 ? 1 : h >= 19 ? (h - 19) / 2 : h < 7 ? (7 - h) / 1.5 : 0; };
+const glowAround = (h, at, w) => clamp(1 - Math.abs(h - at) / w, 0, 1);
+Sky.season = () => ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'autumn', 'autumn', 'autumn', 'winter'][Sky.now().getMonth()];
+const AUTUMN = ['#E8933A', '#D9574A', '#E8B84A', '#C9702E'];
+
+function skyLayout(L) {
+  const wide = L.cols !== 1, r = seeded(11);
+  Sky.clouds = (wide ? [[150, 80], [900, 40], [1300, L.h * .68]] : [[80, 60], [380, L.h * .45], [200, L.h * .8]]).map(([x, y]) => ({ x, y, s: wide ? 1.3 : 1.1, v: 6 + r() * 5, rainT: -99, snow: false }));
+  Sky.puddles = []; Sky.fireflies = Array.from({ length: wide ? 16 : 10 }, () => ({ x: r() * L.w, y: L.h * (.35 + r() * .6), p: r() * TAU }));
+}
+const cloudX = (k, t) => { const span = Home.L.w + 260; return ((k.x + (RM ? 0 : t * k.v)) % span + span) % span - 130; };
+const raining = (k, t) => t - k.rainT < 5;
+function cloudAt(x, y, t = Loop.t) { return Sky.clouds.find(k => { const cx = cloudX(k, t) + 30 * k.s; return Math.abs(x - cx) < 66 * k.s && Math.abs(y - k.y + 4 * k.s) < 40 * k.s; }); }
+function makeRain(k, t) { k.rainT = t; k.snow = Sky.season() === 'winter'; if (!k.snow) Sound.rain(); else Sound.sparkle(); }
+// taps on the sky come first (clouds float over everything); puddles and fireflies come last
+function skyTap(x, y, low) {
+  const t = Loop.t;
+  if (!low) { const k = cloudAt(x, y); if (!k) return false; if (!raining(k, t)) makeRain(k, t); else Sound.drip(); return true; }
+  const p = Sky.puddles.find(q => ((x - q.x) / q.r) ** 2 + ((y - q.y) / (q.r * .45)) ** 2 < 1.4);
+  if (p) { p.splashT = t; Sky.splashT = t; Sound.splash(); return true; }
+  return false;
+}
+// what the clock says, and what the weather is doing; called once a frame
+function skyStep(t) {
+  for (const k of Sky.clouds) {
+    if (!raining(k, t) && k.rainT > 0 && !k.done && !k.snow) {   // a shower just ended: puddles where it fell, and a rainbow by day
+      k.done = true; const cx = cloudX(k, t) + 30 * k.s;
+      const spots = []; for (let x = 40; x < Home.L.w; x += 30) for (let y = 40; y < Home.L.h; y += 30) spots.push({ x, y, d: dist(x, y, cx, k.y + 200) });
+      spots.sort((a, b) => a.d - b.d); let n = 0;   // the two nearest patches of open lawn
+      for (const q of spots) { if (n === 2 || q.d > 600) break; if (openGrass(q.x, q.y, 45)) { Sky.puddles.push({ x: q.x, y: q.y, r: rand(28, 38), t0: t, splashT: -99 }); n++; } }
+      if (Sky.night() < .5) Sky.rainbowT = t;
+    }
+    if (raining(k, t)) k.done = false;
+  }
+  Sky.puddles = Sky.puddles.filter(p => t - p.t0 < 45);
+  // now and then a cloud rains by itself, once a visit at most
+  if (Sky.autoT != null && t > Sky.autoT) { Sky.autoT = null; const k = Sky.clouds[0]; if (k && !raining(k, t)) makeRain(k, t); }
+  // autumn: a leaf drifts down from a tree every few seconds
+  if (!RM && Sky.season() === 'autumn' && t - Sky.lastLeaf > 3.5 && Home.L.trees.length) {
+    Sky.lastLeaf = t; const tr = Home.L.trees[Math.floor(Math.random() * Home.L.trees.length)];
+    Grounds.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy, gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: 1, color: AUTUMN[Math.floor(Math.random() * 4)] });
+  }
+}
+// a spot of plain lawn: not on a building, the trail, the pond, the bed, a piece or another puddle
+function openGrass(x, y, r) {
+  const L = Home.L; if (x < r || x > L.w - r || y < r || y > L.h - r || (x < 160 && y > L.h - 160)) return false;   // the bottom-left corner stays plain grass
+  if (L.lots.some(p => Math.abs(x - p.x) < 150 * L.scale + r && y > p.y - 190 * L.scale - r && y < p.y + 140 + r)) return false;
+  if (nearTrail(x, y) >= 0 || dist(x, y, L.gate.x, L.gate.y) < 120) return false;
+  if (L.pond && (((x - L.pond.x) / (L.pond.rx + r)) ** 2 + ((y - L.pond.y) / (L.pond.ry + r)) ** 2 < 1)) return false;
+  if (L.bed && Math.abs(x - L.bed.x) < L.bed.w / 2 + r && Math.abs(y - L.bed.y + 40) < 70 + r) return false;
+  if (L.rock && dist(x, y, L.rock.x + 40, L.rock.y) < 110 + r) return false;
+  if ([...(L.garden || []), ...(L.landmarks || [])].some(g => Math.abs(x - g.x) < 70 + r && y > g.y - 160 && y < g.y + 30 + r)) return false;
+  if (L.trees.some(tr => dist(x, y, tr.x, tr.y) < 60 + r)) return false;
+  if (Sky.clouds.some(k => Math.abs(y - k.y) < 80 * k.s + r)) return false;   // clouds drift along their row: keep puddles out from under them
+  return !Sky.puddles.some(q => dist(x, y, q.x, q.y) < q.r + r + 10);
+}
+// the tree's canopy color and decoration for the season
+function seasonTree(x) {
+  const s = Sky.season(); if (s === 'autumn') return { fill: AUTUMN[Math.abs(Math.round(x / 97)) % 4] };
+  if (s === 'spring') return { fill: C.leaf, blossom: true }; if (s === 'winter') return { fill: '#3E8A4F', snow: true }; return { fill: C.leaf };
+}
+// on the lawn, under everything: the rainbow after a shower, and puddles
+function drawSkyGround(c, t) {
+  const L = Home.L, rb = t - Sky.rainbowT;
+  if (rb < 14) {
+    const a = Math.min(1, rb / 1.5, (14 - rb) / 2) * .5, wide = L.cols !== 1, cx = L.w * .5, cy = (L.pond ? L.pond.y : L.h) + (wide ? 200 : 140), R = wide ? 520 : 250, lw = wide ? 18 : 12;
+    c.save(); c.globalAlpha = a; c.lineWidth = lw;
+    ['#E04B4B', '#F2994A', '#F2D04A', '#5DBB4C', '#5BB8E8', '#9B7FE0'].forEach((col, i) => { c.strokeStyle = col; c.beginPath(); c.arc(cx, cy, R - i * lw, PI, TAU); c.stroke(); });
+    c.restore();
+  }
+  for (const p of Sky.puddles) {
+    const a = clamp((45 - (t - p.t0)) / 6, 0, 1); c.save(); c.globalAlpha = a;
+    c.fillStyle = '#9FD3E8'; c.strokeStyle = 'rgba(36,54,40,.5)'; c.lineWidth = 3; c.beginPath(); c.ellipse(p.x, p.y, p.r, p.r * .42, 0, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.ellipse(p.x - p.r * .3, p.y - p.r * .12, p.r * .3, 4, 0, 0, TAU); c.fill();
+    const e = t - p.splashT; if (e < .6 && !RM) { c.fillStyle = '#9FD3E8'; c.strokeStyle = C.ink; c.lineWidth = 2; for (let i = 0; i < 6; i++) { const a2 = -PI * (i + .5) / 6, d = e * 90; c.beginPath(); c.arc(p.x + Math.cos(a2) * d, p.y + Math.sin(a2) * d * .8 + e * e * 120, 4 * (1 - e), 0, TAU); c.fill(); c.stroke(); } }
+    c.restore();
+  }
+}
+// over the buildings, under little Pip: the light of the hour, cloud shadows and fireflies
+function drawSkyLight(c, t) {
+  const L = Home.L, d = Sky.now(), h = d.getHours() + d.getMinutes() / 60, n = Sky.night(), sunset = glowAround(h, 19, 1.8), dawn = glowAround(h, 6.5, 1.3);
+  for (const k of Sky.clouds) { c.fillStyle = 'rgba(36,54,40,.08)'; c.beginPath(); c.ellipse(cloudX(k, t) + 40 * k.s, k.y + 120, 70 * k.s, 22 * k.s, 0, 0, TAU); c.fill(); }
+  if (dawn) { c.fillStyle = `rgba(255,190,150,${.16 * dawn})`; c.fillRect(0, 0, L.w, L.h); }
+  if (sunset) { c.fillStyle = `rgba(255,140,60,${.2 * sunset})`; c.fillRect(0, 0, L.w, L.h); }
+  if (n) { c.fillStyle = `rgba(18,28,72,${.42 * n})`; c.fillRect(0, 0, L.w, L.h); }
+  if (n > .4) for (const f of Sky.fireflies) {
+    const x = f.x + (RM ? 0 : Math.sin(t * .5 + f.p) * 30), y = f.y + (RM ? 0 : Math.cos(t * .4 + f.p * 2) * 18), on = RM ? 1 : .5 + .5 * Math.sin(t * 2.4 + f.p * 3);
+    if (on < .15) continue; const g = c.createRadialGradient(x, y, 0, x, y, 16); g.addColorStop(0, `rgba(255,246,150,${on * n})`); g.addColorStop(1, 'rgba(255,246,150,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 16, 0, TAU); c.fill(); c.fillStyle = `rgba(255,255,220,${on})`; c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill();
+  }
+}
+// on top of everything: the rainbow, the rain or snow, and the clouds
+function drawSkyAbove(c, t) {
+  const n = Sky.night();
+  for (const k of Sky.clouds) {
+    const x = cloudX(k, t), rain = raining(k, t), e = t - k.rainT;
+    if (rain && !RM) {
+      if (k.snow) { c.fillStyle = '#fff'; c.strokeStyle = 'rgba(36,54,40,.35)'; c.lineWidth = 1; for (let i = 0; i < 26; i++) { const u = ((e * .35 + i / 26) % 1), sx = x + 30 * k.s + ((i * 37) % 120 - 60) * k.s + Math.sin(e * 2 + i) * 8, sy = k.y + 20 + u * 200; c.beginPath(); c.arc(sx, sy, 3.5, 0, TAU); c.fill(); c.stroke(); } }
+      else { c.strokeStyle = 'rgba(91,150,220,.75)'; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 30; i++) { const u = ((e * 1.6 + i / 30) % 1), sx = x + 30 * k.s + ((i * 41) % 120 - 60) * k.s - u * 10, sy = k.y + 20 + u * 190; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx - 3, sy + 14); c.stroke(); } }
+    }
+    // a rain cloud turns grey, and clouds dim at night
+    c.save(); cloud(c, x, k.y, k.s, .92);
+    if (rain || n) { c.globalAlpha = rain ? .45 + .2 * n : .45 * n; c.translate(x, k.y); c.scale(k.s, k.s); c.fillStyle = rain ? '#7F8C99' : '#2A3560'; c.beginPath(); for (const [cx, cy, r] of [[0, 0, 24], [28, -14, 31], [60, -4, 25], [32, 8, 24], [8, 8, 18]]) { c.moveTo(cx + r, cy); c.arc(cx, cy, r, 0, TAU); } c.fill(); }
+    c.restore();
+  }
 }
 /* ============ topics: add new ones here ============ */
 const TOPICS = [

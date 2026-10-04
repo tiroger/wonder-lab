@@ -443,9 +443,15 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 - **News:** pieces that weren't there on the last visit sparkle until they're tapped, and Pip says `GARDEN_NEW` once, in place of "Where should we explore…" (`Store.data.gardenSeen`).
 - `checkIds()` checks that every `reward` and `landmark` names a real piece.
 
+### A living sky (as built, src/08g_sky.js)
+- **The clock:** a warm wash at dawn (around 6:30) and a sunset glow (around 19:00), and a navy tint from 19:00 that is full from 21:00 to 5:30. At night fireflies drift over the grounds, clouds dim, and little Pip is drawn above the tint so he stays bright. `Sky.night()` gives 0 to 1. Tests set `Sky.fake` to a `Date`.
+- **Clouds** (three wide, two on a phone) drift across with soft shadows on the lawn. Tapping one makes it rain for 5 s: it turns grey, with a soft rain sound. A daytime shower leaves two puddles on the nearest open lawn (`openGrass`: never on a building, the trail, the pond, the bed or a garden piece) that splash when tapped, and a rainbow over the garden that fades after 14 s. In winter the cloud snows instead, with no puddles. On about one home visit in five, a cloud rains by itself after 6–14 s.
+- **Seasons** by month: spring trees have pink blossoms, autumn trees turn orange, red and gold and drop a leaf every few seconds, winter trees are dark green with snow caps.
+- **Layers:** the rainbow and puddles sit on the lawn, under everything; the light tint, cloud shadows and fireflies go over the buildings and under Pip; rain and clouds are on top. Cloud taps come first; puddle taps come last.
+- No speech, so nothing to record. With `RM` on, clouds stay still, rain and snow aren't drawn (the cloud still greys), and fireflies don't move.
+
 ### Next for the campus (planned with Roger, 2026-10-03)
-1. **A living sky:** the map follows the real clock (morning light, sunset, fireflies at night); now and then it rains (puddles to splash, then a rainbow); clouds drift with shadows; seasonal touches (autumn leaves, snow).
-2. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
+1. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
 
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.
