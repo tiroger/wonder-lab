@@ -2,7 +2,7 @@
 function petalPath(L, w) { const p = new Path2D(); p.moveTo(0, 0); p.bezierCurveTo(-w * .95, -L * .25, -w * .7, -L * .95, 0, -L); p.bezierCurveTo(w * .7, -L * .95, w * .95, -L * .25, 0, 0); p.closePath(); return p; }
 const A_flower = {
   id: 'flower', name: 'Flower Lab', icon: 'flower',
-  badge: { id: 'b.flower', name: 'Flower Detective', desc: 'You took a flower apart and helped a bee pollinate it!', how: 'Not yet! Take the flower apart and help the bee in <b>Flower Lab</b>.' },
+  badge: { id: 'b.flower', name: 'Flower Detective', desc: 'You took a flower apart and helped a bee pollinate it!', how: 'Not yet! Take the flower apart and help the bee in <b>Flower Lab</b>.', reward: 'beehive' },
   stars: [{ id: 'flower.sepals', name: 'Sepals' }, { id: 'flower.petals', name: 'Petals' }, { id: 'flower.stamen', name: 'Stamen' }, { id: 'flower.pistil', name: 'Pistil' }, { id: 'flower.pollen', name: 'Pollination' }],
   intro: 'Let\'s dissect a flower! <b>Drag the pink petals</b> and the green <b>sepals</b> off, one by one, into the trays. What\'s hiding inside?',
   facts: ['Did you know? Bees carry <b>pollen</b> from flower to flower. That helps flowers make seeds.', 'Did you know? After a flower gets pollen, its <b>ovary</b>, a part hidden in the middle, grows into a fruit with seeds inside.'],

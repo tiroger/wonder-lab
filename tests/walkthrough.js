@@ -415,6 +415,27 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     await done(ctx, p);
   }
   {
+    // the campus grows: each badge plants a piece in the Badge Garden (oldest first), Pip points out what's new once, a trophy raises a landmark
+    const { ctx, p } = await fresh(() => { if (!localStorage.getItem('wonderlab.v1')) localStorage.setItem('wonderlab.v1', JSON.stringify({ last: { topic: 'plants', activity: 'flower' }, stars: { 'parts.roots': 1 }, badges: { 'b.flower': 3, 'b.parts': 1, 'b.seed': 2 } })); }, { viewport: { width: 1100, height: 1600 } });
+    const garden = {};
+    garden.first = await p.evaluate(() => ({ line: plainText(App.current), kinds: Home.L.garden.map(g => g.kind), fresh: Home.fresh.size, landmarks: Home.L.landmarks.length, sign: !!Home.L.sign }));
+    const piece = await p.evaluate(() => { const r = Home.cv.getBoundingClientRect(), L = Home.L, g = L.garden[2]; return [r.left + g.x / L.w * r.width, r.top + (g.y - 40) / L.h * r.height]; });
+    await p.mouse.click(...piece); await sleep(200);
+    garden.poked = await p.evaluate(() => Garden.pokeT['b.flower'] != null && !Home.fresh.has('b.flower'));
+    await quiet(p);
+    const sign = await p.evaluate(() => { const r = Home.cv.getBoundingClientRect(), L = Home.L; return [r.left + L.sign.x / L.w * r.width, r.top + (L.sign.y - 80) / L.h * r.height]; });
+    await p.mouse.click(...sign); await sleep(300);
+    garden.sign = await p.evaluate(() => App.current === GARDEN_SIGN);
+    await quiet(p);
+    await p.reload(); await sleep(900);
+    garden.again = await p.evaluate(() => ({ line: plainText(App.current), fresh: Home.fresh.size }));
+    await p.evaluate(() => { for (const a of TOPICS[0].activities) Store.data.badges[a.badge.id] = Date.now(); Store.data.badges['b.botanist'] = Date.now(); go('#/trophies'); }); await sleep(600);
+    await p.evaluate(() => go('#/')); await sleep(700);
+    garden.trophy = await p.evaluate(() => ({ line: plainText(App.current), pieces: Home.L.garden.length, landmark: Home.L.landmarks.map(g => g.kind), rows: Home.L.garden.at(-1).y > Home.L.garden[0].y }));
+    home.garden = garden;
+    await done(ctx, p);
+  }
+  {
     // a link straight into an activity: the first tap reads its intro and taps wait for Pip
     const { ctx, p } = await fresh(null, { hash: '#/plants/parts' });
     const c0 = await p.evaluate(() => window.__clips);
@@ -602,6 +623,9 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Grounds: tapping Pip tickles him, then gets a fact from an activity played': report.home.grounds.tickle && report.home.grounds.fact,
     'Grounds: a tree shakes, drops leaves, and a bird flies out on the third tap': report.home.grounds.tree.shook && report.home.grounds.tree.leaves > 0 && report.home.grounds.tree.birds === 1,
     'Grounds: the frog hops, the pond ripples, the rock flips and the pill bug curls': report.home.grounds.frogHopped && report.home.grounds.ripple && report.home.grounds.rock && report.home.grounds.bugCurled,
+    'Badge Garden: each badge plants a piece, oldest first, and Pip points it out once': report.home.garden.first.line === 'Welcome back! Look! Something new is growing on the map.' && report.home.garden.first.kinds.join() === 'birdhouse,wheelbarrow,beehive' && report.home.garden.first.fresh === 3 && report.home.garden.first.sign && report.home.garden.again.line === 'Welcome back! Where should we explore today?' && report.home.garden.again.fresh === 0,
+    'Badge Garden: pieces react to a tap, and the sign explains the garden': report.home.garden.poked && report.home.garden.sign,
+    'Badge Garden: the Botanist trophy raises a sunflower by the greenhouse': report.home.garden.trophy.landmark.join() === 'sunflower' && report.home.garden.trophy.pieces === 11 && report.home.garden.trophy.rows && report.home.garden.trophy.line === 'Look! Something new is growing on the map.',
     'Grounds: every flower blooms and a bee comes to visit': report.home.grounds.bloom,
     'Grounds: Pip strolls the trail, and a building tapped mid-stroll still opens': report.home.grounds.stroll.walking && report.home.grounds.stroll.hash === '#/' && report.home.grounds.entered && report.home.grounds.buzzOff,
     'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,

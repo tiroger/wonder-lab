@@ -169,7 +169,7 @@ const PRODUCE = [
 
 const A_produce = {
   id: 'produce', name: 'Produce Lab', icon: 'produce',
-  badge: { id: 'b.produce', name: 'Fruit Finder', desc: 'You cut open produce and sorted the fruits from the vegetables!', how: 'Not yet! Cut open the produce and sort it in <b>Produce Lab</b>.' },
+  badge: { id: 'b.produce', name: 'Fruit Finder', desc: 'You cut open produce and sorted the fruits from the vegetables!', how: 'Not yet! Cut open the produce and sort it in <b>Produce Lab</b>.', reward: 'pumpkins' },
   stars: [{ id: 'produce.fruit', name: 'Seeds mean fruit' }, { id: 'produce.outside', name: 'Seeds outside' }, { id: 'produce.root', name: 'Root' },
     { id: 'produce.stem', name: 'Stalk' }, { id: 'produce.leaf', name: 'Leaves' }, { id: 'produce.flower', name: 'Flower buds' }],
   intro: 'Your class cut open <b>produce</b>, which means fruits and vegetables, to look for seeds. Let\'s try it! <b>Tap a food</b> in the basket to put it on the cutting board.',

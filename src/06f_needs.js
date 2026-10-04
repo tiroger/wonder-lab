@@ -3,7 +3,7 @@
 // then look at each one. A fair test changes only one thing, so you know what made the difference.
 const A_needs = {
   id: 'needs', name: 'Plant Needs', icon: 'pots',
-  badge: { id: 'b.needs', name: 'Fair Tester', desc: 'You ran a fair test and found out what plants need!', how: 'Not yet! Run the fair test in <b>Plant Needs</b>.' },
+  badge: { id: 'b.needs', name: 'Fair Tester', desc: 'You ran a fair test and found out what plants need!', how: 'Not yet! Run the fair test in <b>Plant Needs</b>.', reward: 'gnome' },
   stars: [{ id: 'needs.predict', name: 'Make a guess' }, { id: 'needs.best', name: 'Water and light' }, { id: 'needs.water', name: 'No water' },
     { id: 'needs.light', name: 'No light' }, { id: 'needs.fair', name: 'Fair test' }],
   intro: 'Scientists do a <b>fair test</b>. They change just one thing and keep everything else the same. These bean plants are the same, except for water and light. <b>Tap the plant</b> you think will grow the healthiest!',

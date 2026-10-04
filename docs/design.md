@@ -436,10 +436,16 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 - **Pip:** tapping a spot on the trail walks him there (`strollTo`; a building tapped mid-stroll still opens). Tapping him uses his own HTML button (`#pipBtn`, kept over him by `placePipBtn`), since he usually stands inside a building's link. He wiggles and says a "Did you know?" fact from an activity with at least one star (each activity's `facts`), a different one each time until all have been heard; with nothing played yet he says `PIP_TICKLE`. Said with `{ lock: false }`.
 - **State** lives in `Grounds` for the session (a reload resets the blooms and the rock). With `RM` on, nothing flies or falls: blooms, hops and flips happen at once.
 
+### The campus grows (as built, src/08f_garden.js)
+- **The building fills in:** `building(c, t, p)` gets `p`, the share of the topic's stars earned. The greenhouse adds a seedling pot (15%), a tomato plant (35%), a hanging basket (60%) and a bean pole (85%).
+- **The Badge Garden:** a row under the grounds (9 across, 3 on a phone, more rows as it fills) that starts with a "Badge Garden" sign. Each earned badge plants its `reward`, oldest first. The pieces live in `GARDEN`, a shared library any topic can pick from: birdhouse, wheelbarrow, beehive, pumpkins, scarecrow, dandelions, appleTree, sprinkler, beanTeepee, gnome, starFlag. Each one is drawn in a 100×130 box and does something when tapped (a bird peeks out, the dandelions blow away and grow back, the sprinkler sprays), with a sound and no speech. Tapping the sign: Pip says `GARDEN_SIGN`.
+- **Landmarks:** a topic's `landmark` (a `GARDEN` piece flagged `tall`) rises beside its building when its trophy is won, taking the place of the tree there. Plants & Seeds: the giant `sunflower`.
+- **News:** pieces that weren't there on the last visit sparkle until they're tapped, and Pip says `GARDEN_NEW` once, in place of "Where should we explore…" (`Store.data.gardenSeen`).
+- `checkIds()` checks that every `reward` and `landmark` names a real piece.
+
 ### Next for the campus (planned with Roger, 2026-10-03)
-1. **The campus grows with progress** (saved): the greenhouse fills with plants as stars come in; each badge adds something to the grounds (a flower bed, a bean stalk, a scarecrow); a topic's trophy adds a landmark (a giant sunflower for Botanist).
-2. **A living sky:** the map follows the real clock (morning light, sunset, fireflies at night); now and then it rains (puddles to splash, then a rainbow); clouds drift with shadows; seasonal touches (autumn leaves, snow).
-3. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
+1. **A living sky:** the map follows the real clock (morning light, sunset, fireflies at night); now and then it rains (puddles to splash, then a rainbow); clouds drift with shadows; seasonal touches (autumn leaves, snow).
+2. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
 
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.
