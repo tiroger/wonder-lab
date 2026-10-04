@@ -423,6 +423,24 @@ Every badge and trophy across all topics, in one room. Mockup board "Trophy Hall
 - `showHome()`, `showHall()` (`src/08d_hall.js`) and `route()` (in `src/09_app.js`) switch views: `:root.at-home`, `:root.at-hall` or `:root.in-topic`, `App.view`, and `leaveActivity()` stops everything before switching.
 - The Trophy Hall (`src/08d_hall.js`): `drawTrophyHall` on the map (it sparkles while `hallNew()`), `renderHall()` builds the cases as HTML buttons with canvas icons, `Store.data.hallSeen` remembers which earned badges were shown, so new ones glow (`spinin`) once.
 
+### Campus grounds (as built, src/08e_grounds.js)
+The map is a place to explore, not just a menu. Everything here is decoration: the canvas stays `aria-hidden`, and the buildings' links carry the meaning.
+- **Garden strip:** `groundsLayout(L)` adds a band under the buildings (290 logical px tall, 460 on a phone) with a pond, a flower bed, a rock and more trees. Keep the bottom-left corner plain grass: the walkthrough's first tap lands there.
+- **Things to poke** (`groundsHit` / `groundsTap`), each with an instant sound and no speech:
+  - a **tree** shakes and drops two leaves; every third tap on the same tree, a bird flies out (`chirp`).
+  - the **frog** hops to another lily pad (`croak`), with a ripple where it lands; tapping the **water** makes a ripple (`drip`).
+  - each **flower bud** blooms (`pop` plus a note); once all five are open, a **bee** visits each one and flies off (`buzz`, stopped by `leaveActivity`).
+  - the **rock** flips aside to show a damp spot with a **pill bug**, which curls into a ball when tapped, then uncurls and wanders.
+  - the **crane** on a coming-soon lot swings when its button is tapped.
+  - plain **grass** plays a xylophone note.
+- **Pip:** tapping a spot on the trail walks him there (`strollTo`; a building tapped mid-stroll still opens). Tapping him uses his own HTML button (`#pipBtn`, kept over him by `placePipBtn`), since he usually stands inside a building's link. He wiggles and says a "Did you know?" fact from an activity with at least one star (each activity's `facts`), a different one each time until all have been heard; with nothing played yet he says `PIP_TICKLE`. Said with `{ lock: false }`.
+- **State** lives in `Grounds` for the session (a reload resets the blooms and the rock). With `RM` on, nothing flies or falls: blooms, hops and flips happen at once.
+
+### Next for the campus (planned with Roger, 2026-10-03)
+1. **The campus grows with progress** (saved): the greenhouse fills with plants as stars come in; each badge adds something to the grounds (a flower bed, a bean stalk, a scarecrow); a topic's trophy adds a landmark (a giant sunflower for Botanist).
+2. **A living sky:** the map follows the real clock (morning light, sunset, fireflies at night); now and then it rains (puddles to splash, then a rainbow); clouds drift with shadows; seasonal touches (autumn leaves, snow).
+3. **A critter hunt:** about six critters hidden in the grounds (a ladybug under a leaf, a snail by the pond, an owl at night). A field guide by the gate shows silhouettes until each is found; finding them all earns an **Explorer** badge in the Trophy Hall.
+
 ### Building it: checklist
 - **Markup:** in `src/00_markup.html`, a `#home` section (map frame, Keep going strip) and a `#trophies` section, hidden while a topic is open. Remove the `#topic` select and its "More topics coming soon…" option.
 - **Logic:** in `src/09_app.js`: routing (including `#/trophies`), the campus canvas and its lots, the Trophy Hall building and room, the link overlay, per-topic CSS variables and Pip costumes. Each topic's `building(c, t)` lives with the topic, and each badge gains a `how` line for the Trophy Hall. Plants & Seeds gets the greenhouse.

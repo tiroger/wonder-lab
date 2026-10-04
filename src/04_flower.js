@@ -5,6 +5,7 @@ const A_flower = {
   badge: { id: 'b.flower', name: 'Flower Detective', desc: 'You took a flower apart and helped a bee pollinate it!', how: 'Not yet! Take the flower apart and help the bee in <b>Flower Lab</b>.' },
   stars: [{ id: 'flower.sepals', name: 'Sepals' }, { id: 'flower.petals', name: 'Petals' }, { id: 'flower.stamen', name: 'Stamen' }, { id: 'flower.pistil', name: 'Pistil' }, { id: 'flower.pollen', name: 'Pollination' }],
   intro: 'Let\'s dissect a flower! <b>Drag the pink petals</b> and the green <b>sepals</b> off, one by one, into the trays. What\'s hiding inside?',
+  facts: ['Did you know? Bees carry <b>pollen</b> from flower to flower. That helps flowers make seeds.', 'Did you know? After a flower gets pollen, its <b>ovary</b>, a part hidden in the middle, grows into a fruit with seeds inside.'],
   mount(host, ui) {
     const st = new Stage(host, 'A flower on a lab table. Drag its petals and sepals into trays, then tap the stamens and the pistil, and help a bee carry pollen.');
     const B = [400, 352], PET = petalPath(190, 82), SEP = petalPath(96, 40);

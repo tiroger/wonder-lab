@@ -6,6 +6,7 @@ const A_light = {
   badge: { id: 'b.light', name: 'Light Seeker', desc: 'You found out that stems grow toward light and roots follow gravity down!', how: 'Not yet! Move the lamp and tip the cup in <b>Light Seeker</b>.' },
   stars: [{ id: 'light.bend', name: 'Bends to the light' }, { id: 'light.follow', name: 'Follows the light' }, { id: 'light.up', name: 'Stem turns up' }, { id: 'light.roots', name: 'Roots grow down' }],
   intro: 'Plants love light! <b>Drag the lamp</b> to one side and watch what the plant does.',
+  facts: ['Did you know? Stems grow toward light, and roots grow down. Roots can feel <b>gravity</b>, the pull that makes things fall, so they know which way is down!', 'Did you know? A plant by a window leans toward the glass to catch more light.'],
   mount(host, ui) {
     const st = new Stage(host, 'A bean seedling in a clear cup on a table in a dim room, with a desk lamp you can drag around it, and a button to tip the cup over.');
     const CUP = [400, 430], ARC = 250, TABLE = 470;

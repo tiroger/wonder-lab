@@ -4,6 +4,7 @@ const A_grow = {
   badge: { id: 'b.grow', name: 'Green Thumb', desc: 'You grew a bean plant through its whole life cycle!', how: 'Not yet! Grow a bean all the way to new seeds in <b>Grow a Bean</b>.' },
   stars: [{ id: 'grow.1', name: 'Germination' }, { id: 'grow.2', name: 'Sprout' }, { id: 'grow.3', name: 'Seedling' }, { id: 'grow.4', name: 'Adult plant' }, { id: 'grow.5', name: 'Flowers' }, { id: 'grow.6', name: 'Fruit & seeds' }],
   intro: 'We planted a bean seed! To wake up, a seed needs <b>water</b>, <b>air</b> and <b>warmth</b>. <b>Tap the watering can</b> to give it a drink.',
+  facts: ['Did you know? A bean plant grows from a seed to a sprout, then a seedling. Then it makes flowers, and pods full of new seeds. That is its <b>life cycle</b>!', 'Did you know? When a seed wakes up, its root comes out first. The root grows down to drink water and hold on tight.'],
   mount(host, ui) {
     const st = new Stage(host, 'A garden cut away to show a bean seed in the soil. Tap the watering can and the sun to help it grow through its life cycle.');
     const GY = 300, SX = 400, SY = 372, CAN = [120, 200], SUN = [690, 85];

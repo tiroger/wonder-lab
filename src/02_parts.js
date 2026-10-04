@@ -61,6 +61,7 @@ const A_parts = {
   badge: { id: 'b.parts', name: 'Plant Pal', desc: 'You found every part of a plant!', how: 'Not yet! Find all 5 parts of the plant in <b>Meet the Plant</b>.' },
   stars: [{ id: 'parts.roots', name: 'Roots' }, { id: 'parts.stem', name: 'Stem' }, { id: 'parts.leaves', name: 'Leaves' }, { id: 'parts.flower', name: 'Flower' }, { id: 'parts.fruit', name: 'Fruit & seeds' }],
   intro: 'Every plant has parts with special jobs. <b>Tap each part</b> of this plant to learn its job. Can you find all 5?',
+  facts: ['Did you know? Roots drink water from the soil, and they hold the plant in place like an anchor.', 'Did you know? A stem works like a straw. It carries water up to the leaves.'],
   mount(host, ui) {
     const st = new Stage(host, 'A plant growing in a garden with roots under the soil. Tap its roots, stem, leaves, flower and pod.');
     const CL = [{ x: 180, y: 70, s: .9, v: 12 }, { x: 560, y: 110, s: .7, v: 8 }, { x: 860, y: 55, s: 1.1, v: 10 }];

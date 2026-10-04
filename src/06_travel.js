@@ -4,6 +4,7 @@ const A_travel = {
   badge: { id: 'b.travel', name: 'Seed Launcher', desc: 'You found 4 ways seeds travel to new places!', how: 'Not yet! Find all 4 ways seeds travel in <b>Seed Travel</b>.' },
   stars: [{ id: 'travel.wind', name: 'Wind' }, { id: 'travel.animal', name: 'Animals' }, { id: 'travel.water', name: 'Water' }, { id: 'travel.pop', name: 'Pop!' }],
   intro: 'Plants can\'t walk, so how do their seeds get to new places? <b>Tap each picture</b> to discover 4 ways seeds travel!',
+  facts: ['Did you know? Dandelion seeds have tiny parachutes, so the wind can carry them far away.', 'Did you know? Some seeds stick to animal fur and catch a ride to a new place.'],
   mount(host, ui) {
     const st = new Stage(host, 'Four garden scenes: a dandelion in the wind, a rabbit near a burr plant, a coconut palm by the sea, and a popping seed pod. Tap each one.');
     const facts = {

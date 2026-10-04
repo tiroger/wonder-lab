@@ -7,6 +7,7 @@ const A_celery = {
   stars: [{ id: 'celery.color', name: 'Colored water' }, { id: 'celery.climb', name: 'Water climbs' }, { id: 'celery.leaves', name: 'To the leaves' },
     { id: 'celery.sun', name: 'Sunshine helps' }, { id: 'celery.tubes', name: 'Tiny tubes' }],
   intro: 'Plants drink water through tiny tubes. Let\'s watch it happen! <b>Tap a color</b> to add it to the water.',
+  facts: ['Did you know? Water climbs up a plant through tiny tubes, all the way to the leaves.', 'Did you know? Plants drink faster on a sunny day! Their leaves let water <b>evaporate</b>, or dry up into the air, and that pulls more water up.'],
   mount(host, ui) {
     const st = new Stage(host, 'A celery stalk standing in a glass of water on a table, with bottles of blue and red food coloring, a clock, and a window with blinds.');
     const GLASS = [300, 470], TOP = 150, BOTTLES = { blue: [520, 452], red: [598, 452] }, CLOCK = [690, 120], WINDOW = [140, 40, 200, 150];
