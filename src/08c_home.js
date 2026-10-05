@@ -190,7 +190,7 @@ function homeInit() {
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
-  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
+  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall', 'at-grownups', 'at-privacy');
   renderHome(); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {

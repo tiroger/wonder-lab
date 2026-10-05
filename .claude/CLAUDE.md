@@ -10,9 +10,10 @@ A playful learning web app for Roger's son (3rd grade). Each class topic becomes
 - Voice: `python3 voice/lines.py && python3 voice/synth_openai.py && python3 voice/check.py --fix && python3 build.py`
 - Terraform: `terraform fmt -recursive infra && (cd infra && terraform validate)`
 - API tests: `(cd api && node --test test/*.test.mjs)`
+- Accounts test (grown-up page, demo; real API code + a pretend Cognito): after the walkthrough's build and server, `node tests/accounts.js`. QR test: `npm install --no-save playwright@1 jsqr@1 && node --test tests/qr.test.mjs` (install both together: `--no-save` prunes the other)
 
 ## Layout
-- `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `08c_home.js` (the home page: the Lab campus map), `09_app.js` (TOPICS, routes, Pip, stars, badges, tabs, `say`).
+- `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `08c_home.js` (the home page: the Lab campus map), `08d`–`08h` (Trophy Hall, grounds, garden, sky, critters), `08i_qr.js` (QR encoder), `08j_api.js` (Api, grown-up sign-in, DemoApi), `08k_grownups.js` (the grown-up page), `09_app.js` (TOPICS, routes, Pip, stars, badges, tabs, `say`).
 - `voice/` narration pipeline; `voice/packs/<voice>.{mp3,json}` are the recorded packs.
 - `api/` the accounts API: one Lambda (`index.mjs`, routes in `lib/routes.mjs`), no dependencies beyond the AWS SDK in the runtime, tests against an in-memory table. Errors are never 403 (CloudFront turns 403s into the app page).
 - `infra/` site Terraform (S3 + CloudFront + ACM + Route 53; `accounts.tf`: Cognito, SES, DynamoDB, the API Lambda behind `/api`); `infra/bootstrap/` one-time state bucket, OIDC roles, and the IAM roles the app needs (CI has no IAM permissions).

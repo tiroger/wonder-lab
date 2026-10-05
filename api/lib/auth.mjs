@@ -22,7 +22,7 @@ export function verifier({ region, poolId, clientId, fetchFn = fetch, now = () =
       const key = await keyFor(header.kid); if (!key) return null;
       if (!verify('RSA-SHA256', Buffer.from(`${h}.${p}`), key, Buffer.from(s, 'base64url'))) return null;
       if (claims.iss !== iss || claims.token_use !== 'id' || claims.aud !== clientId || !(claims.exp * 1000 > now())) return null;
-      return { sub: claims.sub, email: claims.email || '' };
+      return { sub: claims.sub, email: String(claims.email || '').toLowerCase(), emailVerified: claims.email_verified === true || claims.email_verified === 'true' };
     } catch { return null; }
   };
 }

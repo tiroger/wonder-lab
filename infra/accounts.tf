@@ -13,6 +13,15 @@ locals {
 
 data "aws_caller_identity" "current" {}
 
+# Grown-up accounts are invite-only. These emails are the admins: they can always sign up, and they manage the invite
+# list on the grown-up page. Set as the ADMIN_EMAILS GitHub secret (comma-separated), never written in the repo.
+variable "admin_emails" {
+  description = "Comma-separated admin emails for the grown-up page"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # ---------- email: SES sends the sign-in codes from hello@wonderlab.camp ----------
 resource "aws_sesv2_email_identity" "site" {
   email_identity = var.domain
@@ -81,7 +90,10 @@ resource "aws_cognito_user_pool" "grownups" {
     }
   }
   admin_create_user_config {
-    allow_admin_create_user_only = false # anyone with an email can sign up
+    allow_admin_create_user_only = false # self sign-up, but only for invited emails (the pre sign-up hook)
+  }
+  lambda_config {
+    pre_sign_up = aws_lambda_function.presignup.arn
   }
   schema {
     name                = "email"
@@ -178,8 +190,41 @@ resource "aws_lambda_function" "api" {
       POOL_ID       = aws_cognito_user_pool.grownups.id
       CLIENT_ID     = aws_cognito_user_pool_client.app.id
       ORIGIN_SECRET = random_password.origin_secret.result
+      ADMIN_EMAILS  = var.admin_emails
     }
   }
+}
+
+# Cognito's pre sign-up hook: the same code, a second entry point. It writes to the API's log group, so the
+# bootstrap-made role (which may only write there) covers it.
+resource "aws_lambda_function" "presignup" {
+  function_name    = "${local.app}-presignup"
+  description      = "Wonder Lab: only invited emails can make a grown-up account"
+  role             = local.api_role
+  runtime          = "nodejs22.x"
+  architectures    = ["arm64"]
+  handler          = "index.preSignUp"
+  filename         = data.archive_file.api.output_path
+  source_code_hash = data.archive_file.api.output_base64sha256
+  memory_size      = 128
+  timeout          = 5
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.api.name
+  }
+  environment {
+    variables = {
+      TABLE        = aws_dynamodb_table.accounts.name
+      ADMIN_EMAILS = var.admin_emails
+    }
+  }
+}
+resource "aws_lambda_permission" "presignup" {
+  statement_id  = "CognitoPreSignUp"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.presignup.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.grownups.arn
 }
 
 resource "aws_lambda_function_url" "api" {
