@@ -95,6 +95,8 @@ const Settings = {
     nm.onchange = () => { const n = explorerName(); if (n) say(`Nice to meet you, <b>${n}</b>! Let's explore together.`); };
     // tap outside the dialog to close it
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+    // the grown-up page opens behind the dialog, so close Settings to show it
+    $('#setGrownups').addEventListener('click', () => { Sound.pop(); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
     dlg.addEventListener('close', () => Sound.pop());
   }
 };
