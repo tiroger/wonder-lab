@@ -9,7 +9,7 @@ A playful learning web app for Roger's son (3rd grade). Each class topic becomes
 - Walkthrough test: `python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js` (must print only PASS lines)
 - Voice: `python3 voice/lines.py && python3 voice/synth_openai.py && python3 voice/check.py --fix && python3 build.py`
 - Terraform: `terraform fmt -recursive infra && (cd infra && terraform validate)`
-- API tests: `(cd api && node --test test/)`
+- API tests: `(cd api && node --test test/*.test.mjs)`
 
 ## Layout
 - `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `08c_home.js` (the home page: the Lab campus map), `09_app.js` (TOPICS, routes, Pip, stars, badges, tabs, `say`).
