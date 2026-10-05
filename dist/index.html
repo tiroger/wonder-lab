@@ -3948,6 +3948,7 @@ const GROWNUP_KEY = 'wonderlab.grownup', DEMO_KEY = 'wonderlab.demo';
 const PICTURE_NAMES = ['frog', 'sun', 'rocket', 'apple', 'fish', 'star', 'leaf', 'moon', 'bee'];
 const LOOK_NAMES = ['leaf', 'sun', 'sky', 'petal', 'carrot', 'grape', 'berry', 'sea'];
 const store2 = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+async function sha256Hex(text) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join(''); }
 class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
 const Grownup = {
@@ -4018,10 +4019,13 @@ const Api = {
   // The demo ({ demo: true }, a 'demo:' token, or a grown-up in the demo) never leaves the browser.
   async call(method, path, body, { device, anon, demo } = {}) {
     if (demo || (device && device.startsWith('demo:')) || (!device && !anon && Grownup.demo)) return DemoApi.handle(method, path, body, device);
-    const headers = { 'Content-Type': 'application/json' };
-    if (device) headers.Authorization = `Device ${device}`;
-    else if (!anon) { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers.Authorization = `Bearer ${t}`; }
-    const r = await fetch(`/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    // tokens go in X-Wonder-Auth (CloudFront signs the request to the API, replacing Authorization), and any body carries
+    // its SHA-256, which a signed request to a Lambda function URL needs
+    const headers = { 'Content-Type': 'application/json' }, data = body ? JSON.stringify(body) : undefined;
+    if (device) headers['X-Wonder-Auth'] = `Device ${device}`;
+    else if (!anon) { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers['X-Wonder-Auth'] = `Bearer ${t}`; }
+    if (data) headers['x-amz-content-sha256'] = await sha256Hex(data);
+    const r = await fetch(`/api${path}`, { method, headers, body: data });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { if (r.status === 401 && !device && !anon) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
     return j;

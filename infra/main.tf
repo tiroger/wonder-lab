@@ -94,6 +94,15 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+# CloudFront signs every request to the API's function URL; the URL refuses anything unsigned. Signing replaces the
+# viewer's Authorization header, so the app sends its own tokens in X-Wonder-Auth.
+resource "aws_cloudfront_origin_access_control" "api" {
+  name                              = "wonder-lab-api-oac"
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 # www.wonderlab.camp -> wonderlab.camp
 resource "aws_cloudfront_function" "www_redirect" {
   name    = "${replace(var.domain, ".", "-")}-www-redirect"
@@ -132,19 +141,16 @@ resource "aws_cloudfront_distribution" "site" {
     origin_access_control_id = aws_cloudfront_origin_access_control.site.id
   }
 
-  # the API (accounts.tf): a Lambda function URL, with a secret header so it only answers CloudFront
+  # the API (accounts.tf): a Lambda function URL that only accepts requests CloudFront signs (origin access control)
   origin {
-    origin_id   = "api"
-    domain_name = trimsuffix(trimprefix(aws_lambda_function_url.api.function_url, "https://"), "/")
+    origin_id                = "api"
+    domain_name              = trimsuffix(trimprefix(aws_lambda_function_url.api.function_url, "https://"), "/")
+    origin_access_control_id = aws_cloudfront_origin_access_control.api.id
     custom_origin_config {
       http_port              = 80
       https_port             = 443
       origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
-    }
-    custom_header {
-      name  = "x-origin-verify"
-      value = random_password.origin_secret.result
     }
   }
   ordered_cache_behavior {
