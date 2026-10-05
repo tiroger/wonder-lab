@@ -498,6 +498,18 @@ For parents and teachers, at `#/grownups` (links in the footer and in Settings),
 - **Invite-only:** only invited emails (and admins) can make a grown-up account. Cognito's pre sign-up hook checks the invite list, and an uninvited email sees "This email hasn't been invited yet." Admins (the `ADMIN_EMAILS` GitHub secret) get an **Invites** card: invite by email, see Invited or Joined, remove, and copy a ready-made message to send. Wonder Lab doesn't send invitation emails itself.
 - **The demo** (`DemoApi`): Ms. Rivera's class of 6, built from the live `TOPICS`. "Demo Explorer" has everything. It's saved in this browser only (`wonderlab.demo`), with a ribbon, Reset and Leave.
 
+### Kids sign in: "Who's playing?" (as built, src/08l_players.js)
+Kid-facing, with Pip, at `#/players`; a login card's QR code opens `#/join/<code>`, which looks the code up and then shows `#/players` (the code stays out of the address bar).
+- **The player chip** at the start of the header controls shows who's playing: their Pip in their color and their nickname (and a "Demo" tag). For a guest it shows a plain Pip and "Who's playing?". When a breadcrumb takes the room, it shrinks to just the Pip, with a "?" for a guest.
+- **Steps:**
+  1. **The code:** a big text field ("Let's go!"), "Play the demo", "Play without signing in". Codes are forgiving: any case, spaces for dashes. The device remembers the group, so next time it opens straight to the names.
+  2. **The names:** big buttons, each with the kid's Pip.
+  3. **Secret pictures** (if the group uses them): a 3×3 grid, two slots filling as they tap, and it signs in after the second tap. A wrong order shakes the grid. In the demo, the secret is shown underneath.
+  4. **Guest stars** (only if the device has some): "Yes, add them!" moves them into the kid's profile, so a sibling isn't offered the same stars; "No thanks" leaves them with the guest.
+- **Pip's lines** (recorded), all `{ lock: false }`: "Who's playing today? Tap your name!", "Type your group code, or scan your login card.", "Hmm, I don't know that code. Check it and try again!", "Tap your two secret pictures, in order!", "Not quite! Tap your pictures again, in order.", "Let's take a little break. Try again soon, or ask your grown-up for help!", "I found stars from playing without signing in. Add them to your stars?", "Let's sign in again! Type your group code. Your grown-up can help." After signing in, the map greets them by name ("Welcome back, Sam!").
+- **Storage:** each kid's progress lives under `wonderlab.kid.<id>` and a guest's under `wonderlab.v1`. `Store.switchTo` carries the device's settings (`DEVICE_KEYS`: sound, music, voice and so on) across.
+- **Sync:** `Store.onSave` queues a `PUT /api/play/progress` 2 seconds later; the reply is merged back in, so stars earned on another device appear. It also pulls at start-up and retries every 30 seconds when offline. If the API says the device is no longer signed in (the kid was removed, or got new pictures), the kid goes back to "Who's playing?" with "Let's sign in again!".
+
 ## 17. Checklist for anything new
 
 - [ ] Uses the tokens, fonts, outlines, radii and shadows above. No new greys, blurred shadows, gradients on interface elements, emoji or image files.

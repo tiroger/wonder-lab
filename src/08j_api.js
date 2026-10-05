@@ -71,15 +71,16 @@ const Grownup = {
 };
 
 const Api = {
-  // as a grown-up (default) or as a kid's device ({ device: token })
-  async call(method, path, body, { device } = {}) {
-    if (Grownup.demo || (device && device.startsWith('demo:'))) return DemoApi.handle(method, path, body, device);
+  // as a grown-up (default), as a kid's device ({ device: token }), or as nobody yet ({ anon: true }: joining a group).
+  // The demo ({ demo: true }, a 'demo:' token, or a grown-up in the demo) never leaves the browser.
+  async call(method, path, body, { device, anon, demo } = {}) {
+    if (demo || (device && device.startsWith('demo:')) || (!device && !anon && Grownup.demo)) return DemoApi.handle(method, path, body, device);
     const headers = { 'Content-Type': 'application/json' };
     if (device) headers.Authorization = `Device ${device}`;
-    else { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers.Authorization = `Bearer ${t}`; }
+    else if (!anon) { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers.Authorization = `Bearer ${t}`; }
     const r = await fetch(`/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { if (r.status === 401 && !device) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
+    if (!r.ok) { if (r.status === 401 && !device && !anon) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
     return j;
   },
 };
@@ -109,7 +110,7 @@ const DemoApi = {
     this.save();
   },
   save() { store2.set(DEMO_KEY, this.d); },
-  async handle(method, path, body = {}) {
+  async handle(method, path, body = {}, device) {
     const d = this.d || this.load(), g = id => d.groups.find(x => x.id === id), k = id => d.groups.flatMap(x => x.kids).find(x => x.id === id);
     const pub = x => ({ id: x.id, nick: x.nick, look: x.look }), full = x => ({ ...pub(x), pictures: x.pictures }), group = x => ({ ...x, kids: x.kids.map(full) });
     const nope = () => { throw new ApiError(404, 'not found'); }, bad = m => { throw new ApiError(400, m); };
@@ -139,11 +140,31 @@ const DemoApi = {
       }
     } else if ((m = /^\/groups\/([^/]+)\/progress$/.exec(path))) out = { kids: (g(m[1]) || nope()).kids.map(y => ({ ...pub(y), progress: y.progress })) };
     else if (method === 'DELETE' && path === '/me') { this.reset(); out = { deleted: true }; }
+    // the kid side: join the demo class, play, save progress (same answers as the real API)
+    else if ((m = /^\/join\/([^/]+)$/.exec(path))) { const x = d.groups.find(y => y.code === m[1]) || nope(); out = { group: { name: x.name, kind: x.kind, pictures: x.pictures }, kids: x.kids.map(pub), pictures: x.pictures ? PICTURE_NAMES : [] }; }
+    else if ((m = /^\/join\/([^/]+)\/kids\/([^/]+)$/.exec(path))) {
+      const x = d.groups.find(y => y.code === m[1]) || nope(), y = x.kids.find(z => z.id === m[2]) || nope(), p = body.pictures || [];
+      if (x.pictures && (p[0] !== y.pictures[0] || p[1] !== y.pictures[1])) throw new ApiError(401, 'wrong pictures');
+      out = { token: `demo:${y.id}`, kid: pub(y), group: { name: x.name } };
+    } else if (device) {
+      const y = k(device.slice(5)); if (!y) throw new ApiError(401, 'sign in first');
+      if (method === 'GET' && path === '/play') out = { kid: pub(y), progress: y.progress };
+      else if (method === 'PUT' && path === '/play/progress') { y.progress = mergeProgress(y.progress, body.progress); out = { progress: y.progress }; }
+      else if (method === 'POST' && path === '/play/signout') out = { signedOut: true };
+      else nope();
+    }
     else nope();
     this.save(); return JSON.parse(JSON.stringify(out));
   },
 };
 const WORDS_DEMO = ['maple', 'otter', 'pond', 'comet', 'tulip', 'fern', 'robin', 'acorn', 'meadow', 'lantern', 'pebble', 'willow'];
+// progress only grows: every id from both sides, the earliest time (the same rule as the API's)
+const PROGRESS_MAPS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen'];
+function mergeProgress(a = {}, b = {}) {
+  const out = {};
+  for (const k of PROGRESS_MAPS) { const m = { ...(a[k] || {}) }; for (const [id, v] of Object.entries(b[k] || {})) m[id] = id in m ? (m[id] > 1 && v > 1 ? Math.min(m[id], v) : Math.max(m[id], v)) : v; out[k] = m; }
+  return out;
+}
 function hasBadgeIn(a, stars) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => stars[s.id]).length >= need; }
 
 // ---------- the 9 pictures a secret is made from, drawn in a 60x60 box around (0, 0) ----------

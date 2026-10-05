@@ -8,13 +8,13 @@ const KIND_LABEL = { family: 'Family', class: 'Class' };
 
 function showGrownups() {
   leaveActivity(); App.view = 'grownups'; App.topic = null; App.act = null; applyAccent(null);
-  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-privacy'); root.classList.add('at-grownups');
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-privacy', 'at-players'); root.classList.add('at-grownups');
   $('#crumbTopic').textContent = 'Grown-ups'; refresh();
   GU.msg = ''; renderGrownups(); if (Grownup.signedIn) loadGroups();
 }
 function showPrivacy() {
   leaveActivity(); App.view = 'privacy'; App.topic = null; App.act = null; applyAccent(null);
-  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-grownups'); root.classList.add('at-privacy');
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-grownups', 'at-players'); root.classList.add('at-privacy');
   $('#crumbTopic').textContent = 'Privacy'; refresh();
 }
 async function loadGroups() {

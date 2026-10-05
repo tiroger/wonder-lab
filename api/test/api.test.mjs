@@ -104,7 +104,7 @@ test('resetting pictures signs the kid out everywhere; removing a kid or group r
   assert.ok(![...t.store.rows.values()].some(r => r.pk === `KID#${ava.id}` || r.sk === `KID#${ava.id}`));
   await t.call('DELETE', `/groups/${g.id}`, { auth: t.roger });
   assert.equal((await t.call('GET', `/join/${g.code}`)).status, 404, 'the old code stops working');
-  assert.deepEqual([...t.store.rows.values()].filter(r => !r.pk.startsWith('ADULT#') && !r.pk.startsWith('TOKEN#') && !r.pk.startsWith('RATE#')), []);
+  assert.deepEqual([...t.store.rows.values()].filter(r => !r.pk.startsWith('ADULT#') && !r.pk.startsWith('RATE#')), [], 'kids, codes, progress and device tokens all gone');
 });
 
 test('a new group code retires the old one; deleting the account deletes everything', async () => {
@@ -113,7 +113,7 @@ test('a new group code retires the old one; deleting the account deletes everyth
   assert.notEqual(g2.code, g.code);
   assert.equal((await t.call('GET', `/join/${g.code}`)).status, 404); assert.equal((await t.call('GET', `/join/${g2.code}`)).status, 200);
   await t.call('DELETE', '/me', { auth: t.roger });
-  assert.deepEqual([...t.store.rows.values()].filter(r => !r.pk.startsWith('RATE#') && !r.pk.startsWith('TOKEN#')), []);
+  assert.deepEqual([...t.store.rows.values()].filter(r => !r.pk.startsWith('RATE#')), []);
 });
 
 test('guessing group codes is limited per address', async () => {
