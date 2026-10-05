@@ -241,3 +241,20 @@ resource "aws_lambda_permission" "cloudfront_invoke" {
   source_arn               = aws_cloudfront_distribution.site.arn
   invoked_via_function_url = true
 }
+
+# One-time cleanup: Lambda added these two grants itself while the function URL was public. They grant nothing now that
+# the URL needs CloudFront's signature, but they shouldn't linger. Terraform never managed them, so this removes them once
+# (and is a no-op if they're gone). Safe to delete this resource after it has run.
+resource "terraform_data" "remove_public_url_grants" {
+  triggers_replace = [aws_lambda_function_url.api.authorization_type]
+  depends_on       = [aws_lambda_permission.cloudfront_url, aws_lambda_permission.cloudfront_invoke]
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    command     = <<-SH
+      for sid in FunctionURLAllowPublicAccess FunctionURLAllowInvokeAction; do
+        aws lambda remove-permission --function-name ${aws_lambda_function.api.function_name} --statement-id "$sid" --region us-east-1 2>/dev/null \
+          && echo "removed $sid" || echo "$sid already gone"
+      done
+    SH
+  }
+}
