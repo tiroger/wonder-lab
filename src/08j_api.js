@@ -25,7 +25,10 @@ const Grownup = {
   // step 1: an email. New addresses sign up (Cognito emails a confirmation code); known ones get a sign-in code.
   async start(email) {
     try { await this.cognito('SignUp', { Username: email, UserAttributes: [{ Name: 'email', Value: email }] }); return { email, step: 'confirm' }; }
-    catch (e) { if (e.code !== 'UsernameExistsException') throw e; }
+    catch (e) {
+      if (/INVITE_ONLY/.test(e.message)) throw new Error("This email hasn\u2019t been invited yet. Wonder Lab is invite-only for now.");
+      if (e.code !== 'UsernameExistsException') throw e;
+    }
     try {
       const r = await this.cognito('InitiateAuth', { AuthFlow: 'USER_AUTH', AuthParameters: { USERNAME: email, PREFERRED_CHALLENGE: 'EMAIL_OTP' } });
       return { email, step: 'otp', session: r.Session };

@@ -495,6 +495,7 @@ For parents and teachers, at `#/grownups` (links in the footer and in Settings),
 - **Kid looks:** `PIP_LOOKS` in src/09_app.js tints Pip's body (`pipFigure(c, t, { tint })`): leaf, sun (the plain bean), sky, petal, carrot, grape, berry, sea.
 - **Secret pictures:** `PICTURE_ART` draws frog, sun, rocket, apple, fish, star, leaf, moon and bee, reusing the campus and critter art.
 - **Login cards** print 8 to a page, with nothing else on the page. Each has the logo, "Hi, <nick>!", three steps, the group code, a QR code for `/#/join/<code>` (src/08i_qr.js, our own encoder) and the secret pictures.
+- **Invite-only:** only invited emails (and admins) can make a grown-up account. Cognito's pre sign-up hook checks the invite list, and an uninvited email sees "This email hasn't been invited yet." Admins (the `ADMIN_EMAILS` GitHub secret) get an **Invites** card: invite by email, see Invited or Joined, remove, and copy a ready-made message to send. Wonder Lab doesn't send invitation emails itself.
 - **The demo** (`DemoApi`): Ms. Rivera's class of 6, built from the live `TOPICS`. "Demo Explorer" has everything. It's saved in this browser only (`wonderlab.demo`), with a ribbon, Reset and Leave.
 
 ## 17. Checklist for anything new

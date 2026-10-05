@@ -6,19 +6,21 @@ const SITE = process.env.WL_URL || 'http://localhost:8799/';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const { routes } = await import('../api/lib/routes.mjs'), { memoryStore } = await import('../api/lib/memory.mjs'), { validCode } = await import('../api/lib/rules.mjs');
+  const { routes, inviteCheck } = await import('../api/lib/routes.mjs'), { memoryStore } = await import('../api/lib/memory.mjs'), { validCode } = await import('../api/lib/rules.mjs');
   const store = memoryStore();
   // pretend Cognito: users by email, the last code it "emailed", and unsigned tokens our verifier trusts
   const users = new Map(), sent = [], cognitoCalls = [];
-  const idToken = email => `test.${Buffer.from(JSON.stringify({ sub: `sub-${email}`, email, exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.sig`;
-  const verify = async t => { try { if (!t.startsWith('test.')) return null; const c = JSON.parse(Buffer.from(t.split('.')[1], 'base64url')); return users.has(c.email) ? { sub: c.sub, email: c.email } : null; } catch { return null; } };
-  const app = routes({ store, verify, config: { region: 'us-east-1', clientId: 'test-client' } });
+  const idToken = email => `test.${Buffer.from(JSON.stringify({ sub: `sub-${email}`, email, email_verified: true, exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.sig`;
+  const verify = async t => { try { if (!t.startsWith('test.')) return null; const c = JSON.parse(Buffer.from(t.split('.')[1], 'base64url')); return users.has(c.email) ? { sub: c.sub, email: c.email, emailVerified: c.email_verified } : null; } catch { return null; } };
+  // parent@example.com is the admin (invite-only); the pretend Cognito runs the real pre sign-up check
+  const admins = ['parent@example.com'], allowed = inviteCheck({ store, admins });
+  const app = routes({ store, verify, config: { region: 'us-east-1', clientId: 'test-client', admins } });
   const auth = email => ({ AuthenticationResult: { IdToken: idToken(email), AccessToken: `access-${email}`, RefreshToken: `refresh-${email}` } });
   const fail = (type, message) => ({ status: 400, body: { __type: type, message } });
-  function cognito(target, b) {
+  async function cognito(target, b) {
     cognitoCalls.push(target);
     const email = b.Username || (b.AuthParameters && b.AuthParameters.USERNAME) || (b.ChallengeResponses && b.ChallengeResponses.USERNAME), u = users.get(email);
-    if (target === 'SignUp') { if (u) return fail('UsernameExistsException', 'User already exists'); users.set(email, { confirmed: false }); sent.push({ email, code: '111111' }); return { body: { UserConfirmed: false } }; }
+    if (target === 'SignUp') { if (u) return fail('UsernameExistsException', 'User already exists'); if (!(await allowed(email))) return fail('UserLambdaValidationException', 'PreSignUp failed with error INVITE_ONLY.'); users.set(email, { confirmed: false }); sent.push({ email, code: '111111' }); return { body: { UserConfirmed: false } }; }
     if (target === 'ConfirmSignUp') { if (b.ConfirmationCode !== '111111') return fail('CodeMismatchException', 'Invalid code'); u.confirmed = true; return { body: { Session: `confirmed-${email}` } }; }
     if (target === 'InitiateAuth' && b.AuthFlow === 'REFRESH_TOKEN_AUTH') return { body: auth(b.AuthParameters.REFRESH_TOKEN.replace('refresh-', '')) };
     if (target === 'InitiateAuth') {
@@ -42,7 +44,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await r.fulfill({ status: res.status, contentType: 'application/json', body: JSON.stringify(res.body) });
     });
     await p.route('https://cognito-idp.us-east-1.amazonaws.com/', async r => {
-      const q = r.request(), res = cognito(q.headers()['x-amz-target'].split('.').pop(), JSON.parse(q.postData()));
+      const q = r.request(), res = await cognito(q.headers()['x-amz-target'].split('.').pop(), JSON.parse(q.postData()));
       await r.fulfill({ status: res.status || 200, contentType: 'application/x-amz-json-1.1', body: JSON.stringify(res.body) });
     });
     await p.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
@@ -73,6 +75,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await p.click('[data-print]'); await sleep(300);
     r.cards = await p.evaluate(() => ({ printed: window.__printed, cards: document.querySelectorAll('#cardsSheet .login-card').length, qr: [...document.querySelectorAll('#cardsSheet .lc-qr')].every(c => c.width > 100), pics: document.querySelectorAll('#cardsSheet .lc-pics canvas').length }));
     await p.click('[data-newcode]'); await ask(p); r.newCode = (await groups(p))[0].code; r.oldCode = g.code;
+    // the admin's Invites card: invite a teacher, get a message to send them
+    r.adminCard = await p.evaluate(() => !!document.querySelector('.gu-invites'));
+    await p.fill('#guInviteIn', 'Teacher@Example.com'); await p.click('#guInvite button'); await sleep(400);
+    r.invite = await p.evaluate(() => ({ list: [...document.querySelectorAll('.gu-invlist li span:first-child')].map(x => x.textContent), note: (document.querySelector('#guNote') || {}).textContent || '' }));
     await p.click('#guOut'); await sleep(400);
     r.signedOutAgain = await p.evaluate(() => !!document.querySelector('#guEmailIn') && !localStorage.getItem('wonderlab.grownup'));
     report.laptop = r; await ctx.close();
@@ -87,14 +93,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     // remove a kid, then delete the account: everything goes
     await p.click('.gu-kid [data-remove]'); await ask(p); r.afterRemove = (await groups(p))[0].kids;
     await p.click('#guDelete'); await ask(p); await sleep(400);
-    r.deleted = { signedOut: await p.evaluate(() => !!document.querySelector('#guEmailIn')), rows: [...store.rows.values()].filter(x => !x.pk.startsWith('RATE#')).length, user: users.has('parent@example.com') };
+    r.deleted = { signedOut: await p.evaluate(() => !!document.querySelector('#guEmailIn')), rows: [...store.rows.values()].filter(x => !x.pk.startsWith('RATE#') && x.pk !== 'INVITES').length, user: users.has('parent@example.com') };
     await ctx.close();
   }
-  // ---------- someone else signs in: they see none of it ----------
+  // ---------- invite-only: a stranger can't make an account; the invited teacher can, and sees none of the family ----------
   {
     const { ctx, p } = await device('stranger'), r = {};
-    await signIn(p, 'stranger@example.com', '111111'); r.groups = await groups(p);
+    await p.fill('#guEmailIn', 'stranger@example.com'); await p.click('#guEmail button'); await sleep(500);
+    r.refused = await p.evaluate(() => ({ msg: (document.querySelector('.gu-msg') || {}).textContent || '', noCodeBox: !document.querySelector('#guCodeIn') }));
+    r.noAccount = !users.has('stranger@example.com');
     report.stranger = r; await ctx.close();
+  }
+  {
+    const { ctx, p } = await device('teacher'), r = {};
+    await signIn(p, 'teacher@example.com', '111111'); r.groups = await groups(p);
+    r.adminCard = await p.evaluate(() => !!document.querySelector('.gu-invites'));
+    r.joined = !!(await store.get('INVITES', 'teacher@example.com')).joined;
+    report.teacher = r; await ctx.close();
   }
   // ---------- the demo: everything works, nothing leaves the browser ----------
   {
@@ -123,7 +138,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     'Grown-ups: sign out forgets the session': L.signedOutAgain,
     'Grown-ups: another device signs in with an emailed code and finds the same family': P.groups.length === 1 && P.groups[0].name === 'The Lefort Lab' && P.groups[0].kids.join() === 'Sam,Ava' && !P.sideways,
     'Grown-ups: removing a kid and deleting the account delete everything': P.afterRemove.length === 1 && P.deleted.signedOut && P.deleted.rows === 0 && !P.deleted.user,
-    "Grown-ups: another grown-up sees none of someone else's groups": report.stranger.groups.length === 0,
+    'Invite-only: an email without an invite is turned away, kindly, and no account is made': /hasn.t been invited/.test(report.stranger.refused.msg) && report.stranger.refused.noCodeBox && report.stranger.noAccount,
+    'Invite-only: the admin invites a teacher by email and gets a message to send': L.adminCard && L.invite.list.join() === 'teacher@example.com' && L.invite.note.includes('teacher@example.com') && L.invite.note.includes('/#/grownups'),
+    "Invite-only: the invited teacher signs up, sees none of the family's groups, and isn't an admin": report.teacher.groups.length === 0 && !report.teacher.adminCard && report.teacher.joined,
     'Demo: a sample class of six, changes kept in this browser, reset and leave work': D.start[0].kids.length === 6 && D.added === 7 && D.kept === 7 && D.reset === 6 && D.classes === 2 && D.left,
     'Demo: nothing is sent to the API or to Cognito': D.network.api === 0 && D.network.cognito === 0,
     'Accounts: no page errors': errors.length === 0,

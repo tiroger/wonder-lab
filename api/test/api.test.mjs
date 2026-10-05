@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { routes } from '../lib/routes.mjs';
+import { routes, inviteCheck } from '../lib/routes.mjs';
 import { memoryStore } from '../lib/memory.mjs';
 import { verifier } from '../lib/auth.mjs';
 import { mergeProgress, cleanProgress, normalCode, validCode, newCode } from '../lib/rules.mjs';
@@ -42,7 +42,7 @@ test('grown-ups must be signed in with a valid Cognito token', async () => {
   assert.equal((await t.call('GET', '/me', { auth: `Bearer ${idToken({ sub: 'x', aud: 'another-app' })}` })).status, 401, 'another app');
   assert.equal((await t.call('GET', '/me', { auth: `Bearer ${idToken({ sub: 'x', token_use: 'access' })}` })).status, 401, 'an access token');
   const me = await t.call('GET', '/me', { auth: t.roger });
-  assert.equal(me.status, 200); assert.deepEqual(me.body, { email: 'r@example.com', groups: [] });
+  assert.equal(me.status, 200); assert.deepEqual(me.body, { email: 'r@example.com', admin: false, groups: [] });
 });
 
 test('a family: create it, add kids, and see it all from /me', async () => {
@@ -139,4 +139,26 @@ test('unknown routes are 404, bad JSON is 400, and nothing ever answers 403', as
   assert.equal((await t.call('GET', '/nowhere')).status, 404);
   const r = await routes({ store: memoryStore(), verify: async () => null })({ method: 'POST', path: '/api/join/a-b-c-12/kids/x', body: '{oops', headers: {} });
   assert.equal(r.status, 400);
+});
+
+test('invite-only: admins manage the list, invited emails may sign up, nobody else', async () => {
+  const store = memoryStore(), verify = verifier({ region: 'us-east-1', poolId: POOL, clientId: CLIENT, fetchFn });
+  const app = routes({ store, verify, config: { admins: ['Boss@Example.com'] } });
+  const call = (method, path, auth, body) => app({ method, path: `/api${path}`, headers: auth ? { authorization: auth } : {}, body: body ? JSON.stringify(body) : '' });
+  const boss = `Bearer ${idToken({ sub: 'boss', email: 'boss@example.com', email_verified: true })}`;
+  const unverified = `Bearer ${idToken({ sub: 'b2', email: 'boss@example.com', email_verified: false })}`;
+  const teacher = `Bearer ${idToken({ sub: 'teach', email: 'teacher@school.org', email_verified: true })}`;
+  assert.equal((await call('GET', '/me', boss)).body.admin, true);
+  assert.equal((await call('GET', '/me', unverified)).body.admin, false, 'an unverified email is never an admin');
+  assert.equal((await call('GET', '/invites', teacher)).status, 404, 'only admins see the list');
+  assert.equal((await call('POST', '/invites', teacher, { email: 'x@y.com' })).status, 404);
+  assert.equal((await call('POST', '/invites', boss, { email: 'not an email' })).status, 400);
+  assert.equal((await call('POST', '/invites', boss, { email: ' Teacher@School.org ' })).status, 200);
+  const check = inviteCheck({ store, admins: ['boss@example.com'] });
+  assert.equal(await check('teacher@school.org'), true); assert.equal(await check('BOSS@example.com'), true); assert.equal(await check('stranger@x.com'), false);
+  await call('GET', '/me', teacher);   // the teacher signs in for the first time
+  const list = (await call('GET', '/invites', boss)).body.invites;
+  assert.equal(list.length, 1); assert.equal(list[0].email, 'teacher@school.org'); assert.ok(list[0].joined, 'marked as joined');
+  await call('DELETE', '/invites/teacher%40school.org', boss);
+  assert.equal(await check('teacher@school.org'), false, 'a removed invite no longer lets them sign up');
 });

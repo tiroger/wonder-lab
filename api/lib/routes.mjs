@@ -2,6 +2,7 @@
 //   get(pk, sk), put(item), putNew(item) -> false if it exists, del(pk, sk), query(pk, skPrefix), bump(pk, sk, ttlSeconds) -> count
 // `verify(idToken)` returns { sub, email } for a signed-in grown-up, or null.
 // Errors are 400, 401, 404 and 429, never 403: CloudFront turns 403s into the app's page (docs/accounts.md).
+// Grown-up accounts are invite-only: `config.admins` (emails) manage the invite list, and inviteCheck() gates sign-up.
 import { KINDS, MAX_GROUPS, LOOKS, PICTURES, newId, newCode, newPictures, newToken, hashToken, normalCode, validCode,
   cleanNick, cleanGroupName, cleanProgress, mergeProgress } from './rules.mjs';
 
@@ -10,7 +11,15 @@ const ok = body => ({ status: 200, body });
 const fail = (status, error) => ({ status, body: { error } });
 const NOT_FOUND = fail(404, 'not found');
 
+// may this email make a grown-up account? Admins always; anyone else needs an invite. Used by the Cognito pre sign-up hook.
+export const validEmail = e => /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(e);
+export function inviteCheck({ store, admins = [] }) {
+  return async email => { const e = String(email || '').trim().toLowerCase(); return admins.includes(e) || !!(await store.get('INVITES', e)); };
+}
+
 export function routes({ store, verify, config = {} }) {
+  const admins = (config.admins || []).map(e => e.toLowerCase());
+  const isAdmin = a => a.emailVerified && admins.includes(a.email);
   // --- loading and checking ---
   const groupMeta = gid => store.get(`GROUP#${gid}`, 'META');
   // kids in the order they were added
@@ -48,11 +57,22 @@ export function routes({ store, verify, config = {} }) {
   // --- grown-up routes ---
   const adultRoutes = {
     'GET /me': async (a) => {
-      await store.putNew({ pk: `ADULT#${a.sub}`, sk: 'META', email: a.email, created: Date.now() });
+      if (await store.putNew({ pk: `ADULT#${a.sub}`, sk: 'META', email: a.email, created: Date.now() })) {
+        const inv = await store.get('INVITES', a.email); if (inv && !inv.joined) await store.put({ ...inv, joined: Date.now() });   // their first visit: the invite is used
+      }
       const links = await store.query(`ADULT#${a.sub}`, 'GROUP#'), groups = [];
       for (const l of links) { const g = await groupMeta(l.gid); if (g) groups.push(await fullGroup(g)); }
-      return ok({ email: a.email, groups });
+      return ok({ email: a.email, admin: isAdmin(a), groups });
     },
+    // the invite list, for admins only (everyone else gets a 404, as if it weren't there)
+    'GET /invites': async (a) => isAdmin(a) ? ok({ invites: (await store.query('INVITES', '')).map(i => ({ email: i.email, created: i.created, joined: i.joined || null })).sort((x, y) => y.created - x.created) }) : NOT_FOUND,
+    'POST /invites': async (a, body) => {
+      if (!isAdmin(a)) return NOT_FOUND;
+      const email = String(body.email || '').trim().toLowerCase(); if (!validEmail(email)) return fail(400, 'That doesn\'t look like an email address.');
+      if (!(await store.get('INVITES', email))) await store.put({ pk: 'INVITES', sk: email, email, invitedBy: a.email, created: Date.now() });
+      return ok({ invited: email });
+    },
+    'DELETE /invites/:email': async (a, body, email) => { if (!isAdmin(a)) return NOT_FOUND; await store.del('INVITES', String(email).toLowerCase()); return ok({ deleted: true }); },
     'DELETE /me': async (a) => {
       for (const l of await store.query(`ADULT#${a.sub}`, 'GROUP#')) { const g = await groupMeta(l.gid); if (g) await removeGroup(g); }
       await store.del(`ADULT#${a.sub}`, 'META'); return ok({ deleted: true });

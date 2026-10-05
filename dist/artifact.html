@@ -224,6 +224,8 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .gu-add{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .btn.danger{background:#C24A4A;color:#fff}
 .gu-loading{text-align:center;color:var(--ink-soft)}
+.gu-invlist{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:6px}.gu-invlist li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--card-2);border:2px solid var(--ink);border-radius:12px;padding:6px 10px}.gu-invlist li span:first-child{flex:1 1 200px;font-weight:600;word-break:break-all}
+.gu-note{background:var(--sun-soft);border:2px solid var(--ink);border-radius:12px;padding:8px 12px;margin:8px 0}.gu-copytext{background:#fff;border-radius:8px;padding:8px;font-size:15px}
 .gu-dialog{border:4px solid var(--ink);border-radius:20px;padding:18px 20px;max-width:min(440px,calc(100vw - 32px));box-shadow:0 6px 0 var(--ink);background:var(--card)}
 .gu-dialog::backdrop{background:rgba(36,54,40,.4)}.gu-dialog form{display:flex;flex-direction:column;gap:10px}.gu-dialog h3{margin:0}
 .gu-dbtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
@@ -3919,7 +3921,10 @@ const Grownup = {
   // step 1: an email. New addresses sign up (Cognito emails a confirmation code); known ones get a sign-in code.
   async start(email) {
     try { await this.cognito('SignUp', { Username: email, UserAttributes: [{ Name: 'email', Value: email }] }); return { email, step: 'confirm' }; }
-    catch (e) { if (e.code !== 'UsernameExistsException') throw e; }
+    catch (e) {
+      if (/INVITE_ONLY/.test(e.message)) throw new Error("This email hasn\u2019t been invited yet. Wonder Lab is invite-only for now.");
+      if (e.code !== 'UsernameExistsException') throw e;
+    }
     try {
       const r = await this.cognito('InitiateAuth', { AuthFlow: 'USER_AUTH', AuthParameters: { USERNAME: email, PREFERRED_CHALLENGE: 'EMAIL_OTP' } });
       return { email, step: 'otp', session: r.Session };
@@ -4067,7 +4072,7 @@ function drawKidPip(cv, look, t = 1) {
 /* ============ The grown-up page (#/grownups) ============ */
 // For parents and teachers: sign in with an emailed code, make a family or a class, add kids, hand out the group code or
 // print login cards. Plain, calm HTML for adults: no Pip narration here. "Try the demo" runs it all in this browser.
-const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {} };
+const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {}, invites: null, invited: '' };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const joinLink = code => `${location.origin}/#/join/${code}`;
 const KIND_LABEL = { family: 'Family', class: 'Class' };
@@ -4086,6 +4091,7 @@ function showPrivacy() {
 async function loadGroups() {
   try {
     GU.me = await Api.call('GET', '/me');
+    GU.invites = GU.me.admin ? (await Api.call('GET', '/invites')).invites : null;
     for (const g of GU.me.groups) { const p = await Api.call('GET', `/groups/${g.id}/progress`); for (const k of p.kids) GU.starsOf[k.id] = Object.keys(k.progress.stars || {}).length; }
   } catch (e) { GU.msg = e.message; }
   renderGrownups();
@@ -4105,6 +4111,7 @@ function renderGrownups() {
     box.innerHTML = `<div class="card gu-card gu-signin">
       <h2>For grown-ups</h2>
       <p>Set up a profile for each child, or for a whole class. Their stars then follow them to any device, even an incognito window.</p>
+      <p class="gu-fine">Wonder Lab is invite-only for now. If you've been invited, sign in with that email.</p>
       ${!f ? `<form id="guEmail" class="gu-form"><label for="guEmailIn">Your email</label>
         <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
         <small>No password. We email you a 6-digit code each time you sign in.</small></form>`
@@ -4128,6 +4135,7 @@ function renderGrownups() {
     ${err}
     ${!me ? '<p class="gu-loading">Loading…</p>' : me.groups.map(groupCard).join('') || '<div class="card gu-card"><h2>Welcome!</h2><p>Make a family for your own kids, or a class for your students. You can have both.</p></div>'}
     ${me ? `<div class="gu-add"><button class="btn go" id="guAddFamily" type="button">Add a family</button><button class="btn" id="guAddClass" type="button">Add a class</button></div>
+    ${GU.invites ? invitesCard() : ''}
     <div class="card gu-card gu-account"><h3>Your account</h3><p>Deleting your account deletes every group, every kid profile and their progress, right away.</p>
       <button class="btn danger" id="guDelete" type="button">${Grownup.demo ? 'Delete the demo data' : 'Delete my account'}</button></div>` : ''}`;
   box.querySelectorAll('canvas[data-look]').forEach(cv => drawKidPip(cv, cv.dataset.look));
@@ -4139,6 +4147,25 @@ function renderGrownups() {
   $('#guDelete').onclick = () => guAsk({ title: Grownup.demo ? "Delete the demo data?" : "Delete your account?", text: "Every group, kid profile and their progress will be deleted. This can’t be undone.", ok: 'Delete', danger: true })
     .then(yes => yes && guDo(async () => { await Grownup.deleteAccount(); GU.me = null; }));
   for (const g of me.groups) wireGroup(g);
+  if (GU.invites) wireInvites();
+}
+// for admins: who may make a grown-up account (invite-only). Wonder Lab doesn't email invitations; copy the note instead.
+function invitesCard() {
+  const note = GU.invited ? `Hi! I've invited you to Wonder Lab. Go to ${location.origin}/#/grownups and sign in with ${GU.invited}. You'll get a 6-digit code by email, with no password needed.` : '';
+  return `<section class="card gu-card gu-invites"><h2>Invites</h2>
+    <p>Wonder Lab is invite-only. Only these emails (and admins) can make a grown-up account.</p>
+    <form class="gu-form" id="guInvite"><label for="guInviteIn">Invite a parent or teacher</label>
+      <div class="gu-row"><input id="guInviteIn" type="email" required placeholder="teacher@school.org"><button class="btn go">Invite</button></div></form>
+    ${note ? `<div class="gu-note"><p><b>Invite added.</b> Send them this:</p><p class="gu-copytext" id="guNote">${esc(note)}</p><button class="btn" id="guCopyNote" type="button">Copy message</button></div>` : ''}
+    <ul class="gu-invlist">${GU.invites.map(i => `<li><span>${esc(i.email)}</span><span class="gu-chip">${i.joined ? 'Joined' : 'Invited'}</span><button class="linkish" data-uninvite="${esc(i.email)}" type="button">Remove</button></li>`).join('') || '<li class="gu-empty">No invites yet.</li>'}</ul>
+    <p class="gu-fine">Removing an invite stops someone from signing up. It doesn't delete an account they've already made.</p>
+  </section>`;
+}
+function wireInvites() {
+  $('#guInvite').onsubmit = e => { e.preventDefault(); const email = $('#guInviteIn').value.trim().toLowerCase(); guDo(async () => { await Api.call('POST', '/invites', { email }); GU.invited = email; await loadGroups(); }); };
+  if ($('#guCopyNote')) $('#guCopyNote').onclick = e => { navigator.clipboard && navigator.clipboard.writeText($('#guNote').textContent); e.target.textContent = 'Copied!'; };
+  document.querySelectorAll('[data-uninvite]').forEach(b => { b.onclick = () => guAsk({ title: `Remove the invite for ${b.dataset.uninvite}?`, ok: 'Remove', danger: true })
+    .then(yes => yes && guDo(async () => { await Api.call('DELETE', `/invites/${encodeURIComponent(b.dataset.uninvite)}`); GU.invited = ''; await loadGroups(); })); });
 }
 function codeTrouble(e) {
   if (e.code === 'CodeMismatchException') return "That code didn’t match. Check the email and try again.";

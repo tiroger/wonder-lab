@@ -24,7 +24,7 @@ Pip reads every line aloud. Discoveries earn stars and badges, finished topics e
 
 ## Grown-ups
 
-Parents and teachers sign in with any email and a one-time code (no passwords) to set up a family or a class. Each child gets a profile with a nickname and their own Pip color; a teacher can turn on secret pictures so classmates stay out of each other's profiles, and print a login card for every child with a QR code. Visitors can try it all in a demo that never leaves their browser.
+Parents and teachers sign in with an emailed one-time code (no passwords) to set up a family or a class. Accounts are invite-only for now. Each child gets a profile with a nickname and their own Pip color; a teacher can turn on secret pictures so classmates stay out of each other's profiles, and print a login card for every child with a QR code. Visitors can try it all in a demo that never leaves their browser.
 
 ## How it's built
 

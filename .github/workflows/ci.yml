@@ -86,6 +86,8 @@ jobs:
           aws-region: us-east-1
       - name: Plan
         working-directory: infra
+        env:
+          TF_VAR_admin_emails: ${{ secrets.ADMIN_EMAILS }} # so the plan matches what's deployed; sensitive, so never printed
         run: |
           terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
           terraform plan -input=false -no-color -lock=false | tee plan.txt   # read-only: never blocks a deploy
