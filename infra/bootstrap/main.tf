@@ -64,12 +64,16 @@ locals {
 }
 
 # The site's own resources, read from its Terraform outputs, so CI's permissions name them exactly. Apply this root after
-# the site has been deployed with those outputs (the check below stops an apply that would leave CI unable to deploy).
+# the site has been deployed with those outputs; the preconditions on the two CI policies stop an apply that would leave
+# CI unable to deploy (an empty ARN would grant nothing).
 data "terraform_remote_state" "site" {
   backend = "s3"
   config  = { bucket = aws_s3_bucket.state.id, key = "wonder-lab/site.tfstate", region = "us-east-1" }
 }
 locals {
+  site_ok = alltrue([for v in [try(data.terraform_remote_state.site.outputs.distribution_arn, ""), try(data.terraform_remote_state.site.outputs.certificate_arn, ""),
+  try(data.terraform_remote_state.site.outputs.user_pool_arn, "")] : v != ""]) && length(try(data.terraform_remote_state.site.outputs.origin_access_control_ids, [])) == 2
+  site_missing = "The site's state is missing the outputs CI's permissions name (distribution, certificate, user pool, 2 origin access controls). Deploy the site first, then apply this."
   site = {
     distribution_arn = try(data.terraform_remote_state.site.outputs.distribution_arn, "")
     certificate_arn  = try(data.terraform_remote_state.site.outputs.certificate_arn, "")
@@ -81,13 +85,6 @@ locals {
   "arn:aws:cloudfront::*:cache-policy/*", "arn:aws:cloudfront::*:origin-request-policy/*", "arn:aws:cloudfront::*:response-headers-policy/*"], local.oac_arns)
   pool_read = ["cognito-idp:DescribeUserPool", "cognito-idp:DescribeUserPoolClient", "cognito-idp:GetUserPoolMfaConfig", "cognito-idp:ListTagsForResource"]
 }
-check "site_outputs" {
-  assert {
-    condition     = local.site.distribution_arn != "" && local.site.user_pool_arn != "" && length(local.site.oac_ids) == 2
-    error_message = "The site's state doesn't have the outputs CI's permissions need yet. Merge and deploy the security-hardening change first, then apply this."
-  }
-}
-
 # ------------------------------------------------------- roles the app needs --
 # The API's Lambda: its own table and its own logs, nothing else.
 resource "aws_iam_role" "api" {
@@ -252,6 +249,12 @@ resource "aws_iam_role_policy" "plan" {
   name   = "wonder-lab-plan"
   role   = aws_iam_role.plan.id
   policy = data.aws_iam_policy_document.plan.json
+  lifecycle {
+    precondition {
+      condition     = local.site_ok
+      error_message = local.site_missing
+    }
+  }
 }
 
 data "aws_iam_policy_document" "assume" {
@@ -283,8 +286,9 @@ resource "aws_iam_role" "deploy" {
 
 # Scoped to what the site's Terraform and the Deploy workflow touch, by exact resource where AWS allows it (the account is
 # shared, and a tag check alone would let CI tag another project's resource as ours and then take it over). No IAM
-# permissions beyond handing the API its one bootstrap-made role. Making a new distribution, certificate, user pool or
-# origin access control needs a change here first.
+# permissions beyond handing the API its one bootstrap-made role. CI can't create a distribution, certificate, user pool or
+# origin access control. To add one: (1) grant its create action here and apply, (2) deploy the site, which creates it and
+# outputs its ID, (3) name it in the outputs read above, remove the create grant, and apply again.
 data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "TerraformState"
@@ -391,6 +395,12 @@ resource "aws_iam_role_policy" "deploy" {
   name   = "wonder-lab-deploy"
   role   = aws_iam_role.deploy.id
   policy = data.aws_iam_policy_document.deploy.json
+  lifecycle {
+    precondition {
+      condition     = local.site_ok
+      error_message = local.site_missing
+    }
+  }
 }
 
 # ---------------------------------------------------------------------- outputs --
