@@ -9,12 +9,15 @@ A playful learning web app for Roger's son (3rd grade). Each class topic becomes
 - Walkthrough test: `python3 build.py && (cd dist && python3 -m http.server 8799 &) && node tests/walkthrough.js` (must print only PASS lines)
 - Voice: `python3 voice/lines.py && python3 voice/synth_openai.py && python3 voice/check.py --fix && python3 build.py`
 - Terraform: `terraform fmt -recursive infra && (cd infra && terraform validate)`
+- API tests: `(cd api && node --test test/*.test.mjs)`
 
 ## Layout
 - `src/` is concatenated in file-name order into one page: `00_markup.html` (CSS + markup), `01_core.js` (helpers, palette `C`, Store, Sound, Music, Loop, Stage, shared drawing), one file per activity (`02_parts` … `07_quiz`), `08_voice.js`, `08b_settings.js`, `08c_home.js` (the home page: the Lab campus map), `09_app.js` (TOPICS, routes, Pip, stars, badges, tabs, `say`).
 - `voice/` narration pipeline; `voice/packs/<voice>.{mp3,json}` are the recorded packs.
-- `infra/` site Terraform (S3 + CloudFront + ACM + Route 53); `infra/bootstrap/` one-time state bucket + OIDC roles.
+- `api/` the accounts API: one Lambda (`index.mjs`, routes in `lib/routes.mjs`), no dependencies beyond the AWS SDK in the runtime, tests against an in-memory table. Errors are never 403 (CloudFront turns 403s into the app page).
+- `infra/` site Terraform (S3 + CloudFront + ACM + Route 53; `accounts.tf`: Cognito, SES, DynamoDB, the API Lambda behind `/api`); `infra/bootstrap/` one-time state bucket, OIDC roles, and the IAM roles the app needs (CI has no IAM permissions).
 - `docs/design.md` design guide: visual language, platform vs topic theming, home page plan. Read it before changing the look or adding a topic.
+- `docs/accounts.md` (local only, in `.git/info/exclude`) accounts spec: grown-up sign-in by email code, families and classes, kid profiles with group codes and picture passwords, sync, the API and its AWS pieces. Read it before touching sign-in, sync or `/api`.
 - `docs/internal.md` (git-ignored, on Roger's Mac only) the operations guide: running, the voice pipeline and its pitfalls, tests, deploys, AWS and DNS details. The README is the public project overview; keep how-to material out of it.
 - `.github/workflows/` CI on PRs, Deploy on push to main.
 

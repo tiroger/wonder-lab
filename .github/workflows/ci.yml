@@ -27,6 +27,8 @@ jobs:
         run: python3 build.py
       - name: Script parses
         run: sed -n '/<script>/,/<\/script>/p' dist/artifact.html | sed '1d;$d' > /tmp/app.js && node --check /tmp/app.js
+      - name: API tests
+        run: (cd api && node --test test/*.test.mjs)
       - name: Terraform format and validate
         run: |
           terraform fmt -check -recursive infra

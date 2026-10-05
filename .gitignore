@@ -6,6 +6,7 @@ __pycache__/
 .env
 voice/clips/
 infra/.terraform/
+infra/.build/
 infra/*.tfstate*
 infra/.terraform.tfstate.lock.info
 tests/last-run.png
