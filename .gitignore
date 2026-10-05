@@ -3,7 +3,17 @@ voice/clips/
 voice/tmp.wav
 __pycache__/
 .DS_Store
+# secrets and local settings: any .env file, Terraform variable files and saved plans (sanitized examples are fine)
 .env
+.env.*
+!.env.example
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+*.tfplan
+tfplan*
+*.pem
+*.key
 voice/clips/
 infra/.terraform/
 infra/.build/

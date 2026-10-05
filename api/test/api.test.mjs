@@ -162,3 +162,21 @@ test('invite-only: admins manage the list, invited emails may sign up, nobody el
   await call('DELETE', '/invites/teacher%40school.org', boss);
   assert.equal(await check('teacher@school.org'), false, 'a removed invite no longer lets them sign up');
 });
+
+test('picture tries are limited even when the guesses arrive all at once', async () => {
+  const t = setup(), { g, ava } = await family(t, 'class'), wrong = [ava.pictures[1], ava.pictures[0]];
+  const res = await Promise.all(Array.from({ length: 20 }, () => t.call('POST', `/join/${g.code}/kids/${ava.id}`, { body: { pictures: wrong } })));
+  assert.equal(res.filter(r => r.status === 401).length, 5, 'only 5 guesses are checked');
+  assert.equal(res.filter(r => r.status === 429).length, 15, 'the rest wait');
+});
+test('code guesses are limited even when they arrive all at once', async () => {
+  const t = setup();
+  const res = await Promise.all(Array.from({ length: 40 }, () => t.call('GET', `/join/${newCode()}`, { ip: '7.7.7.7' })));
+  assert.equal(res.filter(r => r.status === 404).length, 20); assert.equal(res.filter(r => r.status === 429).length, 20);
+});
+test('an expired device token no longer works, even before the table deletes it', async () => {
+  const t = setup(), { g, sam } = await family(t);
+  const tok = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token;
+  for (const r of t.store.rows.values()) if (r.pk.startsWith('TOKEN#')) r.ttl = Math.floor(Date.now() / 1000) - 1;
+  assert.equal((await t.call('GET', '/play', { auth: `Device ${tok}` })).status, 401);
+});

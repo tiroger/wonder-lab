@@ -1,6 +1,6 @@
 # ---------- Accounts: grown-up sign-in, kid profiles and sync (the API at /api) ----------
 # Grown-ups sign in with any email and a one-time code (Cognito, Essentials tier, sent through SES). Kid profiles and
-# progress live in one DynamoDB table. One Lambda serves /api through CloudFront. The Lambda's IAM role and Cognito's
+# progress live in one DynamoDB table. One Lambda serves /api through CloudFront (only CloudFront can call it). The Lambda's IAM role and Cognito's
 # email role are made by infra/bootstrap, so CI never needs IAM permissions.
 
 locals {
@@ -162,12 +162,6 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 14
 }
 
-# CloudFront sends this header; the Lambda answers 404 to anything without it
-resource "random_password" "origin_secret" {
-  length  = 40
-  special = false
-}
-
 resource "aws_lambda_function" "api" {
   function_name                  = local.api_name
   description                    = "Wonder Lab API: grown-ups, groups, kid profiles, sync"
@@ -186,11 +180,10 @@ resource "aws_lambda_function" "api" {
   }
   environment {
     variables = {
-      TABLE         = aws_dynamodb_table.accounts.name
-      POOL_ID       = aws_cognito_user_pool.grownups.id
-      CLIENT_ID     = aws_cognito_user_pool_client.app.id
-      ORIGIN_SECRET = random_password.origin_secret.result
-      ADMIN_EMAILS  = var.admin_emails
+      TABLE        = aws_dynamodb_table.accounts.name
+      POOL_ID      = aws_cognito_user_pool.grownups.id
+      CLIENT_ID    = aws_cognito_user_pool_client.app.id
+      ADMIN_EMAILS = var.admin_emails
     }
   }
 }
@@ -227,21 +220,24 @@ resource "aws_lambda_permission" "presignup" {
   source_arn    = aws_cognito_user_pool.grownups.arn
 }
 
+# only this site's CloudFront distribution may call it, with requests it signs; nothing reaches the function otherwise
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
-  authorization_type = "NONE" # the secret header and the app's own checks guard it
+  authorization_type = "AWS_IAM"
 }
-resource "aws_lambda_permission" "url" {
-  statement_id           = "FunctionUrl"
+resource "aws_lambda_permission" "cloudfront_url" {
+  statement_id           = "CloudFrontFunctionUrl"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.api.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.site.arn
+  function_url_auth_type = "AWS_IAM"
 }
-resource "aws_lambda_permission" "url_invoke" {
-  statement_id             = "FunctionUrlInvoke"
+resource "aws_lambda_permission" "cloudfront_invoke" {
+  statement_id             = "CloudFrontInvoke"
   action                   = "lambda:InvokeFunction"
   function_name            = aws_lambda_function.api.function_name
-  principal                = "*"
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = aws_cloudfront_distribution.site.arn
   invoked_via_function_url = true
 }

@@ -21,11 +21,19 @@ export function dynamoStore(table) {
       } while (start);
       return items;
     },
-    // a counter that DynamoDB deletes by itself once its time-to-live passes
-    async bump(pk, sk, ttlSeconds) {
-      const r = await db.send(new UpdateCommand({ TableName: table, Key: { pk, sk }, UpdateExpression: 'ADD n :one SET #ttl = if_not_exists(#ttl, :ttl)',
-        ExpressionAttributeNames: { '#ttl': 'ttl' }, ExpressionAttributeValues: { ':one': 1, ':ttl': Math.floor(Date.now() / 1000) + ttlSeconds }, ReturnValues: 'UPDATED_NEW' }));
-      return r.Attributes.n;
+    // a rate counter, atomically: take one try if fewer than `limit` are used, else false. DynamoDB deletes it after its time-to-live.
+    async reserve(pk, sk, ttlSeconds, limit) {
+      try {
+        await db.send(new UpdateCommand({ TableName: table, Key: { pk, sk }, UpdateExpression: 'ADD n :one SET #ttl = if_not_exists(#ttl, :ttl)',
+          ConditionExpression: 'attribute_not_exists(n) OR n < :limit', ExpressionAttributeNames: { '#ttl': 'ttl' },
+          ExpressionAttributeValues: { ':one': 1, ':limit': limit, ':ttl': Math.floor(Date.now() / 1000) + ttlSeconds } }));
+        return true;
+      } catch (e) { if (e.name === 'ConditionalCheckFailedException') return false; throw e; }
+    },
+    // give a try back (the guess was right)
+    async release(pk, sk) {
+      try { await db.send(new UpdateCommand({ TableName: table, Key: { pk, sk }, UpdateExpression: 'ADD n :minus', ConditionExpression: 'n > :zero', ExpressionAttributeValues: { ':minus': -1, ':zero': 0 } })); }
+      catch (e) { if (e.name !== 'ConditionalCheckFailedException') throw e; }
     },
   };
 }

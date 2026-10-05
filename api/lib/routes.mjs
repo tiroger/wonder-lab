@@ -1,5 +1,6 @@
 // Every API route. `store` is the table (DynamoDB in production, an in-memory map in tests):
-//   get(pk, sk), put(item), putNew(item) -> false if it exists, del(pk, sk), query(pk, skPrefix), bump(pk, sk, ttlSeconds) -> count
+//   get(pk, sk), put(item), putNew(item) -> false if it exists, del(pk, sk), query(pk, skPrefix),
+//   reserve(pk, sk, ttlSeconds, limit) -> false once `limit` tries are used (atomic), release(pk, sk) -> gives one back
 // `verify(idToken)` returns { sub, email } for a signed-in grown-up, or null.
 // Errors are 400, 401, 404 and 429, never 403: CloudFront turns 403s into the app's page (docs/accounts.md).
 // Grown-up accounts are invite-only: `config.admins` (emails) manage the invite list, and inviteCheck() gates sign-up.
@@ -12,6 +13,8 @@ const fail = (status, error) => ({ status, body: { error } });
 const NOT_FOUND = fail(404, 'not found');
 
 // may this email make a grown-up account? Admins always; anyone else needs an invite. Used by the Cognito pre sign-up hook.
+// the app sends its tokens in X-Wonder-Auth: CloudFront replaces Authorization with its own signature on the way to the Lambda
+const authOf = h => h['x-wonder-auth'] || h.authorization || '';
 export const validEmail = e => /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(e);
 export function inviteCheck({ store, admins = [] }) {
   return async email => { const e = String(email || '').trim().toLowerCase(); return admins.includes(e) || !!(await store.get('INVITES', e)); };
@@ -50,8 +53,9 @@ export function routes({ store, verify, config = {} }) {
   }
   // a kid device: its token must exist and match the kid's current epoch (a reset bumps it)
   async function device(headers) {
-    const m = /^Device\s+(\S+)$/.exec(headers.authorization || ''); if (!m) return null;
+    const m = /^Device\s+(\S+)$/.exec(authOf(headers)); if (!m) return null;
     const t = await store.get(`TOKEN#${hashToken(m[1])}`, 'META'); if (!t) return null;
+    if (t.ttl && t.ttl * 1000 <= Date.now()) return null;   // expired: DynamoDB deletes it eventually, but it stops working now
     const k = await store.get(`GROUP#${t.gid}`, `KID#${t.kid}`); if (!k || k.epoch !== t.epoch) return null;
     return { t, k, hash: hashToken(m[1]) };
   }
@@ -124,11 +128,12 @@ export function routes({ store, verify, config = {} }) {
 
   // --- kid routes ---
   async function findGroup(code, ip) {
+    // take a try before looking (so simultaneous guesses can't slip past the limit), and give it back if the code is real
     const c = normalCode(code), rate = `RATE#join#${ip}`, hour = String(Math.floor(Date.now() / 3_600_000));
-    if (((await store.get(rate, hour))?.n || 0) >= JOIN_FAILS_PER_HOUR) return { error: fail(429, 'too many tries, wait a bit') };
+    if (!(await store.reserve(rate, hour, 3600, JOIN_FAILS_PER_HOUR))) return { error: fail(429, 'too many tries, wait a bit') };
     const link = validCode(c) && await store.get(`CODE#${c}`, 'META'), g = link && await groupMeta(link.gid);
-    if (!g) { await store.bump(rate, hour, 3600); return { error: NOT_FOUND }; }
-    return { g };
+    if (!g) return { error: NOT_FOUND };
+    await store.release(rate, hour); return { g };
   }
   const kidRoutes = {
     // what the app needs to sign grown-ups in with Cognito (public values)
@@ -142,9 +147,10 @@ export function routes({ store, verify, config = {} }) {
       const k = await store.get(`GROUP#${g.gid}`, `KID#${kid}`); if (!k) return NOT_FOUND;
       if (g.pictures) {
         const rate = `RATE#pics#${kid}`, slot = String(Math.floor(Date.now() / (PICTURE_WINDOW * 1000)));
-        if (((await store.get(rate, slot))?.n || 0) >= PICTURE_FAILS) return fail(429, 'too many tries, wait a bit');
+        if (!(await store.reserve(rate, slot, PICTURE_WINDOW, PICTURE_FAILS))) return fail(429, 'too many tries, wait a bit');
         const p = Array.isArray(body.pictures) ? body.pictures : [];
-        if (p.length !== 2 || p[0] !== k.pics[0] || p[1] !== k.pics[1]) { await store.bump(rate, slot, PICTURE_WINDOW); return fail(401, 'wrong pictures'); }
+        if (p.length !== 2 || p[0] !== k.pics[0] || p[1] !== k.pics[1]) return fail(401, 'wrong pictures');
+        await store.release(rate, slot);
       }
       const token = newToken(), hash = hashToken(token), ttl = Math.floor(Date.now() / 1000) + TOKEN_DAYS * 86400;
       await store.put({ pk: `TOKEN#${hash}`, sk: 'META', kid: k.kid, gid: g.gid, epoch: k.epoch, ttl });
@@ -180,7 +186,7 @@ export function routes({ store, verify, config = {} }) {
       let data = {}; if (body) { if (body.length > 64_000) return fail(400, 'too big'); data = JSON.parse(body); if (!data || typeof data !== 'object') return fail(400, 'bad body'); }
       let r = match(adultRoutes, method, p);
       if (r) {
-        const m = /^Bearer\s+(\S+)$/.exec(headers.authorization || ''), adult = m && await verify(m[1]);
+        const m = /^Bearer\s+(\S+)$/.exec(authOf(headers)), adult = m && await verify(m[1]);
         return adult ? await r.fn(adult, data, ...r.args) : fail(401, 'sign in first');
       }
       r = match(deviceRoutes, method, p);

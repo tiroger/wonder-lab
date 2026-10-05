@@ -61,7 +61,31 @@ locals {
   fn_arn    = "arn:aws:lambda:us-east-1:${local.account}:function:${local.app}-*"
   logs_arn  = "arn:aws:logs:us-east-1:${local.account}:log-group:/aws/lambda/${local.app}-*"
   ses_arn   = "arn:aws:ses:us-east-1:${local.account}:identity/${var.domain}"
-  pools_arn = "arn:aws:cognito-idp:us-east-1:${local.account}:userpool/*"
+}
+
+# The site's own resources, read from its Terraform outputs, so CI's permissions name them exactly. Apply this root after
+# the site has been deployed with those outputs (the check below stops an apply that would leave CI unable to deploy).
+data "terraform_remote_state" "site" {
+  backend = "s3"
+  config  = { bucket = aws_s3_bucket.state.id, key = "wonder-lab/site.tfstate", region = "us-east-1" }
+}
+locals {
+  site = {
+    distribution_arn = try(data.terraform_remote_state.site.outputs.distribution_arn, "")
+    certificate_arn  = try(data.terraform_remote_state.site.outputs.certificate_arn, "")
+    user_pool_arn    = try(data.terraform_remote_state.site.outputs.user_pool_arn, "")
+    oac_ids          = try(data.terraform_remote_state.site.outputs.origin_access_control_ids, [])
+  }
+  oac_arns = [for id in local.site.oac_ids : "arn:aws:cloudfront::${local.account}:origin-access-control/${id}"]
+  cloudfront_own = concat([local.site.distribution_arn, "arn:aws:cloudfront::${local.account}:function/${local.prefix}-*",
+  "arn:aws:cloudfront::*:cache-policy/*", "arn:aws:cloudfront::*:origin-request-policy/*", "arn:aws:cloudfront::*:response-headers-policy/*"], local.oac_arns)
+  pool_read = ["cognito-idp:DescribeUserPool", "cognito-idp:DescribeUserPoolClient", "cognito-idp:GetUserPoolMfaConfig", "cognito-idp:ListTagsForResource"]
+}
+check "site_outputs" {
+  assert {
+    condition     = local.site.distribution_arn != "" && local.site.user_pool_arn != "" && length(local.site.oac_ids) == 2
+    error_message = "The site's state doesn't have the outputs CI's permissions need yet. Merge and deploy the security-hardening change first, then apply this."
+  }
 }
 
 # ------------------------------------------------------- roles the app needs --
@@ -168,8 +192,9 @@ resource "aws_iam_role" "plan" {
   assume_role_policy   = data.aws_iam_policy_document.assume_plan.json
   max_session_duration = 3600
 }
-# Only what `terraform plan` on infra/ reads. The account is shared with other projects, so no account-wide
-# read access: no S3 objects outside the state bucket, no databases, no other project's settings.
+# Only what `terraform plan` on infra/ reads, and only this site's resources: the account is shared, so no reading other
+# projects' settings (other distributions' origin headers can hold secrets). The state it reads holds secrets too, so the
+# plan role only trusts pull requests from this repo (forks get no OIDC token), and plans print no sensitive values.
 data "aws_iam_policy_document" "plan" {
   statement {
     sid       = "ReadState" # plans run with -lock=false, so they never write (or block a deploy)
@@ -182,9 +207,19 @@ data "aws_iam_policy_document" "plan" {
     resources = ["arn:aws:s3:::${local.site_bucket}"]
   }
   statement {
-    sid       = "CloudFrontAndCertificateRead" # configuration only; certificates' private keys are never readable
-    actions   = ["cloudfront:Get*", "cloudfront:List*", "cloudfront:Describe*", "acm:Describe*", "acm:Get*", "acm:List*"]
+    sid       = "CloudFrontRead" # this site's distribution, function and origin access controls, and AWS's managed policies
+    actions   = ["cloudfront:Get*", "cloudfront:Describe*", "cloudfront:ListTagsForResource"]
+    resources = local.cloudfront_own
+  }
+  statement {
+    sid       = "CloudFrontPolicyLists" # finds AWS's managed policies by name
+    actions   = ["cloudfront:ListCachePolicies", "cloudfront:ListOriginRequestPolicies", "cloudfront:ListResponseHeadersPolicies"]
     resources = ["*"]
+  }
+  statement {
+    sid       = "CertificateRead"
+    actions   = ["acm:DescribeCertificate", "acm:GetCertificate", "acm:ListTagsForCertificate"]
+    resources = [local.site.certificate_arn]
   }
   statement {
     sid       = "DnsZone"
@@ -196,7 +231,7 @@ data "aws_iam_policy_document" "plan" {
     actions   = ["route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:GetChange"]
     resources = ["*"]
   }
-  # the accounts pieces' settings, never the data in the table
+  # the accounts pieces' settings, never the data in the table or the grown-ups in the user pool
   statement {
     sid       = "AccountsRead"
     actions   = ["dynamodb:Describe*", "dynamodb:ListTagsOfResource", "dynamodb:GetResourcePolicy", "lambda:Get*", "lambda:List*", "logs:ListTagsForResource", "logs:ListTagsLogGroup", "ses:GetEmailIdentity", "ses:ListTagsForResource"]
@@ -204,13 +239,8 @@ data "aws_iam_policy_document" "plan" {
   }
   statement {
     sid       = "UserPoolRead"
-    actions   = ["cognito-idp:Describe*", "cognito-idp:Get*", "cognito-idp:ListTagsForResource"]
-    resources = [local.pools_arn]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/Project"
-      values   = [local.project]
-    }
+    actions   = local.pool_read
+    resources = [local.site.user_pool_arn]
   }
   statement {
     sid       = "LogGroupsList"
@@ -251,8 +281,10 @@ resource "aws_iam_role" "deploy" {
   max_session_duration = 3600
 }
 
-# Scoped to what the site's Terraform and the Deploy workflow touch. No IAM permissions beyond handing the API its
-# one bootstrap-made role, so a compromised workflow can't widen its own access.
+# Scoped to what the site's Terraform and the Deploy workflow touch, by exact resource where AWS allows it (the account is
+# shared, and a tag check alone would let CI tag another project's resource as ours and then take it over). No IAM
+# permissions beyond handing the API its one bootstrap-made role. Making a new distribution, certificate, user pool or
+# origin access control needs a change here first.
 data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "TerraformState"
@@ -264,88 +296,40 @@ data "aws_iam_policy_document" "deploy" {
     actions   = ["s3:*"]
     resources = ["arn:aws:s3:::${local.site_bucket}", "arn:aws:s3:::${local.site_bucket}/*"]
   }
-  # The account is shared, so anything that changes or deletes CloudFront or ACM resources is limited to this
-  # site's: the distribution and certificate by their Project tag (the site's provider adds it to everything),
-  # functions by name. Creating can't be scoped (there's no resource yet) and harms nothing else.
   statement {
-    sid       = "CloudFrontAndCertificateRead"
-    actions   = ["cloudfront:Get*", "cloudfront:List*", "cloudfront:Describe*", "acm:Describe*", "acm:Get*", "acm:List*"]
-    resources = ["*"]
+    sid       = "CloudFrontRead"
+    actions   = ["cloudfront:Get*", "cloudfront:Describe*", "cloudfront:ListTagsForResource"]
+    resources = local.cloudfront_own
   }
   statement {
-    sid       = "CloudFrontCreate"
-    actions   = ["cloudfront:CreateDistribution", "cloudfront:CreateFunction", "cloudfront:CreateOriginAccessControl"]
+    sid       = "CloudFrontPolicyLists"
+    actions   = ["cloudfront:ListCachePolicies", "cloudfront:ListOriginRequestPolicies", "cloudfront:ListResponseHeadersPolicies"]
     resources = ["*"]
   }
   statement {
     sid       = "Distribution"
-    actions   = ["cloudfront:UpdateDistribution", "cloudfront:DeleteDistribution", "cloudfront:CreateInvalidation", "cloudfront:TagResource", "cloudfront:UntagResource"]
-    resources = ["arn:aws:cloudfront::${local.account}:distribution/*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/Project"
-      values   = [local.project]
-    }
-  }
-  statement {
-    sid       = "DistributionTagNew" # tags a distribution as it's created; can't relabel another project's
-    actions   = ["cloudfront:TagResource"]
-    resources = ["arn:aws:cloudfront::${local.account}:distribution/*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestTag/Project"
-      values   = [local.project]
-    }
-    condition {
-      test     = "Null"
-      variable = "aws:ResourceTag/Project"
-      values   = ["true"]
-    }
+    actions   = ["cloudfront:UpdateDistribution", "cloudfront:CreateInvalidation", "cloudfront:TagResource", "cloudfront:UntagResource"]
+    resources = [local.site.distribution_arn]
   }
   statement {
     sid       = "Functions"
-    actions   = ["cloudfront:UpdateFunction", "cloudfront:PublishFunction", "cloudfront:DeleteFunction", "cloudfront:TestFunction", "cloudfront:TagResource", "cloudfront:UntagResource"]
+    actions   = ["cloudfront:UpdateFunction", "cloudfront:PublishFunction", "cloudfront:TestFunction", "cloudfront:TagResource", "cloudfront:UntagResource"]
     resources = ["arn:aws:cloudfront::${local.account}:function/${local.prefix}-*"]
   }
   statement {
-    sid       = "OriginAccessControl" # these support neither tags nor names in their ARN
-    actions   = ["cloudfront:UpdateOriginAccessControl", "cloudfront:DeleteOriginAccessControl"]
-    resources = ["*"]
+    sid       = "OriginAccessControls"
+    actions   = ["cloudfront:UpdateOriginAccessControl"]
+    resources = local.oac_arns
   }
   statement {
-    sid       = "CertificateRequest" # only for this site's names
-    actions   = ["acm:RequestCertificate"]
-    resources = ["*"]
-    condition {
-      test     = "ForAllValues:StringEquals"
-      variable = "acm:DomainNames"
-      values   = local.site_names
-    }
+    sid       = "CertificateRead"
+    actions   = ["acm:DescribeCertificate", "acm:GetCertificate", "acm:ListTagsForCertificate"]
+    resources = [local.site.certificate_arn]
   }
   statement {
     sid       = "Certificate"
-    actions   = ["acm:DeleteCertificate", "acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate"]
-    resources = ["arn:aws:acm:us-east-1:${local.account}:certificate/*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/Project"
-      values   = [local.project]
-    }
-  }
-  statement {
-    sid       = "CertificateTagNew" # tags a certificate as it's requested; can't relabel another project's
-    actions   = ["acm:AddTagsToCertificate"]
-    resources = ["arn:aws:acm:us-east-1:${local.account}:certificate/*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestTag/Project"
-      values   = [local.project]
-    }
-    condition {
-      test     = "Null"
-      variable = "aws:ResourceTag/Project"
-      values   = ["true"]
-    }
+    actions   = ["acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate"]
+    resources = [local.site.certificate_arn]
   }
   statement {
     sid       = "DnsRecords"
@@ -358,7 +342,7 @@ data "aws_iam_policy_document" "deploy" {
     resources = ["*"]
   }
 
-  # ---- accounts (infra/accounts.tf): everything named wonder-lab-* or tagged Project=wonderlab ----
+  # ---- accounts (infra/accounts.tf) ----
   statement {
     sid = "AccountsTable" # managing the table, never reading or writing the data in it
     actions = ["dynamodb:CreateTable", "dynamodb:DeleteTable", "dynamodb:UpdateTable", "dynamodb:Describe*", "dynamodb:List*", "dynamodb:GetResourcePolicy",
@@ -397,32 +381,12 @@ data "aws_iam_policy_document" "deploy" {
     resources = [local.ses_arn]
   }
   statement {
-    sid       = "UserPoolCreate" # only with this project's tag
-    actions   = ["cognito-idp:CreateUserPool", "cognito-idp:TagResource"]
-    resources = ["*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestTag/Project"
-      values   = [local.project]
-    }
-  }
-  statement {
-    sid       = "UserPool" # this project's user pool and its app client, by tag
-    actions   = ["cognito-idp:*"]
-    resources = [local.pools_arn]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/Project"
-      values   = [local.project]
-    }
-  }
-  statement {
-    sid       = "UserPoolList"
-    actions   = ["cognito-idp:ListUserPools"]
-    resources = ["*"]
+    sid = "UserPool" # the pool's settings and its app client, never its users (no Admin* actions, no ListUsers)
+    actions = concat(local.pool_read, ["cognito-idp:UpdateUserPool", "cognito-idp:UpdateUserPoolClient", "cognito-idp:SetUserPoolMfaConfig",
+    "cognito-idp:TagResource", "cognito-idp:UntagResource"])
+    resources = [local.site.user_pool_arn]
   }
 }
-
 resource "aws_iam_role_policy" "deploy" {
   name   = "wonder-lab-deploy"
   role   = aws_iam_role.deploy.id

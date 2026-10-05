@@ -8,6 +8,8 @@ export function memoryStore() {
     async putNew(item) { if (rows.has(key(item.pk, item.sk))) return false; rows.set(key(item.pk, item.sk), copy(item)); return true; },
     async del(pk, sk) { rows.delete(key(pk, sk)); },
     async query(pk, prefix) { return [...rows.values()].filter(r => r.pk === pk && r.sk.startsWith(prefix)).sort((a, b) => a.sk < b.sk ? -1 : 1).map(copy); },
-    async bump(pk, sk) { const r = rows.get(key(pk, sk)) || { pk, sk, n: 0 }; r.n++; rows.set(key(pk, sk), r); return r.n; },
+    // no awaits before the change, so each call is atomic, like DynamoDB's conditional update
+    async reserve(pk, sk, ttl, limit) { const r = rows.get(key(pk, sk)) || { pk, sk, n: 0 }; if (r.n >= limit) return false; r.n++; rows.set(key(pk, sk), r); return true; },
+    async release(pk, sk) { const r = rows.get(key(pk, sk)); if (r && r.n > 0) r.n--; },
   };
 }
