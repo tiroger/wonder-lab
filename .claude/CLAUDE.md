@@ -15,6 +15,7 @@ A playful learning web app for Roger's son (3rd grade). Each class topic becomes
 - `voice/` narration pipeline; `voice/packs/<voice>.{mp3,json}` are the recorded packs.
 - `infra/` site Terraform (S3 + CloudFront + ACM + Route 53); `infra/bootstrap/` one-time state bucket + OIDC roles.
 - `docs/design.md` design guide: visual language, platform vs topic theming, home page plan. Read it before changing the look or adding a topic.
+- `docs/accounts.md` accounts spec: grown-up sign-in by email code, families and classes, kid profiles with group codes and picture passwords, sync, the API and its AWS pieces. Read it before touching sign-in, sync or `/api`.
 - `docs/internal.md` (git-ignored, on Roger's Mac only) the operations guide: running, the voice pipeline and its pitfalls, tests, deploys, AWS and DNS details. The README is the public project overview; keep how-to material out of it.
 - `.github/workflows/` CI on PRs, Deploy on push to main.
 
