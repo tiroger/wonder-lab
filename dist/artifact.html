@@ -179,6 +179,68 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .nudge-tip svg{width:22px;height:22px}
 @keyframes tipin{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}15%{opacity:1;transform:translate(-50%,-120%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* the grown-up page (#/grownups) and the privacy note: calm, plain, for adults */
+:root.at-grownups,:root.at-privacy{--ground:#F6F1E4;--dot:#E6DCC4}
+:root.at-grownups .crumbs,:root.at-privacy .crumbs{display:flex}
+:root.at-grownups #tabs,:root.at-grownups .stage,:root.at-grownups .below,:root.at-grownups #badgeCard,:root.at-grownups .home,:root.at-grownups .hall,:root.at-grownups .guide,
+:root.at-privacy #tabs,:root.at-privacy .stage,:root.at-privacy .below,:root.at-privacy #badgeCard,:root.at-privacy .home,:root.at-privacy .hall,:root.at-privacy .guide{display:none}
+.grownups,.privacy{display:none;flex-direction:column;gap:16px}
+:root.at-grownups .grownups,:root.at-privacy .privacy{display:flex}
+.gu-card{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto}
+.gu-card h2{margin:0 0 6px}.gu-card p{margin:6px 0;line-height:1.5}
+.gu-form{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.gu-form label{font-weight:600}
+.gu-row{display:flex;flex-wrap:wrap;gap:8px}
+.gu-row input,.gu-dialog input[name=text],.gu-addkid input[name=nick]{flex:1 1 220px;min-height:48px;font:inherit;font-size:17px;border:3px solid var(--ink);border-radius:14px;padding:6px 12px;background:#fff;box-sizing:border-box}
+.gu-form small,.gu-demo small,.gu-fine{color:var(--ink-soft);font-size:14px}.gu-fine a,.privacy a{color:#1F6E3A;font-weight:600}
+.grownups input[type=checkbox],.gu-dialog input[type=checkbox]{accent-color:var(--leaf)}
+.linkish{background:none;border:0;padding:4px 2px;font:inherit;font-weight:600;color:#1F6E3A;text-decoration:underline;cursor:pointer;min-height:32px}
+.gu-msg{background:#FDE2E2;border:2px solid #C24A4A;border-radius:12px;padding:8px 12px;font-weight:600}
+.gu-demo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--sun-soft);border:2px dashed var(--ink-soft);border-radius:14px;padding:10px 12px;margin:12px 0}
+.gu-ribbon{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;background:var(--sun-soft);border:3px solid var(--ink);border-radius:14px;padding:8px 14px}
+.gu-top{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.gu-ghead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}.gu-ghead h2{margin:0}
+.gu-chip{background:var(--sky,#BFE6F4);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700}
+.gu-code{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0 4px}
+.gu-code span{font-weight:600}.gu-code code{font-size:22px;font-weight:700;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:4px 12px;letter-spacing:.02em}
+.gu-hint{color:var(--ink-soft);font-size:15px}
+.gu-toggle{display:flex;gap:8px;align-items:flex-start;margin:10px 0;line-height:1.4}.gu-toggle input{width:22px;height:22px;flex:none;margin-top:1px}
+.gu-kids{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gu-kid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--card-2);border:2px solid var(--ink);border-radius:14px;padding:4px 10px}
+.gu-kid canvas[data-look]{width:44px;height:44px}
+.gu-nick{font-weight:700;font-size:17px;flex:1 1 120px}
+.gu-stars{display:inline-flex;align-items:center;gap:4px;font-weight:700}.gu-stars svg{width:18px;height:18px}
+.gu-pics{display:inline-flex;gap:4px}.gu-pics canvas{width:34px;height:34px;background:#fff;border:2px solid var(--ink);border-radius:8px}
+.gu-kid-btns{display:flex;gap:6px}
+.gu-empty{color:var(--ink-soft);padding:6px 2px}
+.gu-addkid{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;border-top:2px dashed var(--ink-soft);padding-top:12px}
+.gu-addkid>label{display:flex;flex-direction:column;gap:4px;font-weight:600;flex:1 1 200px}.gu-addkid input[name=nick]{flex:none}
+.gu-looks{display:flex;flex-wrap:wrap;gap:6px;border:0;padding:0;margin:0}.gu-looks legend{font-weight:600;padding:0;margin-bottom:4px}
+.gu-look{position:relative;cursor:pointer}.gu-look input{position:absolute;opacity:0;inset:0}
+.gu-look i{display:block;width:30px;height:30px;border-radius:50%;border:3px solid var(--ink);box-shadow:0 2px 0 var(--ink)}
+.gu-look input:checked+i{outline:4px solid var(--sun);outline-offset:1px}.gu-look input:focus-visible+i{outline:4px solid var(--ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.gu-gfoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+.gu-add{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn.danger{background:#C24A4A;color:#fff}
+.gu-loading{text-align:center;color:var(--ink-soft)}
+.gu-dialog{border:4px solid var(--ink);border-radius:20px;padding:18px 20px;max-width:min(440px,calc(100vw - 32px));box-shadow:0 6px 0 var(--ink);background:var(--card)}
+.gu-dialog::backdrop{background:rgba(36,54,40,.4)}.gu-dialog form{display:flex;flex-direction:column;gap:10px}.gu-dialog h3{margin:0}
+.gu-dbtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.privacy .card{max-width:760px;margin:0 auto;line-height:1.55}.privacy h3{margin:16px 0 4px}
+footer a{color:inherit;font-weight:600}
+/* login cards: only the sheet prints, 8 cards to a page */
+#cardsSheet{display:none}
+@media print{
+  body{background:#fff!important}body>*:not(#cardsSheet){display:none!important}
+  #cardsSheet{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+  .login-card{break-inside:avoid;border:1.5px dashed #555;border-radius:4mm;padding:4mm;font-family:var(--display);color:#243628;height:62mm;box-sizing:border-box;display:flex;flex-direction:column;gap:2mm}
+  .lc-head{display:flex;justify-content:space-between;align-items:baseline}.lc-head b{font-size:16pt;color:#2A7340}.lc-head b span{color:#E8762C}.lc-head small{font-size:9pt}
+  .lc-body{display:flex;gap:3mm;align-items:center}.lc-body canvas[data-look]{width:20mm;height:20mm}
+  .lc-hi{font-size:14pt;font-weight:700}.lc-step{font-size:8.5pt}.login-card code{font-size:11pt;font-weight:700}
+  .lc-qr{width:26mm;height:26mm;margin-left:auto}
+  .lc-pics{display:flex;align-items:center;gap:2mm;font-size:9pt}.lc-pics canvas{width:11mm;height:11mm;border:1px solid #555;border-radius:2mm}
+}
 /* home: the Lab campus map (docs/design.md, section 16) */
 :root.at-home{--ground:#F6F1E4;--dot:#E6DCC4}
 .brand{text-decoration:none;color:inherit;border-radius:14px}
@@ -294,6 +356,11 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
         <span class="set-note" id="resetNote">Clears every star and badge on this device.</span>
       </div>
     </section>
+    <section class="set-sec">
+      <h3>Grown-ups</h3>
+      <p class="set-note">Set up profiles for your kids or your class, so their stars follow them to any device.</p>
+      <a class="btn" href="#/grownups" id="setGrownups">Go to the grown-up page</a>
+    </section>
   </div>
 </dialog>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -356,6 +423,19 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     <div class="hall-totals" id="hallTotals"></div>
   </section>
 
+  <section class="grownups" id="grownups" aria-label="For grown-ups"></section>
+
+  <section class="privacy" id="privacy" aria-label="Privacy">
+    <div class="card"><h2>Privacy at Wonder Lab</h2>
+      <p>Wonder Lab is a small learning site for kids. It collects as little as it can.</p>
+      <h3>Playing without signing in</h3><p>Stars, badges and settings stay on your device, in this browser. Nothing is sent anywhere.</p>
+      <h3>Grown-up accounts</h3><p>A parent or teacher signs in with an email address. We use it only to email sign-in codes. There are no passwords, no ads, no tracking and no third-party scripts.</p>
+      <h3>Kid profiles</h3><p>A grown-up creates each kid profile and gives consent for that child. A profile holds a nickname, a Pip color, an optional pair of secret pictures, and the child's progress: stars, badges, trophies and critters found. No email, real name, birthday, photo or location. Only the grown-up who made the profile can see it.</p>
+      <h3>Deleting</h3><p>Removing a kid, a family or a class, or deleting your account, deletes that data right away. Grown-ups can do this on the <a href="#/grownups">grown-up page</a>.</p>
+      <h3>The demo</h3><p>"Try the demo" and "Play the demo" keep everything in your browser and never send it to us.</p>
+    </div>
+  </section>
+
   <section class="stage" id="stage"></section>
 
   <section class="below">
@@ -365,7 +445,7 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 
   <section class="card" id="badgeCard"><h2>My badges <a class="hall-link" href="#/trophies">See the Trophy Hall</a></h2><div class="shelf" id="shelf"></div></section>
 
-  <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span></footer>
+  <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span><span><a href="#/grownups">For grown-ups</a> · <a href="#/privacy">Privacy</a></span></footer>
 </div>
 <script>
 'use strict';
@@ -2987,7 +3067,7 @@ function homeInit() {
 // Home: Pip greets you; a first visit gets his hello, a return a welcome back. Short reactions don't hold taps.
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
-  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall');
+  document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall', 'at-grownups', 'at-privacy');
   renderHome(); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
@@ -3093,7 +3173,7 @@ function hallTap(el, b) {
 }
 function showHall() {
   leaveActivity(); App.view = 'hall'; App.topic = null; App.act = null; applyAccent(null);
-  const root = document.documentElement; root.classList.remove('at-home', 'in-topic'); root.classList.add('at-hall');
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-grownups', 'at-privacy'); root.classList.add('at-hall');
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();
   // everything earned so far is now seen; the map stops sparkling
@@ -3701,6 +3781,450 @@ function drawCritters(c, t) {
     drawCritter(c, cr.id, t, cr.id === 'owl' ? 1.2 * (p.s || 1) : 1.3); c.restore();
   }
 }
+/* ============ QR codes for login cards (no libraries) ============ */
+// A small QR Code encoder after the standard (ISO/IEC 18004) and Project Nayuki's reference design: byte mode,
+// error correction level M, versions 1-10 (up to 213 bytes, plenty for a join link). qrMatrix(text) returns rows of
+// booleans (true = dark); drawQr paints it on a canvas with the required quiet zone.
+const QR_ECC_PER_BLOCK = [0, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];   // level M, by version
+const QR_BLOCKS = [0, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5];
+function qrRawModules(ver) {
+  let r = (16 * ver + 128) * ver + 64;
+  if (ver >= 2) { const n = Math.floor(ver / 7) + 2; r -= (25 * n - 10) * n - 55; if (ver >= 7) r -= 36; }
+  return r;
+}
+const qrDataCodewords = ver => Math.floor(qrRawModules(ver) / 8) - QR_ECC_PER_BLOCK[ver] * QR_BLOCKS[ver];
+function qrMul(x, y) { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z & 255; }
+function qrDivisor(degree) {
+  const r = new Array(degree - 1).fill(0).concat([1]); let root = 1;
+  for (let i = 0; i < degree; i++) { for (let j = 0; j < r.length; j++) { r[j] = qrMul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; } root = qrMul(root, 2); }
+  return r;
+}
+function qrRemainder(data, div) {
+  const r = new Array(div.length).fill(0);
+  for (const b of data) { const f = b ^ r.shift(); r.push(0); div.forEach((c, i) => { r[i] ^= qrMul(c, f); }); }
+  return r;
+}
+function qrMatrix(text) {
+  const bytes = [...new TextEncoder().encode(text)];
+  let ver = 1; while (ver <= 10 && 4 + 8 * (ver < 10 ? 1 : 2) + 8 * bytes.length > qrDataCodewords(ver) * 8) ver++;
+  if (ver > 10) throw new Error('too long for a QR code');
+  // the data: byte mode, the length, the bytes, a terminator, then padding
+  const bits = [], put = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >>> i) & 1); };
+  put(4, 4); put(bytes.length, ver < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+  const cap = qrDataCodewords(ver) * 8; put(0, Math.min(4, cap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+  for (let pad = 0xEC; bits.length < cap; pad ^= 0xEC ^ 0x11) put(pad, 8);
+  const data = []; for (let i = 0; i < bits.length; i += 8) data.push(parseInt(bits.slice(i, i + 8).join(''), 2));
+  // split into blocks, add error correction to each, interleave
+  const nb = QR_BLOCKS[ver], ecLen = QR_ECC_PER_BLOCK[ver], raw = Math.floor(qrRawModules(ver) / 8), nShort = nb - raw % nb, shortLen = Math.floor(raw / nb), div = qrDivisor(ecLen);
+  const blocks = [];
+  for (let i = 0, k = 0; i < nb; i++) {
+    const dat = data.slice(k, k += shortLen - ecLen + (i < nShort ? 0 : 1)), ecc = qrRemainder(dat, div);
+    if (i < nShort) dat.push(0); blocks.push(dat.concat(ecc));
+  }
+  const code = [];
+  for (let i = 0; i < blocks[0].length; i++) blocks.forEach((b, j) => { if (i !== shortLen - ecLen || j >= nShort) code.push(b[i]); });
+  // the grid: function patterns first, then the codewords, then the best mask
+  const size = ver * 4 + 17, mods = [...Array(size)].map(() => Array(size).fill(false)), fn = [...Array(size)].map(() => Array(size).fill(false));
+  const set = (x, y, dark) => { mods[y][x] = dark; fn[y][x] = true; };
+  for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+  for (const [cx, cy] of [[3, 3], [size - 4, 3], [3, size - 4]])
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const x = cx + dx, y = cy + dy, d = Math.max(Math.abs(dx), Math.abs(dy));
+      if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4);
+    }
+  if (ver >= 2) {
+    const n = Math.floor(ver / 7) + 2, step = Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2, pos = [6];
+    for (let p = size - 7; pos.length < n; p -= step) pos.splice(1, 0, p);
+    for (const ax of pos) for (const ay of pos) {
+      if ((ax === 6 && ay === 6) || (ax === 6 && ay === size - 7) || (ax === size - 7 && ay === 6)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(ax + dx, ay + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+  }
+  const format = mask => {
+    const d = (0 << 3) | mask; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);   // level M is 00
+    const b = ((d << 10) | r) ^ 0x5412, bit = i => ((b >>> i) & 1) === 1;
+    for (let i = 0; i <= 5; i++) set(8, i, bit(i));
+    set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8));
+    for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+    for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i));
+    for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i));
+    set(8, size - 8, true);
+  };
+  format(0);
+  if (ver >= 7) {
+    let r = ver; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+    const b = (ver << 12) | r;
+    for (let i = 0; i < 18; i++) { const dark = ((b >>> i) & 1) === 1, a = size - 11 + i % 3, c = Math.floor(i / 3); set(a, c, dark); set(c, a, dark); }
+  }
+  let i = 0;
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right = 5;
+    for (let v = 0; v < size; v++) for (let j = 0; j < 2; j++) {
+      const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - v : v;
+      if (!fn[y][x] && i < code.length * 8) { mods[y][x] = ((code[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; }
+    }
+  }
+  const MASKS = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, x => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+  const flip = m => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fn[y][x] && MASKS[m](x, y)) mods[y][x] = !mods[y][x]; };
+  let best = 0, low = Infinity;
+  for (let m = 0; m < 8; m++) { flip(m); format(m); const p = qrPenalty(mods); if (p < low) { low = p; best = m; } flip(m); }
+  flip(best); format(best);
+  return mods;
+}
+// how hard a grid is to scan (the standard's four rules); the mask with the lowest score wins
+function qrPenalty(m) {
+  const n = m.length; let p = 0, dark = 0;
+  const lines = [...m, ...m[0].map((_, x) => m.map(r => r[x]))];
+  for (const l of lines) {
+    let run = 1;
+    for (let i = 1; i <= n; i++) { if (i < n && l[i] === l[i - 1]) run++; else { if (run >= 5) p += run - 2; run = 1; } }
+    const s = l.map(v => (v ? 1 : 0)).join('');
+    for (const pat of ['10111010000', '00001011101']) { let k = s.indexOf(pat); while (k >= 0) { p += 40; k = s.indexOf(pat, k + 1); } }
+  }
+  for (let y = 0; y < n - 1; y++) for (let x = 0; x < n - 1; x++) { const c = m[y][x]; if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) p += 3; }
+  m.forEach(r => r.forEach(v => { if (v) dark++; }));
+  return p + Math.floor(Math.abs(dark * 20 - n * n * 10) / (n * n)) * 10;
+}
+function drawQr(cv, text, px = 4) {
+  const m = qrMatrix(text), q = 4, n = m.length + q * 2, c = cv.getContext('2d');
+  cv.width = cv.height = n * px; c.fillStyle = '#fff'; c.fillRect(0, 0, n * px, n * px); c.fillStyle = '#000';
+  m.forEach((row, y) => row.forEach((v, x) => { if (v) c.fillRect((x + q) * px, (y + q) * px, px, px); }));
+}
+/* ============ Accounts: the API, grown-up sign-in, and the demo ============ */
+// Api.call(method, path, body) talks to /api (api/ in the repo). A grown-up signs in with any email and a one-time code:
+// Cognito's own API, called with fetch, no library. In demo mode DemoApi answers instead, in this browser only.
+const GROWNUP_KEY = 'wonderlab.grownup', DEMO_KEY = 'wonderlab.demo';
+const PICTURE_NAMES = ['frog', 'sun', 'rocket', 'apple', 'fish', 'star', 'leaf', 'moon', 'bee'];
+const LOOK_NAMES = ['leaf', 'sun', 'sky', 'petal', 'carrot', 'grape', 'berry', 'sea'];
+const store2 = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+
+const Grownup = {
+  s: store2.get(GROWNUP_KEY),   // { email, id, access, refresh, exp } or { demo: true }
+  get signedIn() { return !!(this.s && (this.s.demo || this.s.refresh)); },
+  get demo() { return !!(this.s && this.s.demo); },
+  save(s) { this.s = s; store2.set(GROWNUP_KEY, s); },
+  // what the API says the app needs to reach Cognito
+  async config() { return this.cfg || (this.cfg = await (await fetch('/api/config')).json()); },
+  async cognito(target, body) {
+    const cfg = await this.config();
+    const r = await fetch(`https://cognito-idp.${cfg.region}.amazonaws.com/`, { method: 'POST', body: JSON.stringify({ ClientId: cfg.clientId, ...body }),
+      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': `AWSCognitoIdentityProviderService.${target}` } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(j.message || 'Something went wrong'); e.code = String(j.__type || '').split('#').pop(); throw e; }
+    return j;
+  },
+  // step 1: an email. New addresses sign up (Cognito emails a confirmation code); known ones get a sign-in code.
+  async start(email) {
+    try { await this.cognito('SignUp', { Username: email, UserAttributes: [{ Name: 'email', Value: email }] }); return { email, step: 'confirm' }; }
+    catch (e) { if (e.code !== 'UsernameExistsException') throw e; }
+    try {
+      const r = await this.cognito('InitiateAuth', { AuthFlow: 'USER_AUTH', AuthParameters: { USERNAME: email, PREFERRED_CHALLENGE: 'EMAIL_OTP' } });
+      return { email, step: 'otp', session: r.Session };
+    } catch (e) {
+      if (e.code !== 'UserNotConfirmedException') throw e;   // signed up before but never typed the code
+      await this.cognito('ResendConfirmationCode', { Username: email }); return { email, step: 'confirm' };
+    }
+  },
+  // step 2: the 6-digit code from the email
+  async finish(st, code) {
+    let r;
+    if (st.step === 'confirm') {
+      const c = await this.cognito('ConfirmSignUp', { Username: st.email, ConfirmationCode: code });
+      r = await this.cognito('InitiateAuth', { AuthFlow: 'USER_AUTH', Session: c.Session, AuthParameters: { USERNAME: st.email } });
+    } else r = await this.cognito('RespondToAuthChallenge', { ChallengeName: 'EMAIL_OTP', Session: st.session, ChallengeResponses: { USERNAME: st.email, EMAIL_OTP_CODE: code } });
+    if (!r.AuthenticationResult) throw new Error("That code didn’t work. Try again.");
+    this.keep(st.email, r.AuthenticationResult);
+  },
+  keep(email, a) {
+    const claims = JSON.parse(atob(a.IdToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    this.save({ email: claims.email || email, id: a.IdToken, access: a.AccessToken, refresh: a.RefreshToken || (this.s && this.s.refresh), exp: claims.exp * 1000 });
+  },
+  // a fresh ID token, refreshing it a minute before it expires
+  async idToken() {
+    if (!this.s || !this.s.refresh) return null;
+    if (Date.now() < this.s.exp - 60000) return this.s.id;
+    try { const r = await this.cognito('InitiateAuth', { AuthFlow: 'REFRESH_TOKEN_AUTH', AuthParameters: { REFRESH_TOKEN: this.s.refresh } }); this.keep(this.s.email, r.AuthenticationResult); return this.s.id; }
+    catch (e) { this.save(null); return null; }
+  },
+  async signOut() {
+    const s = this.s; this.save(null);
+    if (s && s.refresh) this.cognito('RevokeToken', { Token: s.refresh }).catch(() => {});
+  },
+  async deleteAccount() {
+    if (this.demo) { store2.set(DEMO_KEY, null); this.save(null); return; }
+    await Api.call('DELETE', '/me'); const access = this.s.access; this.save(null);
+    await this.cognito('DeleteUser', { AccessToken: access }).catch(() => {});
+  },
+  startDemo() { this.save({ demo: true, email: 'ms.rivera@example.com' }); DemoApi.load(); },
+};
+
+const Api = {
+  // as a grown-up (default) or as a kid's device ({ device: token })
+  async call(method, path, body, { device } = {}) {
+    if (Grownup.demo || (device && device.startsWith('demo:'))) return DemoApi.handle(method, path, body, device);
+    const headers = { 'Content-Type': 'application/json' };
+    if (device) headers.Authorization = `Device ${device}`;
+    else { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers.Authorization = `Bearer ${t}`; }
+    const r = await fetch(`/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { if (r.status === 401 && !device) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
+    return j;
+  },
+};
+
+// ---------- the demo: the same answers as the API, kept in this browser only ----------
+// Ms. Rivera's class: six kids with progress made from the live TOPICS, so new activities show up here by themselves.
+const DemoApi = {
+  d: null,
+  load() {
+    this.d = store2.get(DEMO_KEY);
+    if (!this.d || this.d.v !== 1) this.reset();
+    return this.d;
+  },
+  reset() {
+    const stars = TOPICS.flatMap(tp => tp.activities.flatMap(a => a.stars.map(s => s.id))), r = seeded(7), t0 = Date.now() - 20 * 86400000;
+    const some = share => Object.fromEntries(stars.filter(() => r() < share).map((id, i) => [id, t0 + i * 60000]));
+    const kid = (id, nick, look, pics, share) => ({ id, nick, look, pictures: pics, progress: { stars: some(share), badges: {}, critters: {}, gardenSeen: {}, hallSeen: {} } });
+    const kids = [kid('demo-explorer', 'Demo Explorer', 'sun', ['frog', 'star'], 1), kid('demo-maya', 'Maya', 'petal', ['moon', 'bee'], .7), kid('demo-leo', 'Leo', 'sky', ['rocket', 'fish'], .45),
+      kid('demo-zoe', 'Zoe', 'grape', ['apple', 'sun'], .3), kid('demo-sam', 'Sam', 'leaf', ['leaf', 'frog'], .15), kid('demo-ava', 'Ava', 'carrot', ['star', 'moon'], .05)];
+    // Demo Explorer has everything: every badge and trophy, every critter
+    const all = kids[0].progress;
+    for (const tp of TOPICS) { tp.activities.forEach((a, i) => { all.badges[a.badge.id] = t0 + i * 3600000; }); all.badges[tp.master.id] = t0 + 86400000; }
+    for (const c of CRITTERS) all.critters[c.id] = t0;
+    for (const b of CAMPUS_BADGES) all.badges[b.id] = t0 + 2 * 86400000;
+    for (const k of kids.slice(1)) for (const tp of TOPICS) for (const a of tp.activities) if (hasBadgeIn(a, k.progress.stars)) k.progress.badges[a.badge.id] = t0 + 3600000;
+    this.d = { v: 1, groups: [{ id: 'demo-class', name: "Ms. Rivera's class", kind: 'class', code: 'sunny-otter-pond-00', pictures: true, kids }] };
+    this.save();
+  },
+  save() { store2.set(DEMO_KEY, this.d); },
+  async handle(method, path, body = {}) {
+    const d = this.d || this.load(), g = id => d.groups.find(x => x.id === id), k = id => d.groups.flatMap(x => x.kids).find(x => x.id === id);
+    const pub = x => ({ id: x.id, nick: x.nick, look: x.look }), full = x => ({ ...pub(x), pictures: x.pictures }), group = x => ({ ...x, kids: x.kids.map(full) });
+    const nope = () => { throw new ApiError(404, 'not found'); }, bad = m => { throw new ApiError(400, m); };
+    const word = () => WORDS_DEMO[Math.floor(Math.random() * WORDS_DEMO.length)], code = () => `${word()}-${word()}-${word()}-${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+    let m, out;
+    if (method === 'GET' && path === '/me') out = { email: Grownup.s.email, groups: d.groups.map(group) };
+    else if (method === 'POST' && path === '/groups') {
+      const name = String(body.name || '').trim(); if (!name || !['family', 'class'].includes(body.kind)) bad("A group needs a name.");
+      const x = { id: `demo-${Date.now().toString(36)}`, name: name.slice(0, 40), kind: body.kind, code: code(), pictures: body.kind === 'class', kids: [] }; d.groups.push(x); out = group(x);
+    } else if ((m = /^\/groups\/([^/]+)$/.exec(path))) {
+      const x = g(m[1]) || nope();
+      if (method === 'DELETE') { d.groups = d.groups.filter(y => y !== x); out = { deleted: true }; }
+      else { if (body.name) x.name = String(body.name).trim().slice(0, 40); if (body.pictures != null) x.pictures = !!body.pictures; if (body.newCode) x.code = code(); out = group(x); }
+    } else if ((m = /^\/groups\/([^/]+)\/kids$/.exec(path))) {
+      const x = g(m[1]) || nope(), nick = String(body.nick || '').trim(); if (!nick) bad("A kid needs a nickname.");
+      if (x.kids.length >= (x.kind === 'class' ? 40 : 10)) bad("This group is full.");
+      const a = PICTURE_NAMES[Math.floor(Math.random() * 9)], b = PICTURE_NAMES.filter(p => p !== a)[Math.floor(Math.random() * 8)];
+      const y = { id: `demo-${Date.now().toString(36)}`, nick: nick.slice(0, 24), look: LOOK_NAMES.includes(body.look) ? body.look : 'leaf', pictures: [a, b], progress: { stars: {}, badges: {}, critters: {}, gardenSeen: {}, hallSeen: {} } };
+      x.kids.push(y); out = full(y);
+    } else if ((m = /^\/kids\/([^/]+)$/.exec(path))) {
+      const y = k(m[1]) || nope();
+      if (method === 'DELETE') { d.groups.forEach(x => { x.kids = x.kids.filter(z => z !== y); }); out = { deleted: true }; }
+      else {
+        if (body.nick) y.nick = String(body.nick).trim().slice(0, 24); if (LOOK_NAMES.includes(body.look)) y.look = body.look;
+        if (body.resetPictures) { const a = PICTURE_NAMES[Math.floor(Math.random() * 9)]; y.pictures = [a, PICTURE_NAMES.filter(p => p !== a)[Math.floor(Math.random() * 8)]]; }
+        out = full(y);
+      }
+    } else if ((m = /^\/groups\/([^/]+)\/progress$/.exec(path))) out = { kids: (g(m[1]) || nope()).kids.map(y => ({ ...pub(y), progress: y.progress })) };
+    else if (method === 'DELETE' && path === '/me') { this.reset(); out = { deleted: true }; }
+    else nope();
+    this.save(); return JSON.parse(JSON.stringify(out));
+  },
+};
+const WORDS_DEMO = ['maple', 'otter', 'pond', 'comet', 'tulip', 'fern', 'robin', 'acorn', 'meadow', 'lantern', 'pebble', 'willow'];
+function hasBadgeIn(a, stars) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => stars[s.id]).length >= need; }
+
+// ---------- the 9 pictures a secret is made from, drawn in a 60x60 box around (0, 0) ----------
+const PICTURE_ART = {
+  frog(c, t) { c.save(); c.scale(1.15, 1.15); c.translate(0, 6); drawFrog(c, 0, 0, t, false); c.restore(); },
+  sun(c, t) { sun(c, 0, 0, 14, t, { face: false }); },
+  rocket(c) {
+    c.save(); c.rotate(.5); c.strokeStyle = C.ink; c.lineWidth = 2.5; c.lineJoin = 'round';
+    c.fillStyle = C.carrot; c.beginPath(); c.moveTo(-6, 14); c.lineTo(0, 24); c.lineTo(6, 14); c.fill(); c.stroke();
+    c.fillStyle = '#E04B4B'; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * 8, 4); c.lineTo(s * 16, 16); c.lineTo(s * 8, 14); c.closePath(); c.fill(); c.stroke(); }
+    const body = new Path2D('M0 -24 C10 -14 10 4 8 14 L-8 14 C-10 4 -10 -14 0 -24 Z'); c.fillStyle = '#F2F4F7'; c.fill(body); c.stroke(body);
+    c.fillStyle = '#5BB8E8'; c.beginPath(); c.arc(0, -4, 4.5, 0, TAU); c.fill(); c.stroke(); c.restore();
+  },
+  apple(c) { c.save(); c.scale(2.6, 2.6); drawApple(c, 0, 2); c.strokeStyle = '#7A5230'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, -5); c.lineTo(1, -9); c.stroke(); drawLeaf(c, 1, -8, -20, .06); c.restore(); },
+  fish(c, t) { drawCritter(c, 'fish', t, 1.4); },
+  star(c) { c.save(); c.scale(.42, .42); c.fillStyle = C.sun; c.fill(STAR_PATH()); c.strokeStyle = C.ink; c.lineWidth = 6; c.stroke(STAR_PATH()); c.restore(); },
+  leaf(c) { drawLeaf(c, -18, 12, -40, .34); },
+  moon(c) {
+    const m = new Path2D(); m.arc(0, 0, 16, .9, TAU - .9); m.arc(9, -2, 13, TAU - 1.1, 1.1, true); m.closePath();
+    c.fillStyle = '#FFE7A3'; c.fill(m); c.strokeStyle = C.ink; c.lineWidth = 2.5; c.stroke(m);
+  },
+  bee(c, t) { bee(c, -2, 2, t, .85); },
+};
+function drawPicture(cv, name, t = 1) {   // t = 1: everyone's eyes open
+  const c = cv.getContext('2d'), s = cv.width / 60; c.setTransform(s, 0, 0, s, 0, 0); c.clearRect(0, 0, 60, 60); c.translate(30, 30); PICTURE_ART[name](c, t);
+}
+function drawKidPip(cv, look, t = 1) {
+  const c = cv.getContext('2d'), s = cv.width / 100; c.setTransform(s, 0, 0, s, 0, 0); c.clearRect(0, 0, 100, 100); c.translate(50, 58); pipFigure(c, t, { tint: look });
+}
+/* ============ The grown-up page (#/grownups) ============ */
+// For parents and teachers: sign in with an emailed code, make a family or a class, add kids, hand out the group code or
+// print login cards. Plain, calm HTML for adults: no Pip narration here. "Try the demo" runs it all in this browser.
+const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {} };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const joinLink = code => `${location.origin}/#/join/${code}`;
+const KIND_LABEL = { family: 'Family', class: 'Class' };
+
+function showGrownups() {
+  leaveActivity(); App.view = 'grownups'; App.topic = null; App.act = null; applyAccent(null);
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-privacy'); root.classList.add('at-grownups');
+  $('#crumbTopic').textContent = 'Grown-ups'; refresh();
+  GU.msg = ''; renderGrownups(); if (Grownup.signedIn) loadGroups();
+}
+function showPrivacy() {
+  leaveActivity(); App.view = 'privacy'; App.topic = null; App.act = null; applyAccent(null);
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-hall', 'at-grownups'); root.classList.add('at-privacy');
+  $('#crumbTopic').textContent = 'Privacy'; refresh();
+}
+async function loadGroups() {
+  try {
+    GU.me = await Api.call('GET', '/me');
+    for (const g of GU.me.groups) { const p = await Api.call('GET', `/groups/${g.id}/progress`); for (const k of p.kids) GU.starsOf[k.id] = Object.keys(k.progress.stars || {}).length; }
+  } catch (e) { GU.msg = e.message; }
+  renderGrownups();
+}
+// run an action, show its error if it fails, then redraw
+async function guDo(fn) {
+  if (GU.busy) return; GU.busy = true; GU.msg = ''; renderGrownups();
+  try { await fn(); } catch (e) { GU.msg = e.status === 401 && !Grownup.signedIn ? "Please sign in again." : e.message; }
+  GU.busy = false; renderGrownups();
+}
+
+function renderGrownups() {
+  const box = $('#grownups'); if (!box || App.view !== 'grownups') return;
+  const err = GU.msg ? `<p class="gu-msg" role="alert">${esc(GU.msg)}</p>` : '';
+  if (!Grownup.signedIn) {
+    const f = GU.flow;
+    box.innerHTML = `<div class="card gu-card gu-signin">
+      <h2>For grown-ups</h2>
+      <p>Set up a profile for each child, or for a whole class. Their stars then follow them to any device, even an incognito window.</p>
+      ${!f ? `<form id="guEmail" class="gu-form"><label for="guEmailIn">Your email</label>
+        <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
+        <small>No password. We email you a 6-digit code each time you sign in.</small></form>`
+      : `<form id="guCode" class="gu-form"><label for="guCodeIn">We emailed a 6-digit code to <b>${esc(f.email)}</b></label>
+        <div class="gu-row"><input id="guCodeIn" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" maxlength="8" required placeholder="123456"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Sign in</button></div>
+        <small>Can't find it? Check the spam folder. <button type="button" class="linkish" id="guAgain">Use a different email</button></small></form>`}
+      ${err}
+      <div class="gu-demo"><b>Just looking?</b> <button class="btn" id="guDemo" type="button">Try the demo</button><small>A sample class to explore. Nothing leaves this browser.</small></div>
+      <p class="gu-fine">We keep your email only to send sign-in codes. Kids' profiles hold a nickname, a Pip color and their progress, nothing else. <a href="#/privacy">Privacy</a></p>
+    </div>`;
+    const ef = $('#guEmail'), cf = $('#guCode');
+    if (ef) ef.onsubmit = e => { e.preventDefault(); const email = $('#guEmailIn').value.trim(); guDo(async () => { GU.flow = await Grownup.start(email); }); };
+    if (cf) { cf.onsubmit = e => { e.preventDefault(); const code = $('#guCodeIn').value.trim(); guDo(async () => { try { await Grownup.finish(GU.flow, code); GU.flow = null; await loadGroups(); } catch (x) { throw new Error(codeTrouble(x)); } }); }; setTimeout(() => $('#guCodeIn') && $('#guCodeIn').focus(), 0); }
+    const again = $('#guAgain'); if (again) again.onclick = () => { GU.flow = null; GU.msg = ''; renderGrownups(); };
+    $('#guDemo').onclick = () => { Grownup.startDemo(); loadGroups(); };
+    return;
+  }
+  const me = GU.me;
+  box.innerHTML = `${Grownup.demo ? `<div class="gu-ribbon" role="note"><b>Demo:</b> saved in this browser only. <button class="linkish" id="guDemoReset" type="button">Reset the demo</button></div>` : ''}
+    <div class="gu-top"><span>Signed in as <b>${esc(Grownup.s.email)}</b></span><button class="btn" id="guOut" type="button">${Grownup.demo ? 'Leave the demo' : 'Sign out'}</button></div>
+    ${err}
+    ${!me ? '<p class="gu-loading">Loading…</p>' : me.groups.map(groupCard).join('') || '<div class="card gu-card"><h2>Welcome!</h2><p>Make a family for your own kids, or a class for your students. You can have both.</p></div>'}
+    ${me ? `<div class="gu-add"><button class="btn go" id="guAddFamily" type="button">Add a family</button><button class="btn" id="guAddClass" type="button">Add a class</button></div>
+    <div class="card gu-card gu-account"><h3>Your account</h3><p>Deleting your account deletes every group, every kid profile and their progress, right away.</p>
+      <button class="btn danger" id="guDelete" type="button">${Grownup.demo ? 'Delete the demo data' : 'Delete my account'}</button></div>` : ''}`;
+  box.querySelectorAll('canvas[data-look]').forEach(cv => drawKidPip(cv, cv.dataset.look));
+  box.querySelectorAll('canvas[data-pic]').forEach(cv => drawPicture(cv, cv.dataset.pic));
+  $('#guOut').onclick = () => guDo(async () => { await Grownup.signOut(); GU.me = null; });
+  if ($('#guDemoReset')) $('#guDemoReset').onclick = () => guDo(async () => { DemoApi.reset(); await loadGroups(); });
+  if (!me) return;
+  $('#guAddFamily').onclick = () => addGroup('family'); $('#guAddClass').onclick = () => addGroup('class');
+  $('#guDelete').onclick = () => guAsk({ title: Grownup.demo ? "Delete the demo data?" : "Delete your account?", text: "Every group, kid profile and their progress will be deleted. This can’t be undone.", ok: 'Delete', danger: true })
+    .then(yes => yes && guDo(async () => { await Grownup.deleteAccount(); GU.me = null; }));
+  for (const g of me.groups) wireGroup(g);
+}
+function codeTrouble(e) {
+  if (e.code === 'CodeMismatchException') return "That code didn’t match. Check the email and try again.";
+  if (e.code === 'ExpiredCodeException' || e.code === 'NotAuthorizedException') return "That code has expired. Use a different email or send a new code.";
+  return e.message;
+}
+function groupCard(g) {
+  const kids = g.kids.map(k => `<li class="gu-kid">
+      <canvas width="96" height="96" data-look="${esc(k.look)}" aria-hidden="true"></canvas>
+      <span class="gu-nick">${esc(k.nick)}</span>
+      <span class="gu-stars" title="Stars earned">${STAR_SVG(true)}${GU.starsOf[k.id] || 0}</span>
+      ${g.pictures ? `<span class="gu-pics" aria-label="Secret pictures: ${esc(k.pictures.join(' then '))}">${k.pictures.map(p => `<canvas width="72" height="72" data-pic="${p}" aria-hidden="true"></canvas>`).join('')}</span>` : ''}
+      <span class="gu-kid-btns"><button class="linkish" data-edit="${k.id}" type="button">Edit</button><button class="linkish" data-remove="${k.id}" type="button">Remove</button></span>
+    </li>`).join('');
+  return `<section class="card gu-card gu-group" data-group="${g.id}">
+    <div class="gu-ghead"><h2>${esc(g.name)}</h2><span class="gu-chip">${KIND_LABEL[g.kind]}</span><button class="linkish" data-rename type="button">Rename</button></div>
+    <div class="gu-code"><span>Group code</span><code>${esc(g.code)}</code><button class="btn" data-copy type="button">Copy</button><button class="linkish" data-newcode type="button">New code</button></div>
+    <p class="gu-hint">Kids go to <b>wonderlab.camp</b>, tap <b>Who's playing?</b> and enter this code, or scan their login card.</p>
+    <label class="gu-toggle"><input type="checkbox" data-pictures ${g.pictures ? 'checked' : ''}> Secret pictures: each kid taps 2 pictures to sign in${g.kind === 'class' ? ' (keeps classmates out of each other’s profiles)' : ''}</label>
+    <ul class="gu-kids">${kids || '<li class="gu-empty">No kids yet. Add one below.</li>'}</ul>
+    <form class="gu-addkid" data-addkid><label>Nickname <input name="nick" maxlength="24" required placeholder="${g.kind === 'class' ? "e.g. Maya R." : "e.g. Sam"}"></label>
+      <fieldset class="gu-looks"><legend>Pip color</legend>${LOOK_NAMES.map((l, i) => `<label class="gu-look" title="${l}"><input type="radio" name="look" value="${l}" ${i === 0 ? 'checked' : ''}><i style="background:${PIP_LOOKS[l][1]}"></i><span class="sr">${l}</span></label>`).join('')}</fieldset>
+      <button class="btn go">Add</button></form>
+    <div class="gu-gfoot"><button class="btn" data-print type="button" ${g.kids.length ? '' : 'disabled'}>Print login cards</button><button class="linkish" data-delgroup type="button">Delete this ${g.kind}</button></div>
+  </section>`;
+}
+function wireGroup(g) {
+  const el = document.querySelector(`.gu-group[data-group="${g.id}"]`), q = s => el.querySelector(s);
+  q('[data-rename]').onclick = () => guAsk({ title: `Rename ${g.name}`, input: g.name, ok: 'Save' }).then(v => v && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { name: v }); await loadGroups(); }));
+  q('[data-copy]').onclick = e => { navigator.clipboard && navigator.clipboard.writeText(g.code); e.target.textContent = 'Copied!'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1500); };
+  q('[data-newcode]').onclick = () => guAsk({ title: "Make a new group code?", text: "The old code stops working. Kids already signed in stay signed in.", ok: 'New code' })
+    .then(yes => yes && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { newCode: true }); await loadGroups(); }));
+  q('[data-pictures]').onchange = e => guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { pictures: e.target.checked }); await loadGroups(); });
+  q('[data-addkid]').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target); guDo(async () => { await Api.call('POST', `/groups/${g.id}/kids`, { nick: f.get('nick'), look: f.get('look') }); await loadGroups(); }); };
+  q('[data-print]').onclick = () => printCards(g);
+  q('[data-delgroup]').onclick = () => guAsk({ title: `Delete ${g.name}?`, text: "Every kid profile in it and their progress will be deleted. This can’t be undone.", ok: 'Delete', danger: true })
+    .then(yes => yes && guDo(async () => { await Api.call('DELETE', `/groups/${g.id}`); await loadGroups(); }));
+  el.querySelectorAll('[data-remove]').forEach(b => { const k = g.kids.find(x => x.id === b.dataset.remove);
+    b.onclick = () => guAsk({ title: `Remove ${k.nick}?`, text: `${k.nick}'s profile and progress will be deleted.`, ok: 'Remove', danger: true }).then(yes => yes && guDo(async () => { await Api.call('DELETE', `/kids/${k.id}`); await loadGroups(); })); });
+  el.querySelectorAll('[data-edit]').forEach(b => { const k = g.kids.find(x => x.id === b.dataset.edit); b.onclick = () => editKid(g, k); });
+}
+function addGroup(kind) {
+  guAsk({ title: kind === 'family' ? 'Name your family' : 'Name your class', input: kind === 'family' ? 'Our family' : "Room 12", ok: 'Create' })
+    .then(name => name && guDo(async () => { await Api.call('POST', '/groups', { name, kind }); await loadGroups(); }));
+}
+function editKid(g, k) {
+  guAsk({ title: `Edit ${k.nick}`, input: k.nick, looks: k.look, extra: g.pictures ? 'New secret pictures (signs them out on every device)' : '', ok: 'Save' })
+    .then(v => v && guDo(async () => { await Api.call('PATCH', `/kids/${k.id}`, { nick: v.text, look: v.look, resetPictures: !!v.extra }); await loadGroups(); }));
+}
+
+// a small dialog for confirmations and names; resolves to true, the text, { text, look, extra }, or null
+function guAsk({ title, text = '', input = null, looks = null, extra = '', ok = 'OK', danger = false }) {
+  return new Promise(resolve => {
+    const d = document.createElement('dialog'); d.className = 'gu-dialog';
+    d.innerHTML = `<form method="dialog"><h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
+      ${input != null ? `<input name="text" value="${esc(input)}" maxlength="40" required>` : ''}
+      ${looks ? `<fieldset class="gu-looks"><legend>Pip color</legend>${LOOK_NAMES.map(l => `<label class="gu-look"><input type="radio" name="look" value="${l}" ${l === looks ? 'checked' : ''}><i style="background:${PIP_LOOKS[l][1]}"></i><span class="sr">${l}</span></label>`).join('')}</fieldset>` : ''}
+      ${extra ? `<label class="gu-toggle"><input type="checkbox" name="extra"> ${esc(extra)}</label>` : ''}
+      <div class="gu-dbtns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn ${danger ? 'danger' : 'go'}" value="ok">${esc(ok)}</button></div></form>`;
+    document.body.appendChild(d);
+    d.addEventListener('close', () => {
+      const f = new FormData(d.querySelector('form')), yes = d.returnValue === 'ok', t = f.get('text');
+      d.remove(); if (!yes) return resolve(null);
+      if (looks) return resolve({ text: String(t || '').trim(), look: f.get('look'), extra: !!f.get('extra') });
+      resolve(input != null ? String(t || '').trim() || null : true);
+    });
+    d.showModal(); const i = d.querySelector('input[name=text]'); if (i) i.select();
+  });
+}
+
+// login cards: one per kid, 8 to a page, with the group code, a QR code and the kid's secret pictures
+function printCards(g) {
+  let sheet = $('#cardsSheet'); if (!sheet) { sheet = document.createElement('div'); sheet.id = 'cardsSheet'; document.body.appendChild(sheet); }
+  sheet.innerHTML = g.kids.map(k => `<div class="login-card">
+      <div class="lc-head"><b>Wonder <span>Lab</span></b><small>${esc(g.name)}</small></div>
+      <div class="lc-body"><canvas width="160" height="160" data-look="${esc(k.look)}"></canvas><div><div class="lc-hi">Hi, ${esc(k.nick)}!</div>
+        <div class="lc-step">1. Go to <b>wonderlab.camp</b></div><div class="lc-step">2. Tap <b>Who's playing?</b></div><div class="lc-step">3. Scan me, or type:</div><code>${esc(g.code)}</code></div>
+        <canvas class="lc-qr" data-qr="${esc(joinLink(g.code))}"></canvas></div>
+      ${g.pictures ? `<div class="lc-pics">My secret pictures: ${k.pictures.map(p => `<canvas width="96" height="96" data-pic="${p}"></canvas>`).join('<span>then</span>')}</div>` : ''}
+    </div>`).join('');
+  sheet.querySelectorAll('canvas[data-look]').forEach(cv => drawKidPip(cv, cv.dataset.look));
+  sheet.querySelectorAll('canvas[data-pic]').forEach(cv => drawPicture(cv, cv.dataset.pic));
+  sheet.querySelectorAll('canvas[data-qr]').forEach(cv => drawQr(cv, cv.dataset.qr, 4));
+  document.documentElement.classList.add('printing'); window.print();
+  setTimeout(() => document.documentElement.classList.remove('printing'), 500);
+}
 /* ============ topics: add new ones here ============ */
 const TOPICS = [
   // accent: the page ground and dots, the selected tab, the stage backdrop, Pip's bold words, the Trophy Hall name plate (docs/design.md, section 15)
@@ -3727,7 +4251,10 @@ function drawPip(c, t) {
   c.save(); c.translate(54, 64); pipFigure(c, t, { talking: t < Pip.talkUntil, wow: t < Pip.wowUntil, poke: t - Pip.pokeT < .6, look, costume: App.view === 'topic' && App.topic ? App.topic.pip : null }); c.restore();
 }
 // Pip at the origin (body center; feet near y 29, shadow at y 36). Used by the guide and on the campus map.
-function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0, costume = null } = {}) {
+// a kid's Pip color (their profile's look); the plain bean is 'sun'
+const PIP_LOOKS = { leaf: ['#D3F0BE', '#8FCB6E'], sun: ['#F8E6AE', '#E3C27A'], sky: ['#D6F0FB', '#88CBEA'], petal: ['#FBD6E3', '#EE93B3'],
+  carrot: ['#FFDDBF', '#F5A660'], grape: ['#E6DCF8', '#B39DE6'], berry: ['#F8CDCD', '#E2807F'], sea: ['#CBF1E9', '#6FCAB8'] };
+function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0, costume = null, tint = 'sun' } = {}) {
   const bob = RM ? 0 : Math.sin(t * 2.2) * 2 - (talking ? Math.abs(Math.sin(t * 10)) * 3 : 0) - (wow || poke ? Math.abs(Math.sin(t * 12)) * 6 : 0) - hop;
   c.save();
   c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 36, Math.max(10, 26 - bob), 5, 0, 0, TAU); c.fill();
@@ -3737,7 +4264,7 @@ function pipFigure(c, t, { talking = false, wow = false, poke = false, look = nu
     c.strokeStyle = C.leafDeep; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(3, -24); c.quadraticCurveTo(1, -36, 3 + sw * .4, -44); c.stroke();
     drawLeaf(c, 3 + sw * .4, -44, -150 + sw, .22); drawLeaf(c, 3 + sw * .4, -44, -30 + sw, .24);
   }
-  c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28); g.addColorStop(0, '#F8E6AE'); g.addColorStop(1, '#E3C27A');
+  c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28), body2 = PIP_LOOKS[tint] || PIP_LOOKS.sun; g.addColorStop(0, body2[0]); g.addColorStop(1, body2[1]);
   c.fillStyle = g; c.fill(body); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(body); c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-16, -16, 12, 5, -.4, 0, TAU); c.fill(); c.restore();
   const lx = look ? look[0] : Math.sin(t * .7) * 1.5, ly = look ? look[1] : 0;
   const blink = (t % 3.7) < .12;
@@ -3975,6 +4502,8 @@ function lastPlace() { const l = Store.data.last; return typeof l === 'string' ?
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
 function route() {
   const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
+  if (tid === 'grownups') { if (App.view !== 'grownups') showGrownups(); return; }
+  if (tid === 'privacy') { if (App.view !== 'privacy') showPrivacy(); return; }
   if (tid === 'trophies') { if (location.hash !== '#/trophies') history.replaceState(null, '', '#/trophies'); if (App.view !== 'hall') showHall(); return; }
   const tp = TOPICS.find(t => t.id === tid);
   if (!tp) { if (location.hash !== '#/') history.replaceState(null, '', '#/'); if (App.view !== 'home') showHome(); return; }
@@ -3982,7 +4511,7 @@ function route() {
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
   if (App.view !== 'topic' || App.topic !== tp) {
     App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name; applyAccent(tp);
-    document.documentElement.classList.remove('at-home', 'at-hall'); document.documentElement.classList.add('in-topic');
+    document.documentElement.classList.remove('at-home', 'at-hall', 'at-grownups', 'at-privacy'); document.documentElement.classList.add('in-topic');
   }
   if (App.act !== a) mount(a);
 }

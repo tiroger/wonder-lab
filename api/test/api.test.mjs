@@ -50,7 +50,7 @@ test('a family: create it, add kids, and see it all from /me', async () => {
   assert.equal(g.kind, 'family'); assert.equal(g.pictures, false); assert.ok(validCode(g.code), g.code);
   assert.deepEqual(sam.pictures.length, 2); assert.notEqual(sam.pictures[0], sam.pictures[1]);
   const me = (await t.call('GET', '/me', { auth: t.roger })).body;
-  assert.equal(me.groups.length, 1); assert.deepEqual(me.groups[0].kids.map(k => k.nick).sort(), ['Ava', 'Sam']);
+  assert.equal(me.groups.length, 1); assert.deepEqual(me.groups[0].kids.map(k => k.nick), ['Sam', 'Ava'], 'in the order they were added');
   const cls = (await t.call('POST', '/groups', { auth: t.roger, body: { name: "Ms. Rivera's class", kind: 'class' } })).body;
   assert.equal(cls.pictures, true, 'classes use picture passwords');
   assert.equal((await t.call('POST', '/groups', { auth: t.roger, body: { name: '', kind: 'family' } })).status, 400);

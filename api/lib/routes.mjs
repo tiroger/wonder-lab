@@ -13,11 +13,13 @@ const NOT_FOUND = fail(404, 'not found');
 export function routes({ store, verify, config = {} }) {
   // --- loading and checking ---
   const groupMeta = gid => store.get(`GROUP#${gid}`, 'META');
-  const kidsOf = async gid => (await store.query(`GROUP#${gid}`, 'KID#')).map(publicKid);
+  // kids in the order they were added
+  const kidRows = async gid => (await store.query(`GROUP#${gid}`, 'KID#')).sort((a, b) => (a.created || 0) - (b.created || 0));
+  const kidsOf = async gid => (await kidRows(gid)).map(publicKid);
   const publicKid = k => ({ id: k.kid, nick: k.nick, look: k.look });
   const fullKid = k => ({ ...publicKid(k), pictures: k.pics });
   const fullGroup = async g => ({ id: g.gid, name: g.name, kind: g.kind, code: g.code, pictures: g.pictures,
-    kids: (await store.query(`GROUP#${g.gid}`, 'KID#')).map(fullKid) });
+    kids: (await kidRows(g.gid)).map(fullKid) });
   async function owned(adult, gid) { const g = await groupMeta(gid); return g && g.owner === adult.sub ? g : null; }
   async function ownedKid(adult, kid) {
     const m = await store.get(`KID#${kid}`, 'META'); if (!m) return null;
@@ -78,7 +80,7 @@ export function routes({ store, verify, config = {} }) {
       if (!nick) return fail(400, 'a kid needs a nickname (up to 24 letters)');
       const kids = await store.query(`GROUP#${g.gid}`, 'KID#');
       if (kids.length >= KINDS[g.kind].maxKids) return fail(400, 'this group is full');
-      const kid = newId(), k = { pk: `GROUP#${g.gid}`, sk: `KID#${kid}`, kid, nick, look, pics: newPictures(), epoch: 1 };
+      const kid = newId(), k = { pk: `GROUP#${g.gid}`, sk: `KID#${kid}`, kid, nick, look, pics: newPictures(), epoch: 1, created: Date.now() * 100 + kids.length };
       await store.put(k); await store.put({ pk: `KID#${kid}`, sk: 'META', gid: g.gid });
       return ok(fullKid(k));
     },
@@ -93,7 +95,7 @@ export function routes({ store, verify, config = {} }) {
     'GET /groups/:id/progress': async (a, body, id) => {
       const g = await owned(a, id); if (!g) return NOT_FOUND;
       const kids = [];
-      for (const k of await store.query(`GROUP#${g.gid}`, 'KID#')) kids.push({ ...publicKid(k), progress: mergeProgress((await store.get(`KID#${k.kid}`, 'PROGRESS'))?.p) });
+      for (const k of await kidRows(g.gid)) kids.push({ ...publicKid(k), progress: mergeProgress((await store.get(`KID#${k.kid}`, 'PROGRESS'))?.p) });
       return ok({ kids });
     },
   };

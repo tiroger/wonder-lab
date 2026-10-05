@@ -179,6 +179,68 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .nudge-tip svg{width:22px;height:22px}
 @keyframes tipin{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}15%{opacity:1;transform:translate(-50%,-120%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* the grown-up page (#/grownups) and the privacy note: calm, plain, for adults */
+:root.at-grownups,:root.at-privacy{--ground:#F6F1E4;--dot:#E6DCC4}
+:root.at-grownups .crumbs,:root.at-privacy .crumbs{display:flex}
+:root.at-grownups #tabs,:root.at-grownups .stage,:root.at-grownups .below,:root.at-grownups #badgeCard,:root.at-grownups .home,:root.at-grownups .hall,:root.at-grownups .guide,
+:root.at-privacy #tabs,:root.at-privacy .stage,:root.at-privacy .below,:root.at-privacy #badgeCard,:root.at-privacy .home,:root.at-privacy .hall,:root.at-privacy .guide{display:none}
+.grownups,.privacy{display:none;flex-direction:column;gap:16px}
+:root.at-grownups .grownups,:root.at-privacy .privacy{display:flex}
+.gu-card{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto}
+.gu-card h2{margin:0 0 6px}.gu-card p{margin:6px 0;line-height:1.5}
+.gu-form{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.gu-form label{font-weight:600}
+.gu-row{display:flex;flex-wrap:wrap;gap:8px}
+.gu-row input,.gu-dialog input[name=text],.gu-addkid input[name=nick]{flex:1 1 220px;min-height:48px;font:inherit;font-size:17px;border:3px solid var(--ink);border-radius:14px;padding:6px 12px;background:#fff;box-sizing:border-box}
+.gu-form small,.gu-demo small,.gu-fine{color:var(--ink-soft);font-size:14px}.gu-fine a,.privacy a{color:#1F6E3A;font-weight:600}
+.grownups input[type=checkbox],.gu-dialog input[type=checkbox]{accent-color:var(--leaf)}
+.linkish{background:none;border:0;padding:4px 2px;font:inherit;font-weight:600;color:#1F6E3A;text-decoration:underline;cursor:pointer;min-height:32px}
+.gu-msg{background:#FDE2E2;border:2px solid #C24A4A;border-radius:12px;padding:8px 12px;font-weight:600}
+.gu-demo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--sun-soft);border:2px dashed var(--ink-soft);border-radius:14px;padding:10px 12px;margin:12px 0}
+.gu-ribbon{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;background:var(--sun-soft);border:3px solid var(--ink);border-radius:14px;padding:8px 14px}
+.gu-top{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.gu-ghead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}.gu-ghead h2{margin:0}
+.gu-chip{background:var(--sky,#BFE6F4);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700}
+.gu-code{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0 4px}
+.gu-code span{font-weight:600}.gu-code code{font-size:22px;font-weight:700;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:4px 12px;letter-spacing:.02em}
+.gu-hint{color:var(--ink-soft);font-size:15px}
+.gu-toggle{display:flex;gap:8px;align-items:flex-start;margin:10px 0;line-height:1.4}.gu-toggle input{width:22px;height:22px;flex:none;margin-top:1px}
+.gu-kids{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gu-kid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--card-2);border:2px solid var(--ink);border-radius:14px;padding:4px 10px}
+.gu-kid canvas[data-look]{width:44px;height:44px}
+.gu-nick{font-weight:700;font-size:17px;flex:1 1 120px}
+.gu-stars{display:inline-flex;align-items:center;gap:4px;font-weight:700}.gu-stars svg{width:18px;height:18px}
+.gu-pics{display:inline-flex;gap:4px}.gu-pics canvas{width:34px;height:34px;background:#fff;border:2px solid var(--ink);border-radius:8px}
+.gu-kid-btns{display:flex;gap:6px}
+.gu-empty{color:var(--ink-soft);padding:6px 2px}
+.gu-addkid{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;border-top:2px dashed var(--ink-soft);padding-top:12px}
+.gu-addkid>label{display:flex;flex-direction:column;gap:4px;font-weight:600;flex:1 1 200px}.gu-addkid input[name=nick]{flex:none}
+.gu-looks{display:flex;flex-wrap:wrap;gap:6px;border:0;padding:0;margin:0}.gu-looks legend{font-weight:600;padding:0;margin-bottom:4px}
+.gu-look{position:relative;cursor:pointer}.gu-look input{position:absolute;opacity:0;inset:0}
+.gu-look i{display:block;width:30px;height:30px;border-radius:50%;border:3px solid var(--ink);box-shadow:0 2px 0 var(--ink)}
+.gu-look input:checked+i{outline:4px solid var(--sun);outline-offset:1px}.gu-look input:focus-visible+i{outline:4px solid var(--ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.gu-gfoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+.gu-add{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn.danger{background:#C24A4A;color:#fff}
+.gu-loading{text-align:center;color:var(--ink-soft)}
+.gu-dialog{border:4px solid var(--ink);border-radius:20px;padding:18px 20px;max-width:min(440px,calc(100vw - 32px));box-shadow:0 6px 0 var(--ink);background:var(--card)}
+.gu-dialog::backdrop{background:rgba(36,54,40,.4)}.gu-dialog form{display:flex;flex-direction:column;gap:10px}.gu-dialog h3{margin:0}
+.gu-dbtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.privacy .card{max-width:760px;margin:0 auto;line-height:1.55}.privacy h3{margin:16px 0 4px}
+footer a{color:inherit;font-weight:600}
+/* login cards: only the sheet prints, 8 cards to a page */
+#cardsSheet{display:none}
+@media print{
+  body{background:#fff!important}body>*:not(#cardsSheet){display:none!important}
+  #cardsSheet{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+  .login-card{break-inside:avoid;border:1.5px dashed #555;border-radius:4mm;padding:4mm;font-family:var(--display);color:#243628;height:62mm;box-sizing:border-box;display:flex;flex-direction:column;gap:2mm}
+  .lc-head{display:flex;justify-content:space-between;align-items:baseline}.lc-head b{font-size:16pt;color:#2A7340}.lc-head b span{color:#E8762C}.lc-head small{font-size:9pt}
+  .lc-body{display:flex;gap:3mm;align-items:center}.lc-body canvas[data-look]{width:20mm;height:20mm}
+  .lc-hi{font-size:14pt;font-weight:700}.lc-step{font-size:8.5pt}.login-card code{font-size:11pt;font-weight:700}
+  .lc-qr{width:26mm;height:26mm;margin-left:auto}
+  .lc-pics{display:flex;align-items:center;gap:2mm;font-size:9pt}.lc-pics canvas{width:11mm;height:11mm;border:1px solid #555;border-radius:2mm}
+}
 /* home: the Lab campus map (docs/design.md, section 16) */
 :root.at-home{--ground:#F6F1E4;--dot:#E6DCC4}
 .brand{text-decoration:none;color:inherit;border-radius:14px}
@@ -294,6 +356,11 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
         <span class="set-note" id="resetNote">Clears every star and badge on this device.</span>
       </div>
     </section>
+    <section class="set-sec">
+      <h3>Grown-ups</h3>
+      <p class="set-note">Set up profiles for your kids or your class, so their stars follow them to any device.</p>
+      <a class="btn" href="#/grownups" id="setGrownups">Go to the grown-up page</a>
+    </section>
   </div>
 </dialog>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -356,6 +423,19 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
     <div class="hall-totals" id="hallTotals"></div>
   </section>
 
+  <section class="grownups" id="grownups" aria-label="For grown-ups"></section>
+
+  <section class="privacy" id="privacy" aria-label="Privacy">
+    <div class="card"><h2>Privacy at Wonder Lab</h2>
+      <p>Wonder Lab is a small learning site for kids. It collects as little as it can.</p>
+      <h3>Playing without signing in</h3><p>Stars, badges and settings stay on your device, in this browser. Nothing is sent anywhere.</p>
+      <h3>Grown-up accounts</h3><p>A parent or teacher signs in with an email address. We use it only to email sign-in codes. There are no passwords, no ads, no tracking and no third-party scripts.</p>
+      <h3>Kid profiles</h3><p>A grown-up creates each kid profile and gives consent for that child. A profile holds a nickname, a Pip color, an optional pair of secret pictures, and the child's progress: stars, badges, trophies and critters found. No email, real name, birthday, photo or location. Only the grown-up who made the profile can see it.</p>
+      <h3>Deleting</h3><p>Removing a kid, a family or a class, or deleting your account, deletes that data right away. Grown-ups can do this on the <a href="#/grownups">grown-up page</a>.</p>
+      <h3>The demo</h3><p>"Try the demo" and "Play the demo" keep everything in your browser and never send it to us.</p>
+    </div>
+  </section>
+
   <section class="stage" id="stage"></section>
 
   <section class="below">
@@ -365,5 +445,5 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 
   <section class="card" id="badgeCard"><h2>My badges <a class="hall-link" href="#/trophies">See the Trophy Hall</a></h2><div class="shelf" id="shelf"></div></section>
 
-  <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span></footer>
+  <footer><span>Stars and badges are saved on this device. Open Settings to change Pip's voice or start over.</span><span><a href="#/grownups">For grown-ups</a> · <a href="#/privacy">Privacy</a></span></footer>
 </div>

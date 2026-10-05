@@ -22,6 +22,10 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 
 Pip reads every line aloud. Discoveries earn stars and badges, finished topics earn trophies, and they're all on display in the **Trophy Hall**.
 
+## Grown-ups
+
+Parents and teachers sign in with any email and a one-time code (no passwords) to set up a family or a class. Each child gets a profile with a nickname and their own Pip color; a teacher can turn on secret pictures so classmates stay out of each other's profiles, and print a login card for every child with a QR code. Visitors can try it all in a demo that never leaves their browser.
+
 ## How it's built
 
 - **Drawn and voiced in the browser:** every picture is drawn in code and every sound effect is synthesized, with no images and no libraries.
@@ -44,7 +48,7 @@ The repo comes with a Claude Code setup in `.claude/`, so new topics and changes
 
 ## How it's hosted
 
-A static site on AWS, defined in Terraform and deployed by GitHub Actions on every merge.
+A static site and a small serverless API on AWS, defined in Terraform and deployed by GitHub Actions on every merge.
 
 ```mermaid
 flowchart LR
@@ -52,20 +56,28 @@ flowchart LR
   dns --> cdn[CloudFront]
   cert[ACM certificate] -.-> cdn
   cdn --> bucket[(S3)]
+  cdn -->|/api| fn[Lambda]
+  fn --> db[(DynamoDB)]
+  visitor -->|sign-in codes| cognito[Cognito]
+  cognito --> ses[SES email]
   gh[GitHub Actions] -->|deploy| bucket
 ```
 
 - **S3:** stores the site.
-- **CloudFront:** serves it over HTTPS.
+- **CloudFront:** serves it over HTTPS, and the API at `/api`.
+- **Lambda:** the API, in Node.js with no dependencies.
+- **DynamoDB:** grown-ups' groups, kid profiles and their progress.
+- **Cognito and SES:** grown-up sign-in with emailed one-time codes.
 - **ACM:** the certificate.
-- **Route 53:** DNS for `wonderlab.camp`.
+- **Route 53:** DNS for `wonderlab.camp`, plus the email-signing records.
 
 ## Repo
 
 ```
 src/      the app
+api/      the API (one Lambda) and its tests
 voice/    Pip's narration
-tests/    the automated playthrough
+tests/    the automated playthrough and the accounts tests
 infra/    Terraform
 docs/     the design guide
 .claude/  the Claude Code setup

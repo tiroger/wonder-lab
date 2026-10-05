@@ -479,6 +479,24 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
   - at phone width the map stacks vertically with no sideways scrolling
   - the Trophy Hall opens from the map, shows every badge in the right state, and tapping a locked badge plays its recorded "how" line
 
+### The grown-up page (as built, src/08j_api.js, src/08k_grownups.js)
+For parents and teachers, at `#/grownups` (links in the footer and in Settings), with a plain privacy note at `#/privacy`.
+- **Look:** calm and plain, for adults. Same cards, buttons and fonts, but no Pip, no narration and no sounds. The page ground is the platform cream (`:root.at-grownups`).
+- **Signed out:** one card with an email field ("Send me a code"), then a 6-digit code field. A "Try the demo" strip and a one-line privacy note sit underneath.
+- **Signed in:** a card per group:
+  - the name and a Family or Class chip
+  - the group code, large, with Copy and New code
+  - the secret-pictures switch
+  - the kids, each with their Pip color, star count and secret pictures, plus Edit and Remove
+  - an add-a-kid form with 8 Pip colors
+  - Print login cards
+  Under the cards: Add a family, Add a class, and the account card with Delete.
+- **Dialogs** (`guAsk`): a small `<dialog>` for names and confirmations, with the danger button in red for deletes.
+- **Kid looks:** `PIP_LOOKS` in src/09_app.js tints Pip's body (`pipFigure(c, t, { tint })`): leaf, sun (the plain bean), sky, petal, carrot, grape, berry, sea.
+- **Secret pictures:** `PICTURE_ART` draws frog, sun, rocket, apple, fish, star, leaf, moon and bee, reusing the campus and critter art.
+- **Login cards** print 8 to a page, with nothing else on the page. Each has the logo, "Hi, <nick>!", three steps, the group code, a QR code for `/#/join/<code>` (src/08i_qr.js, our own encoder) and the secret pictures.
+- **The demo** (`DemoApi`): Ms. Rivera's class of 6, built from the live `TOPICS`. "Demo Explorer" has everything. It's saved in this browser only (`wonderlab.demo`), with a ribbon, Reset and Leave.
+
 ## 17. Checklist for anything new
 
 - [ ] Uses the tokens, fonts, outlines, radii and shadows above. No new greys, blurred shadows, gradients on interface elements, emoji or image files.

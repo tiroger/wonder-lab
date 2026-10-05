@@ -24,7 +24,10 @@ function drawPip(c, t) {
   c.save(); c.translate(54, 64); pipFigure(c, t, { talking: t < Pip.talkUntil, wow: t < Pip.wowUntil, poke: t - Pip.pokeT < .6, look, costume: App.view === 'topic' && App.topic ? App.topic.pip : null }); c.restore();
 }
 // Pip at the origin (body center; feet near y 29, shadow at y 36). Used by the guide and on the campus map.
-function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0, costume = null } = {}) {
+// a kid's Pip color (their profile's look); the plain bean is 'sun'
+const PIP_LOOKS = { leaf: ['#D3F0BE', '#8FCB6E'], sun: ['#F8E6AE', '#E3C27A'], sky: ['#D6F0FB', '#88CBEA'], petal: ['#FBD6E3', '#EE93B3'],
+  carrot: ['#FFDDBF', '#F5A660'], grape: ['#E6DCF8', '#B39DE6'], berry: ['#F8CDCD', '#E2807F'], sea: ['#CBF1E9', '#6FCAB8'] };
+function pipFigure(c, t, { talking = false, wow = false, poke = false, look = null, hop = 0, costume = null, tint = 'sun' } = {}) {
   const bob = RM ? 0 : Math.sin(t * 2.2) * 2 - (talking ? Math.abs(Math.sin(t * 10)) * 3 : 0) - (wow || poke ? Math.abs(Math.sin(t * 12)) * 6 : 0) - hop;
   c.save();
   c.fillStyle = 'rgba(36,54,40,.15)'; c.beginPath(); c.ellipse(0, 36, Math.max(10, 26 - bob), 5, 0, 0, TAU); c.fill();
@@ -34,7 +37,7 @@ function pipFigure(c, t, { talking = false, wow = false, poke = false, look = nu
     c.strokeStyle = C.leafDeep; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(3, -24); c.quadraticCurveTo(1, -36, 3 + sw * .4, -44); c.stroke();
     drawLeaf(c, 3 + sw * .4, -44, -150 + sw, .22); drawLeaf(c, 3 + sw * .4, -44, -30 + sw, .24);
   }
-  c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28); g.addColorStop(0, '#F8E6AE'); g.addColorStop(1, '#E3C27A');
+  c.save(); c.rotate(-.1 + (poke ? Math.sin(t * 30) * .08 : 0)); const body = kidney(70, 56); const g = c.createLinearGradient(0, -28, 0, 28), body2 = PIP_LOOKS[tint] || PIP_LOOKS.sun; g.addColorStop(0, body2[0]); g.addColorStop(1, body2[1]);
   c.fillStyle = g; c.fill(body); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(body); c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-16, -16, 12, 5, -.4, 0, TAU); c.fill(); c.restore();
   const lx = look ? look[0] : Math.sin(t * .7) * 1.5, ly = look ? look[1] : 0;
   const blink = (t % 3.7) < .12;
@@ -272,6 +275,8 @@ function lastPlace() { const l = Store.data.last; return typeof l === 'string' ?
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
 function route() {
   const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
+  if (tid === 'grownups') { if (App.view !== 'grownups') showGrownups(); return; }
+  if (tid === 'privacy') { if (App.view !== 'privacy') showPrivacy(); return; }
   if (tid === 'trophies') { if (location.hash !== '#/trophies') history.replaceState(null, '', '#/trophies'); if (App.view !== 'hall') showHall(); return; }
   const tp = TOPICS.find(t => t.id === tid);
   if (!tp) { if (location.hash !== '#/') history.replaceState(null, '', '#/'); if (App.view !== 'home') showHome(); return; }
@@ -279,7 +284,7 @@ function route() {
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
   if (App.view !== 'topic' || App.topic !== tp) {
     App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name; applyAccent(tp);
-    document.documentElement.classList.remove('at-home', 'at-hall'); document.documentElement.classList.add('in-topic');
+    document.documentElement.classList.remove('at-home', 'at-hall', 'at-grownups', 'at-privacy'); document.documentElement.classList.add('in-topic');
   }
   if (App.act !== a) mount(a);
 }

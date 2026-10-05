@@ -89,7 +89,7 @@ function hallTap(el, b) {
 }
 function showHall() {
   leaveActivity(); App.view = 'hall'; App.topic = null; App.act = null; applyAccent(null);
-  const root = document.documentElement; root.classList.remove('at-home', 'in-topic'); root.classList.add('at-hall');
+  const root = document.documentElement; root.classList.remove('at-home', 'in-topic', 'at-grownups', 'at-privacy'); root.classList.add('at-hall');
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();
   // everything earned so far is now seen; the map stops sparkling
