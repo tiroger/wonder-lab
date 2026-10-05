@@ -165,6 +165,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     r.joined = !!(await store.get('INVITES', 'teacher@example.com')).joined;
     report.teacher = r; await ctx.close();
   }
+  // ---------- Settings links to the grown-up page, and closes so the page shows ----------
+  {
+    const { ctx, p } = await device('settings'); await p.goto(SITE + '#/'); await sleep(700);
+    await p.click('#settingsBtn'); await sleep(300); await p.click('#setGrownups'); await sleep(600);
+    report.settingsLink = await p.evaluate(() => ({ view: App.view, open: document.querySelector('#settings').open }));
+    await ctx.close();
+  }
   // ---------- the demo: everything works, nothing leaves the browser ----------
   {
     const { ctx, p } = await device('demo'), r = {};
@@ -207,6 +214,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     "Invite-only: the invited teacher signs up, sees none of the family's groups, and isn't an admin": report.teacher.groups.length === 0 && !report.teacher.adminCard && report.teacher.joined,
     'Demo: a sample class of six, changes kept in this browser, reset and leave work': D.start[0].kids.length === 6 && D.added === 7 && D.kept === 7 && D.reset === 6 && D.classes === 2 && D.left,
     'Demo: nothing is sent to the API or to Cognito': D.network.api === 0 && D.network.cognito === 0,
+    'Settings: the grown-up link closes Settings and shows the grown-up page': report.settingsLink.view === 'grownups' && !report.settingsLink.open,
     'Accounts: no page errors': errors.length === 0,
   };
   let failed = 0;
