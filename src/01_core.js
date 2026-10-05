@@ -32,10 +32,19 @@ const C = {
 const STAR_SVG = (on = true) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="${on ? '#FFC93C' : '#FFFDF5'}" stroke="${on ? '#243628' : '#9AAE9E'}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
 
 /* ============ storage (per device) ============ */
+// Progress and settings in localStorage. A guest plays under 'wonderlab.v1'; a signed-in kid under 'wonderlab.kid.<id>'
+// (src/08l_players.js), and the device's settings carry over when players switch. onSave lets sync hear about changes.
+const DEVICE_KEYS = ['sound', 'soundVol', 'music', 'musicVol', 'voiceAuto', 'voiceVol', 'voice', 'waitForPip'];
 const Store = {
-  key: 'wonderlab.v1', data: { stars: {}, badges: {}, name: '', last: '', sound: true, music: false },
+  key: 'wonderlab.v1', data: { stars: {}, badges: {}, name: '', last: '', sound: true, music: false }, onSave: null,
   load() { try { const r = localStorage.getItem(this.key); if (r) { const d = JSON.parse(r); Object.assign(this.data, d); this.data.stars = d.stars || {}; this.data.badges = d.badges || {}; } } catch (e) {} },
-  save() { try { localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) {} }
+  save(quiet) { try { localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) {} if (!quiet && this.onSave) this.onSave(); },
+  // play as someone else on this device: their progress, this device's settings
+  switchTo(key, extra = {}) {
+    const keep = Object.fromEntries(DEVICE_KEYS.filter(k => this.data[k] !== undefined).map(k => [k, this.data[k]]));
+    this.save(true); this.key = key; this.data = { stars: {}, badges: {}, name: '', last: '', sound: true, music: false }; this.load();
+    Object.assign(this.data, keep, extra); this.save(true);
+  }
 };
 
 /* ============ sound kit: every sound is synthesized ============ */

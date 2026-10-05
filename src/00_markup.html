@@ -180,6 +180,35 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 @keyframes tipin{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}15%{opacity:1;transform:translate(-50%,-120%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 /* the grown-up page (#/grownups) and the privacy note: calm, plain, for adults */
+/* "Who's playing?" (#/players): kid-facing, with Pip */
+:root.at-players{--ground:#F6F1E4;--dot:#E6DCC4}
+:root.at-players .crumbs{display:flex}
+:root.at-players #tabs,:root.at-players .stage,:root.at-players .below,:root.at-players #badgeCard,:root.at-players .home,:root.at-players .hall{display:none}
+:root.at-players .bubble p b{color:#B4500F}
+.players{display:none;flex-direction:column;gap:16px}:root.at-players .players{display:flex}
+.pl-card{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;text-align:center}
+.pl-card h2{font-size:28px;margin:0 0 4px}.pl-group{font-size:18px;font-weight:600;margin:4px 0 12px}
+.pl-codeform{display:flex;flex-direction:column;align-items:center;gap:10px;margin:12px 0}.pl-codeform label{font-weight:700;font-size:18px}
+.pl-codeform input{width:min(420px,100%);box-sizing:border-box;font:inherit;font-size:24px;font-weight:700;text-align:center;border:4px solid var(--ink);border-radius:18px;padding:10px 12px;background:#fff}
+.pl-small{color:var(--ink-soft);font-size:15px}
+.pl-demo{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;background:var(--sun-soft);border:2px dashed var(--ink-soft);border-radius:14px;padding:10px 12px;margin:14px auto;max-width:520px}.pl-demo small{color:var(--ink-soft)}
+.pl-kids{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin:8px 0}
+.pl-kid{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card-2);border:3px solid var(--ink);border-radius:20px;box-shadow:0 4px 0 var(--ink);padding:10px 6px;font:inherit;font-family:var(--display);font-weight:700;font-size:19px;cursor:pointer;min-height:44px}
+.pl-kid:hover{transform:translateY(-2px)}.pl-kid:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}.pl-kid canvas{width:84px;height:84px}
+.pl-chosen{display:flex;justify-content:center;gap:12px;margin:6px 0 12px}.pl-chosen canvas,.pl-chosen i{width:56px;height:56px;border:3px solid var(--ink);border-radius:14px;background:#fff;display:block}.pl-chosen i{border-style:dashed;border-color:var(--ink-soft)}
+.pl-pics{display:grid;grid-template-columns:repeat(3,minmax(0,110px));gap:12px;justify-content:center}
+.pl-pic{background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 var(--ink);padding:6px;cursor:pointer;aspect-ratio:1}.pl-pic canvas{width:100%;height:100%}.pl-pic:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.pl-pics.shake{animation:shake .45s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.pl-keep{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 0}
+.pl-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:14px}
+.player-btn{display:inline-flex;align-items:center;gap:6px;min-height:48px;border:3px solid var(--ink);border-radius:999px;background:var(--card-2);box-shadow:0 3px 0 var(--ink);padding:2px 14px 2px 6px;font:inherit;font-family:var(--display);font-weight:700;font-size:16px;cursor:pointer;max-width:220px}
+.player-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-btn canvas{width:36px;height:36px;flex:none}.player-btn small{font-size:12px;background:var(--sun-soft);border-radius:999px;padding:0 6px}
+.player-btn .q{display:none}
+/* with a breadcrumb in the header there's less room: just the kid's Pip (a '?' for a guest) */
+:root:is(.in-topic,.at-hall,.at-players,.at-grownups,.at-privacy) .player-btn{padding:2px 6px;position:relative}
+:root:is(.in-topic,.at-hall,.at-players,.at-grownups,.at-privacy) .player-btn :is(span,small){display:none}
+:root:is(.in-topic,.at-hall,.at-players,.at-grownups,.at-privacy) .player-btn .q{display:grid;place-items:center;position:absolute;right:-4px;top:-4px;width:20px;height:20px;border-radius:50%;background:var(--sun);border:2px solid var(--ink);font-size:13px}
 :root.at-grownups,:root.at-privacy{--ground:#F6F1E4;--dot:#E6DCC4}
 :root.at-grownups .crumbs,:root.at-privacy .crumbs{display:flex}
 :root.at-grownups #tabs,:root.at-grownups .stage,:root.at-grownups .below,:root.at-grownups #badgeCard,:root.at-grownups .home,:root.at-grownups .hall,:root.at-grownups .guide,
@@ -374,6 +403,7 @@ footer a{color:inherit;font-weight:600}
     </a>
     <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"><a href="#/" id="crumbHome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 V21 H14 V15 H10 V21 H3 Z" fill="#FFC93C" stroke="#243628" stroke-width="2" stroke-linejoin="round"/></svg>Home</a><span aria-hidden="true">›</span><span id="crumbTopic"></span></nav>
     <div class="controls">
+      <div class="field"><span class="lab">Player</span><button class="player-btn" id="playerBtn" type="button"></button></div>
       <div class="field"><span class="lab">Stars</span><div class="pill" id="starPill" aria-live="polite"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="#FFC93C" stroke="#243628" stroke-width="1.8" stroke-linejoin="round"/></svg><span id="starCount">0</span><span class="of">/ <span id="starTotal">0</span></span></div></div>
       <div class="field"><span class="lab">Voice · Sound · Music · Settings</span>
         <div class="icons">
@@ -425,6 +455,7 @@ footer a{color:inherit;font-weight:600}
     <div class="hall-totals" id="hallTotals"></div>
   </section>
 
+  <section class="players" id="players" aria-label="Who's playing?"></section>
   <section class="grownups" id="grownups" aria-label="For grown-ups"></section>
 
   <section class="privacy" id="privacy" aria-label="Privacy">

@@ -207,6 +207,7 @@ function nextToast() {
 
 /* ============ page rendering ============ */
 function refresh() {
+  renderPlayerChip();
   const tp = App.topic, stars = Store.data.stars, acts = tp ? tp.activities : TOPICS.flatMap(t => t.activities); // home counts every topic
   const total = acts.reduce((n, a) => n + a.stars.length, 0), have = acts.reduce((n, a) => n + a.stars.filter(s => stars[s.id]).length, 0);
   $('#starCount').textContent = have; $('#starTotal').textContent = total;
@@ -275,6 +276,8 @@ function lastPlace() { const l = Store.data.last; return typeof l === 'string' ?
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
 function route() {
   const [tid, aid] = location.hash.replace(/^#\/?/, '').split('/'), last = lastPlace();
+  if (tid === 'players') { if (App.view !== 'players') showPlayers(); return; }
+  if (tid === 'join') { showPlayers(aid ? decodeURIComponent(aid) : ''); return; }
   if (tid === 'grownups') { if (App.view !== 'grownups') showGrownups(); return; }
   if (tid === 'privacy') { if (App.view !== 'privacy') showPrivacy(); return; }
   if (tid === 'trophies') { if (location.hash !== '#/trophies') history.replaceState(null, '', '#/trophies'); if (App.view !== 'hall') showHall(); return; }
@@ -284,7 +287,7 @@ function route() {
   const want = `#/${tp.id}/${a.id}`; if (location.hash !== want) history.replaceState(null, '', want);
   if (App.view !== 'topic' || App.topic !== tp) {
     App.view = 'topic'; App.topic = tp; renderTabs(); $('#crumbTopic').textContent = tp.name; applyAccent(tp);
-    document.documentElement.classList.remove('at-home', 'at-hall', 'at-grownups', 'at-privacy'); document.documentElement.classList.add('in-topic');
+    document.documentElement.classList.remove('at-home', 'at-hall', 'at-grownups', 'at-privacy', 'at-players'); document.documentElement.classList.add('in-topic');
   }
   if (App.act !== a) mount(a);
 }
@@ -306,6 +309,7 @@ function checkIds() {
 }
 
 function init() {
+  if (Player.on) Store.key = Player.key;   // a signed-in kid plays from their own progress
   Store.load();
   fxInit();
   // title letters hop when hovered or tapped
@@ -320,6 +324,7 @@ function init() {
   homeInit();
   $('#readBtn').onclick = () => { if (Voice.speaking) Voice.stop(); else Voice.speak(App.current); };
   Settings.init();
+  playersInit();
   if (Voice.auto) Voice.load(); // fetching needs no tap, so the opening line can play as soon as sound is allowed
   const unlock = e => { Sound.unlocked = true; Sound.ensure(); Sound.levels(); Voice.load(); if (Store.data.music && !Music.on) Settings.setMusic(true); hearOpening(e); };
   document.addEventListener('pointerdown', unlock, { capture: true, once: true }); document.addEventListener('keydown', unlock, { capture: true, once: true });

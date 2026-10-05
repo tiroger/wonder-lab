@@ -83,6 +83,60 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     r.signedOutAgain = await p.evaluate(() => !!document.querySelector('#guEmailIn') && !localStorage.getItem('wonderlab.grownup'));
     report.laptop = r; await ctx.close();
   }
+  // ---------- kids: join with the group code, play, and progress follows them to another device ----------
+  {
+    const r = {}, bearer = { authorization: `Bearer ${idToken('parent@example.com')}` };
+    const api = async (method, path, body) => (await app({ method, path: `/api${path}`, headers: bearer, body: body ? JSON.stringify(body) : '' })).body;
+    const fam = await api('POST', '/groups', { name: 'Kid Test Family', kind: 'family' }), mia = await api('POST', `/groups/${fam.id}/kids`, { nick: 'Mia', look: 'petal' });
+    await api('POST', `/groups/${fam.id}/kids`, { nick: 'Leo', look: 'sky' });
+    const room = await api('POST', '/groups', { name: 'Room 9', kind: 'class' }), zed = await api('POST', `/groups/${room.id}/kids`, { nick: 'Zed', look: 'grape' });
+    const progressOf = id => (store.rows.get(`KID#${id}\u0000PROGRESS`) || { p: { stars: {} } }).p;
+    const said = p => p.evaluate(() => plainText(App.current));
+    // a tablet that was played on as a guest first: scanning the login card's QR link opens "Who's playing?"
+    const tablet = await device('tablet');
+    await tablet.p.evaluate(() => { Store.data.stars['parts.roots'] = 1000; Store.data.stars['parts.stem'] = 2000; Store.save(); });
+    await tablet.p.goto(SITE + '#/join/' + fam.code); await sleep(800);
+    r.join = { view: await tablet.p.evaluate(() => App.view), hash: await tablet.p.evaluate(() => location.hash), kids: await tablet.p.$$eval('.pl-kid span', xs => xs.map(x => x.textContent)), line: await said(tablet.p) };
+    await tablet.p.click('.pl-kid >> nth=0'); await sleep(600);
+    r.keep = { step: await tablet.p.evaluate(() => Players.st.step), line: await said(tablet.p) };
+    await tablet.p.click('#plKeep'); await sleep(800);
+    r.mia = await tablet.p.evaluate(() => ({ view: App.view, key: Store.key, stars: Object.keys(Store.data.stars).sort(), chip: document.querySelector('#playerBtn').textContent, line: plainText(App.current),
+      guestLeft: Object.keys(JSON.parse(localStorage.getItem('wonderlab.v1')).stars || {}).length }));
+    await sleep(2600); r.synced = Object.keys(progressOf(mia.id).stars).sort();
+    // the same kid on a phone in a fresh browser: types the code loosely, taps her name, and her stars are there
+    const phone = await device('kid phone', { viewport: { width: 390, height: 900 } });
+    await phone.p.goto(SITE + '#/players'); await sleep(600);
+    await phone.p.fill('#plCodeIn', '  ' + fam.code.toUpperCase().replace(/-/g, ' ') + ' '); await phone.p.click('#plCode button'); await sleep(600);
+    await phone.p.click('.pl-kid >> nth=0'); await sleep(1200);
+    r.phone = await phone.p.evaluate(() => ({ view: App.view, stars: Object.keys(Store.data.stars).sort(), sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth, asked: Players.st.step === 'keep' }));
+    // a star earned on the phone shows up on the tablet
+    await phone.p.evaluate(() => { Store.data.stars['seed.peel'] = Date.now(); Store.save(); }); await sleep(2600);
+    await tablet.p.reload(); await sleep(1200);
+    r.tabletAfter = await tablet.p.evaluate(() => Object.keys(Store.data.stars).sort());
+    // the grown-up gives Mia new pictures: her devices are signed out and asked to sign in again
+    await api('PATCH', `/kids/${mia.id}`, { resetPictures: true });
+    await tablet.p.evaluate(() => { Store.data.stars['seed.split'] = Date.now(); Store.save(); }); await sleep(2800);
+    r.lost = await tablet.p.evaluate(() => ({ view: App.view, player: Player.on, key: Store.key, line: plainText(App.current), step: Players.st.step }));
+    // play without signing in: back to the guest's own (now empty) progress
+    await phone.p.click('#playerBtn'); await sleep(500); await phone.p.click('#plGuest'); await sleep(600);
+    r.guest = await phone.p.evaluate(() => ({ view: App.view, player: Player.on, key: Store.key, chip: document.querySelector('#playerBtn').getAttribute('aria-label') }));
+    // a class with secret pictures: the wrong order is refused kindly, the right order signs in
+    const desk = await device('class laptop');
+    await desk.p.goto(SITE + '#/join/' + room.code); await sleep(700);
+    await desk.p.click('.pl-kid >> nth=0'); await sleep(300);
+    r.picsAsk = await said(desk.p);
+    for (const pic of [...zed.pictures].reverse()) { await desk.p.click(`[data-pic-btn="${pic}"]`); await sleep(150); }
+    await sleep(800); r.picsWrong = { line: await said(desk.p), player: await desk.p.evaluate(() => Player.on) };
+    for (const pic of zed.pictures) { await desk.p.click(`[data-pic-btn="${pic}"]`); await sleep(150); }
+    await sleep(1200); r.picsRight = await desk.p.evaluate(() => ({ view: App.view, nick: Player.on && Player.p.kid.nick }));
+    // a code that doesn't exist
+    await desk.p.goto(SITE + '#/join/maple-otter-pond-99'); await sleep(800); r.badCode = await said(desk.p);
+    r.recorded = await desk.p.evaluate(() => { const lines = [WHO_PLAYING, TYPE_CODE, CODE_UNKNOWN, TAP_PICTURES, PICTURES_WRONG, TOO_MANY, KEEP_STARS, SIGN_IN_AGAIN];
+      return Object.entries(VOICE_PACKS).flatMap(([v, pk]) => lines.filter(l => !pk.map[vkey(plainText(l))]).map(l => `${v}: ${l}`)); });
+    report.kids = r;
+    for (const d of [tablet, phone, desk]) await d.ctx.close();
+    await api('DELETE', `/groups/${fam.id}`); await api('DELETE', `/groups/${room.id}`);   // leave the grown-up as we found them
+  }
   // ---------- the same grown-up on a phone, in a fresh (incognito-like) browser: an emailed code, and the family is there ----------
   {
     const { ctx, p } = await device('phone', { viewport: { width: 390, height: 900 } }), r = {};
@@ -128,7 +182,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   }
   await browser.close();
 
-  const L = report.laptop, P = report.phone, D = report.demo;
+  const L = report.laptop, P = report.phone, D = report.demo, K = report.kids;
   const checks = {
     'Grown-ups: the page opens signed out, with no Pip narration': L.signedOut,
     'Grown-ups: a wrong code says so, the right one signs in': /didn.t match/.test(L.wrongCode) && L.welcome,
@@ -140,6 +194,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     'Grown-ups: removing a kid and deleting the account delete everything': P.afterRemove.length === 1 && P.deleted.signedOut && P.deleted.rows === 0 && !P.deleted.user,
     'Invite-only: an email without an invite is turned away, kindly, and no account is made': /hasn.t been invited/.test(report.stranger.refused.msg) && report.stranger.refused.noCodeBox && report.stranger.noAccount,
     'Invite-only: the admin invites a teacher by email and gets a message to send': L.adminCard && L.invite.list.join() === 'teacher@example.com' && L.invite.note.includes('teacher@example.com') && L.invite.note.includes('/#/grownups'),
+    'Kids: a login card link opens "Who\'s playing?" with the family\'s kids, and keeps the code out of the address bar': K.join.view === 'players' && K.join.hash === '#/players' && K.join.kids.join() === 'Mia,Leo' && K.join.line.startsWith("Who's playing today"),
+    'Kids: guest stars on the device are offered, added to the kid, and moved (not copied)': K.keep.step === 'keep' && /found stars/.test(K.keep.line) && K.mia.view === 'home' && K.mia.key.startsWith('wonderlab.kid.') && K.mia.stars.join() === 'parts.roots,parts.stem' && K.mia.guestLeft === 0 && K.mia.chip.includes('Mia') && K.mia.line.includes('Mia'),
+    'Kids: progress syncs to the API a moment after a change': K.synced.join() === 'parts.roots,parts.stem',
+    'Kids: the same kid on another device types the code loosely and finds their stars': K.phone.view === 'home' && K.phone.stars.join() === 'parts.roots,parts.stem' && !K.phone.asked && !K.phone.sideways,
+    'Kids: a star earned on one device shows up on the other': K.tabletAfter.join() === 'parts.roots,parts.stem,seed.peel',
+    'Kids: new pictures from the grown-up sign the kid out, and Pip asks them to sign in again': K.lost.view === 'players' && !K.lost.player && K.lost.key === 'wonderlab.v1' && K.lost.line.startsWith("Let's sign in again") && K.lost.step === 'code',
+    'Kids: "Play without signing in" goes back to guest progress': K.guest.view === 'home' && !K.guest.player && K.guest.key === 'wonderlab.v1' && /Who.s playing/.test(K.guest.chip),
+    'Kids: secret pictures, the wrong order is refused kindly, the right order signs in': /in order/.test(K.picsAsk) && /Not quite/.test(K.picsWrong.line) && !K.picsWrong.player && K.picsRight.view === 'home' && K.picsRight.nick === 'Zed',
+    'Kids: an unknown code gets a kind "check it" from Pip': /don.t know that code/.test(K.badCode),
+    'Kids: every line Pip says on "Who\'s playing?" is recorded in every voice': K.recorded.length === 0,
     "Invite-only: the invited teacher signs up, sees none of the family's groups, and isn't an admin": report.teacher.groups.length === 0 && !report.teacher.adminCard && report.teacher.joined,
     'Demo: a sample class of six, changes kept in this browser, reset and leave work': D.start[0].kids.length === 6 && D.added === 7 && D.kept === 7 && D.reset === 6 && D.classes === 2 && D.left,
     'Demo: nothing is sent to the API or to Cognito': D.network.api === 0 && D.network.cognito === 0,

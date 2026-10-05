@@ -39,8 +39,10 @@ export function routes({ store, verify, config = {} }) {
     for (let i = 0; i < 8; i++) { const code = newCode(); if (await store.putNew({ pk: `CODE#${code}`, sk: 'META', gid })) return code; }
     throw new Error('could not find a free group code');
   }
+  // each kid keeps a list of their device tokens (KID#id / TOKEN#hash), so removing them or resetting their pictures removes the tokens too
+  async function dropTokens(kid) { for (const t of await store.query(`KID#${kid}`, 'TOKEN#')) { await store.del(`TOKEN#${t.hash}`, 'META'); await store.del(`KID#${kid}`, t.sk); } }
   async function removeKid(gid, kid) {
-    await store.del(`GROUP#${gid}`, `KID#${kid}`); await store.del(`KID#${kid}`, 'META'); await store.del(`KID#${kid}`, 'PROGRESS');
+    await dropTokens(kid); await store.del(`GROUP#${gid}`, `KID#${kid}`); await store.del(`KID#${kid}`, 'META'); await store.del(`KID#${kid}`, 'PROGRESS');
   }
   async function removeGroup(g) {
     for (const k of await store.query(`GROUP#${g.gid}`, 'KID#')) await removeKid(g.gid, k.kid);
@@ -108,7 +110,7 @@ export function routes({ store, verify, config = {} }) {
       const o = await ownedKid(a, id); if (!o) return NOT_FOUND; const k = o.k;
       if (body.nick != null) { const n = cleanNick(body.nick); if (!n) return fail(400, 'bad nickname'); k.nick = n; }
       if (body.look != null) { if (!LOOKS.includes(body.look)) return fail(400, 'bad look'); k.look = body.look; }
-      if (body.resetPictures) { k.pics = newPictures(); k.epoch++; }   // new pictures sign the kid out everywhere
+      if (body.resetPictures) { k.pics = newPictures(); k.epoch++; await dropTokens(k.kid); }   // new pictures sign the kid out everywhere
       await store.put(k); return ok(fullKid(k));
     },
     'DELETE /kids/:id': async (a, body, id) => { const o = await ownedKid(a, id); if (!o) return NOT_FOUND; await removeKid(o.g.gid, id); return ok({ deleted: true }); },
@@ -144,8 +146,9 @@ export function routes({ store, verify, config = {} }) {
         const p = Array.isArray(body.pictures) ? body.pictures : [];
         if (p.length !== 2 || p[0] !== k.pics[0] || p[1] !== k.pics[1]) { await store.bump(rate, slot, PICTURE_WINDOW); return fail(401, 'wrong pictures'); }
       }
-      const token = newToken();
-      await store.put({ pk: `TOKEN#${hashToken(token)}`, sk: 'META', kid: k.kid, gid: g.gid, epoch: k.epoch, ttl: Math.floor(Date.now() / 1000) + TOKEN_DAYS * 86400 });
+      const token = newToken(), hash = hashToken(token), ttl = Math.floor(Date.now() / 1000) + TOKEN_DAYS * 86400;
+      await store.put({ pk: `TOKEN#${hash}`, sk: 'META', kid: k.kid, gid: g.gid, epoch: k.epoch, ttl });
+      await store.put({ pk: `KID#${k.kid}`, sk: `TOKEN#${hash}`, hash, ttl });
       return ok({ token, kid: publicKid(k), group: { name: g.name } });
     },
   };
@@ -157,7 +160,7 @@ export function routes({ store, verify, config = {} }) {
       await store.put({ pk: `KID#${d.k.kid}`, sk: 'PROGRESS', p: merged, updated: Date.now() });
       return ok({ progress: merged });
     },
-    'POST /play/signout': async (d) => { await store.del(`TOKEN#${d.hash}`, 'META'); return ok({ signedOut: true }); },
+    'POST /play/signout': async (d) => { await store.del(`TOKEN#${d.hash}`, 'META'); await store.del(`KID#${d.k.kid}`, `TOKEN#${d.hash}`); return ok({ signedOut: true }); },
   };
 
   // --- dispatch: "METHOD /path" with :params ---
