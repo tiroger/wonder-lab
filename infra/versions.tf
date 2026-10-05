@@ -1,7 +1,9 @@
 terraform {
   required_version = ">= 1.10"
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+    aws     = { source = "hashicorp/aws", version = "~> 6.0" }
+    archive = { source = "hashicorp/archive", version = "~> 2.7" }
+    random  = { source = "hashicorp/random", version = "~> 3.7" }
   }
   # State lives in S3 (created once by infra/bootstrap). use_lockfile gives S3-native locking, no DynamoDB needed.
   backend "s3" {

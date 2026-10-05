@@ -1,0 +1,7 @@
+{
+  "name": "wonder-lab-api",
+  "private": true,
+  "type": "module",
+  "description": "Wonder Lab's API: one Lambda, no dependencies beyond the AWS SDK that comes with the runtime",
+  "scripts": { "test": "node --test test/" }
+}

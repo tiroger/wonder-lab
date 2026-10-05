@@ -2,6 +2,7 @@
 #   - the S3 bucket that holds the site's Terraform state
 #   - a read-only plan role that pull requests use for `terraform plan`
 #   - a deploy role that only the repo's `production` GitHub environment can assume
+#   - the IAM roles the app itself needs (the API's execution role, Cognito's email role), so CI never needs IAM
 # Both roles are reached through GitHub OIDC with short-lived sessions. No AWS keys on a laptop or in GitHub.
 # This root keeps its own state locally, because it creates the bucket the other root stores state in.
 
@@ -54,6 +55,45 @@ locals {
   site_names  = [var.domain, "www.${var.domain}"]
   site_bucket = "${local.prefix}-site"
   subjects    = ["repo:${var.github_repo}", "repo:${var.github_repo_immutable}"] # both subject formats
+  # the accounts pieces (infra/accounts.tf) are all named wonder-lab-*
+  app       = "wonder-lab"
+  table_arn = "arn:aws:dynamodb:us-east-1:${local.account}:table/${local.app}-*"
+  fn_arn    = "arn:aws:lambda:us-east-1:${local.account}:function:${local.app}-*"
+  logs_arn  = "arn:aws:logs:us-east-1:${local.account}:log-group:/aws/lambda/${local.app}-*"
+  ses_arn   = "arn:aws:ses:us-east-1:${local.account}:identity/${var.domain}"
+  pools_arn = "arn:aws:cognito-idp:us-east-1:${local.account}:userpool/*"
+}
+
+# ------------------------------------------------------- roles the app needs --
+# The API's Lambda: its own table and its own logs, nothing else.
+resource "aws_iam_role" "api" {
+  name        = "${local.app}-api"
+  description = "Wonder Lab API (Lambda): reads and writes the accounts table"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "lambda.amazonaws.com" } }]
+  })
+}
+data "aws_iam_policy_document" "api" {
+  statement {
+    sid       = "Table"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Query"]
+    resources = ["arn:aws:dynamodb:us-east-1:${local.account}:table/${local.app}-accounts"]
+  }
+  statement {
+    sid       = "Logs"
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = ["arn:aws:logs:us-east-1:${local.account}:log-group:/aws/lambda/${local.app}-api:*"]
+  }
+}
+resource "aws_iam_role_policy" "api" {
+  name   = "${local.app}-api"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api.json
+}
+# Cognito sends sign-in codes through SES with this AWS-defined role (one per account)
+resource "aws_iam_service_linked_role" "cognito_email" {
+  aws_service_name = "email.cognito-idp.amazonaws.com"
 }
 
 # ---------------------------------------------------------------- state bucket --
@@ -156,6 +196,27 @@ data "aws_iam_policy_document" "plan" {
     actions   = ["route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:GetChange"]
     resources = ["*"]
   }
+  # the accounts pieces' settings, never the data in the table
+  statement {
+    sid       = "AccountsRead"
+    actions   = ["dynamodb:Describe*", "dynamodb:ListTagsOfResource", "dynamodb:GetResourcePolicy", "lambda:Get*", "lambda:List*", "logs:ListTagsForResource", "logs:ListTagsLogGroup", "ses:GetEmailIdentity", "ses:ListTagsForResource"]
+    resources = [local.table_arn, local.fn_arn, local.logs_arn, "${local.logs_arn}:*", local.ses_arn]
+  }
+  statement {
+    sid       = "UserPoolRead"
+    actions   = ["cognito-idp:Describe*", "cognito-idp:Get*", "cognito-idp:ListTagsForResource"]
+    resources = [local.pools_arn]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [local.project]
+    }
+  }
+  statement {
+    sid       = "LogGroupsList"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["*"]
+  }
 }
 resource "aws_iam_role_policy" "plan" {
   name   = "wonder-lab-plan"
@@ -190,8 +251,8 @@ resource "aws_iam_role" "deploy" {
   max_session_duration = 3600
 }
 
-# Scoped to what the site's Terraform and the Deploy workflow touch. No IAM permissions at all,
-# so a compromised workflow can't widen its own access.
+# Scoped to what the site's Terraform and the Deploy workflow touch. No IAM permissions beyond handing the API its
+# one bootstrap-made role, so a compromised workflow can't widen its own access.
 data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "TerraformState"
@@ -294,6 +355,70 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "DnsRead"
     actions   = ["route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:GetChange"]
+    resources = ["*"]
+  }
+
+  # ---- accounts (infra/accounts.tf): everything named wonder-lab-* or tagged Project=wonderlab ----
+  statement {
+    sid = "AccountsTable" # managing the table, never reading or writing the data in it
+    actions = ["dynamodb:CreateTable", "dynamodb:DeleteTable", "dynamodb:UpdateTable", "dynamodb:Describe*", "dynamodb:List*", "dynamodb:GetResourcePolicy",
+    "dynamodb:UpdateContinuousBackups", "dynamodb:UpdateTimeToLive", "dynamodb:TagResource", "dynamodb:UntagResource"]
+    resources = [local.table_arn]
+  }
+  statement {
+    sid       = "ApiFunction"
+    actions   = ["lambda:*"]
+    resources = [local.fn_arn]
+  }
+  statement {
+    sid       = "ApiRole" # hands the bootstrap-made role to the API's Lambda, and nothing else
+    actions   = ["iam:PassRole"]
+    resources = [aws_iam_role.api.arn]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["lambda.amazonaws.com"]
+    }
+  }
+  statement {
+    sid = "ApiLogs"
+    actions = ["logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:PutRetentionPolicy", "logs:DeleteRetentionPolicy", "logs:TagResource", "logs:UntagResource",
+    "logs:TagLogGroup", "logs:UntagLogGroup", "logs:ListTagsForResource", "logs:ListTagsLogGroup"]
+    resources = [local.logs_arn, "${local.logs_arn}:*"]
+  }
+  statement {
+    sid       = "LogGroupsList"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "EmailIdentity" # the domain that sends sign-in codes
+    actions   = ["ses:*EmailIdentity*", "ses:TagResource", "ses:UntagResource", "ses:ListTagsForResource"]
+    resources = [local.ses_arn]
+  }
+  statement {
+    sid       = "UserPoolCreate" # only with this project's tag
+    actions   = ["cognito-idp:CreateUserPool", "cognito-idp:TagResource"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [local.project]
+    }
+  }
+  statement {
+    sid       = "UserPool" # this project's user pool and its app client, by tag
+    actions   = ["cognito-idp:*"]
+    resources = [local.pools_arn]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [local.project]
+    }
+  }
+  statement {
+    sid       = "UserPoolList"
+    actions   = ["cognito-idp:ListUserPools"]
     resources = ["*"]
   }
 }
