@@ -8,7 +8,7 @@ export const MAX_GROUPS = 20;
 export const LOOKS = ['leaf', 'sun', 'sky', 'petal', 'carrot', 'grape', 'berry', 'sea'];
 export const PICTURES = ['frog', 'sun', 'rocket', 'apple', 'fish', 'star', 'leaf', 'moon', 'bee'];
 // what syncs: maps of id -> when it was earned or seen (ms), or 1 for older saves without a time
-export const PROGRESS_KEYS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen'];
+export const PROGRESS_KEYS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen', 'resets'];
 const MAX_ENTRIES = 2000;
 
 export const newId = () => randomBytes(9).toString('base64url');
@@ -27,15 +27,20 @@ export function cleanName(s, max) {
 export const cleanNick = s => cleanName(s, 24);
 export const cleanGroupName = s => cleanName(s, 40);
 
-// progress only grows: keep every id from both sides, with the earliest time
+// Earned ids merge with their earliest time. Reset markers merge with their latest time;
+// '*' clears all progress, other markers clear that id in every map (including seen badges).
 export function mergeProgress(a = {}, b = {}) {
-  const out = {};
-  for (const k of PROGRESS_KEYS) {
-    const m = { ...(a[k] || {}) };
-    for (const [id, v] of Object.entries(b[k] || {})) m[id] = id in m ? earliest(m[id], v) : v;
+  const resets = { ...(a.resets || {}) }, out = {};
+  for (const [id, v] of Object.entries(b.resets || {})) resets[id] = Math.max(resets[id] || 0, v);
+  for (const k of PROGRESS_KEYS.filter(k => k !== 'resets')) {
+    const m = {};
+    for (const source of [a, b]) for (const [id, v] of Object.entries(source[k] || {})) {
+      if (v <= Math.max(resets['*'] || 0, resets[id] || 0)) continue;
+      m[id] = id in m ? earliest(m[id], v) : v;
+    }
     out[k] = m;
   }
-  return out;
+  out.resets = resets; return out;
 }
 const earliest = (x, y) => (x > 1 && y > 1 ? Math.min(x, y) : Math.max(x, y));
 // a progress upload: known keys only, sensible ids, numbers only, not too big
@@ -48,7 +53,7 @@ export function cleanProgress(p) {
     const entries = Object.entries(m); if (entries.length > MAX_ENTRIES) return null;
     out[k] = {};
     for (const [id, v] of entries) {
-      if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(id)) return null;
+      if (!(k === 'resets' && id === '*') && !/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(id)) return null;
       const n = v === true ? 1 : Number(v); if (!Number.isFinite(n) || n < 0) return null;
       out[k][id] = Math.round(n);
     }

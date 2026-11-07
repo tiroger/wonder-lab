@@ -113,6 +113,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await phone.p.evaluate(() => { Store.data.stars['seed.peel'] = Date.now(); Store.save(); }); await sleep(2600);
     await tablet.p.reload(); await sleep(1200);
     r.tabletAfter = await tablet.p.evaluate(() => Object.keys(Store.data.stars).sort());
+    // Resetting an activity reaches the other device; its stale upload cannot bring the stars back.
+    await tablet.p.evaluate(async () => { Settings.resetActivity(A_parts); await Sync.push(); });
+    await phone.p.evaluate(() => Sync.push());
+    r.activityReset = { tablet: await tablet.p.evaluate(() => Object.keys(Store.data.stars).sort()),
+      phone: await phone.p.evaluate(() => Object.keys(Store.data.stars).sort()), server: Object.keys(progressOf(mia.id).stars).sort() };
+    await tablet.p.evaluate(async () => { Store.data.stars['parts.roots'] = Date.now(); Store.save(); await Sync.push(); });
+    await phone.p.evaluate(() => Sync.pull());
+    r.reEarned = await phone.p.evaluate(() => !!Store.data.stars['parts.roots']);
+    // Start over also clears campus progress and seen rewards, and survives the other device syncing.
+    await tablet.p.evaluate(async () => { Store.data.critters = { owl: 10 }; Store.data.hallSeen = { 'b.parts': 1 }; Settings.resetAll(); await Sync.push(); });
+    await phone.p.evaluate(() => Sync.push());
+    r.resetAll = [progressOf(mia.id), await phone.p.evaluate(() => Sync.progress())].every(p =>
+      ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen'].every(k => Object.keys(p[k] || {}).length === 0));
     // the grown-up gives Mia new pictures: her devices are signed out and asked to sign in again
     await api('PATCH', `/kids/${mia.id}`, { resetPictures: true });
     await tablet.p.evaluate(() => { Store.data.stars['seed.split'] = Date.now(); Store.save(); }); await sleep(2800);
@@ -206,6 +219,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     'Kids: progress syncs to the API a moment after a change': K.synced.join() === 'parts.roots,parts.stem',
     'Kids: the same kid on another device types the code loosely and finds their stars': K.phone.view === 'home' && K.phone.stars.join() === 'parts.roots,parts.stem' && !K.phone.asked && !K.phone.sideways,
     'Kids: a star earned on one device shows up on the other': K.tabletAfter.join() === 'parts.roots,parts.stem,seed.peel',
+    'Kids: an activity reset survives a stale upload, preserves other activities, and allows re-earning': K.reEarned && Object.values(K.activityReset).every(ids => ids.join() === 'seed.peel'),
+    'Kids: start over clears progress on both devices and stays cleared after sync': K.resetAll,
     'Kids: new pictures from the grown-up sign the kid out, and Pip asks them to sign in again': K.lost.view === 'players' && !K.lost.player && K.lost.key === 'wonderlab.v1' && K.lost.line.startsWith("Let's sign in again") && K.lost.step === 'code',
     'Kids: "Play without signing in" goes back to guest progress': K.guest.view === 'home' && !K.guest.player && K.guest.key === 'wonderlab.v1' && /Who.s playing/.test(K.guest.chip),
     'Kids: secret pictures, the wrong order is refused kindly, the right order signs in': /in order/.test(K.picsAsk) && /Not quite/.test(K.picsWrong.line) && !K.picsWrong.player && K.picsRight.view === 'home' && K.picsRight.nick === 'Zed',

@@ -5,6 +5,11 @@ export function memoryStore() {
     rows,
     async get(pk, sk) { return copy(rows.get(key(pk, sk))) || null; },
     async put(item) { rows.set(key(item.pk, item.sk), copy(item)); },
+    async compareAndPut(item, revision) {
+      const k = key(item.pk, item.sk);
+      if ((rows.get(k)?.revision || 0) !== revision) return false;
+      rows.set(k, copy(item)); return true;
+    },
     async putNew(item) { if (rows.has(key(item.pk, item.sk))) return false; rows.set(key(item.pk, item.sk), copy(item)); return true; },
     async del(pk, sk) { rows.delete(key(pk, sk)); },
     async query(pk, prefix) { return [...rows.values()].filter(r => r.pk === pk && r.sk.startsWith(prefix)).sort((a, b) => a.sk < b.sk ? -1 : 1).map(copy); },

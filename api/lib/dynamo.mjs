@@ -5,8 +5,17 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, QueryCom
 export function dynamoStore(table) {
   const db = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
   return {
-    async get(pk, sk) { return (await db.send(new GetCommand({ TableName: table, Key: { pk, sk } }))).Item || null; },
+    async get(pk, sk) { return (await db.send(new GetCommand({ TableName: table, Key: { pk, sk }, ConsistentRead: true }))).Item || null; },
     async put(item) { await db.send(new PutCommand({ TableName: table, Item: item })); },
+    // Replace only the revision we read. Older progress rows have no revision yet.
+    async compareAndPut(item, revision) {
+      try {
+        await db.send(new PutCommand({ TableName: table, Item: item,
+          ConditionExpression: revision ? '#rev = :rev' : 'attribute_not_exists(#rev)',
+          ExpressionAttributeNames: { '#rev': 'revision' }, ...(revision ? { ExpressionAttributeValues: { ':rev': revision } } : {}) }));
+        return true;
+      } catch (e) { if (e.name === 'ConditionalCheckFailedException') return false; throw e; }
+    },
     async putNew(item) {
       try { await db.send(new PutCommand({ TableName: table, Item: item, ConditionExpression: 'attribute_not_exists(pk)' })); return true; }
       catch (e) { if (e.name === 'ConditionalCheckFailedException') return false; throw e; }

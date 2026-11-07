@@ -125,7 +125,7 @@ test('guessing group codes is limited per address', async () => {
 
 test('the rules: merging, cleaning, codes', () => {
   assert.deepEqual(mergeProgress({ stars: { a: 1 } }, { stars: { a: 500 } }).stars, { a: 500 }, 'a time beats an old-style 1');
-  assert.deepEqual(mergeProgress({}, {}), { stars: {}, badges: {}, critters: {}, gardenSeen: {}, hallSeen: {} });
+  assert.deepEqual(mergeProgress({}, {}), { resets: {}, stars: {}, badges: {}, critters: {}, gardenSeen: {}, hallSeen: {} });
   assert.equal(cleanProgress([]), null); assert.equal(cleanProgress({ stars: { a: -1 } }), null); assert.equal(cleanProgress({ stars: { a: 'x' } }), null);
   assert.deepEqual(cleanProgress({ stars: { 'quiz.q1': true }, junk: 1 }).stars, { 'quiz.q1': 1 }, 'unknown keys dropped');
   assert.equal(normalCode('  Maple  Otter—Pond 42 '), 'maple-otter-pond-42');
@@ -179,4 +179,51 @@ test('an expired device token no longer works, even before the table deletes it'
   const tok = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token;
   for (const r of t.store.rows.values()) if (r.pk.startsWith('TOKEN#')) r.ttl = Math.floor(Date.now() / 1000) - 1;
   assert.equal((await t.call('GET', '/play', { auth: `Device ${tok}` })).status, 401);
+});
+
+test('overlapping progress uploads keep every device’s discoveries, including legacy rows', async () => {
+  const t = setup(), { g, sam } = await family(t);
+  const token = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token, auth = `Device ${token}`;
+  // A saved profile from before revisions were introduced must migrate without losing anything.
+  await t.store.put({ pk: `KID#${sam.id}`, sk: 'PROGRESS', p: { stars: { legacy: 1 } } });
+  const res = await Promise.all(Array.from({ length: 10 }, (_, i) => t.call('PUT', '/play/progress', { auth,
+    body: { progress: { stars: { [`device.${i}`]: 100 + i } } } })));
+  assert.ok(res.every(r => r.status === 200));
+  const p = (await t.call('GET', '/play', { auth })).body.progress;
+  assert.deepEqual(p.stars, { legacy: 1, ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`device.${i}`, 100 + i])) });
+});
+
+test('an activity reset survives stale uploads; re-earned stars and other activities survive', async () => {
+  const t = setup(), { g, sam } = await family(t);
+  const token = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token, auth = `Device ${token}`;
+  const stale = { stars: { 'parts.roots': 10, 'seed.coat': 12 }, badges: { 'b.parts': 14, 'b.botanist': 16 }, hallSeen: { 'b.parts': 1 } };
+  await t.call('PUT', '/play/progress', { auth, body: { progress: stale } });
+  const reset = { resets: { 'parts.roots': 20, 'b.parts': 20, 'b.botanist': 20 } };
+  await Promise.all([t.call('PUT', '/play/progress', { auth, body: { progress: reset } }), t.call('PUT', '/play/progress', { auth, body: { progress: stale } })]);
+  let p = (await t.call('GET', '/play', { auth })).body.progress;
+  assert.deepEqual(p.stars, { 'seed.coat': 12 }); assert.deepEqual(p.badges, {}); assert.deepEqual(p.hallSeen, {});
+  await t.call('PUT', '/play/progress', { auth, body: { progress: { stars: { 'parts.roots': 30 } } } });
+  p = (await t.call('PUT', '/play/progress', { auth, body: { progress: stale } })).body.progress;
+  assert.equal(p.stars['parts.roots'], 30, 'the old timestamp cannot erase a re-earned star');
+});
+
+test('start over clears every progress map and stale devices cannot restore it', async () => {
+  const t = setup(), { g, sam } = await family(t);
+  const token = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token, auth = `Device ${token}`;
+  const stale = { stars: { a: 10 }, badges: { b: 12 }, critters: { owl: 14 }, gardenSeen: { b: 1 }, hallSeen: { b: 1 } };
+  await t.call('PUT', '/play/progress', { auth, body: { progress: stale } });
+  await t.call('PUT', '/play/progress', { auth, body: { progress: { resets: { '*': 20 } } } });
+  const p = (await t.call('PUT', '/play/progress', { auth, body: { progress: stale } })).body.progress;
+  for (const key of Object.keys(stale)) assert.deepEqual(p[key], {});
+  assert.deepEqual(p.resets, { '*': 20 });
+  assert.equal(cleanProgress({ stars: { '*': 10 } }), null);
+  assert.equal(cleanProgress({ resets: { '*': -1 } }), null);
+});
+
+test('contention is bounded and returns a retryable conflict without claiming a save', async () => {
+  const t = setup(), { g, sam } = await family(t);
+  const token = (await t.call('POST', `/join/${g.code}/kids/${sam.id}`)).body.token;
+  t.store.compareAndPut = async () => false;
+  const res = await t.call('PUT', '/play/progress', { auth: `Device ${token}`, body: { progress: { stars: { a: 10 } } } });
+  assert.equal(res.status, 409); assert.equal(await t.store.get(`KID#${sam.id}`, 'PROGRESS'), null);
 });
