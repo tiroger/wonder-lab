@@ -162,12 +162,20 @@ const DemoApi = {
   },
 };
 const WORDS_DEMO = ['maple', 'otter', 'pond', 'comet', 'tulip', 'fern', 'robin', 'acorn', 'meadow', 'lantern', 'pebble', 'willow'];
-// progress only grows: every id from both sides, the earliest time (the same rule as the API's)
-const PROGRESS_MAPS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen'];
+// Keep earned ids after the latest reset, with their earliest time (the same rule as the API's).
+const PROGRESS_MAPS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen', 'resets'];
 function mergeProgress(a = {}, b = {}) {
-  const out = {};
-  for (const k of PROGRESS_MAPS) { const m = { ...(a[k] || {}) }; for (const [id, v] of Object.entries(b[k] || {})) m[id] = id in m ? (m[id] > 1 && v > 1 ? Math.min(m[id], v) : Math.max(m[id], v)) : v; out[k] = m; }
-  return out;
+  const resets = { ...(a.resets || {}) }, out = {};
+  for (const [id, v] of Object.entries(b.resets || {})) resets[id] = Math.max(resets[id] || 0, v);
+  for (const k of PROGRESS_MAPS.filter(k => k !== 'resets')) {
+    const m = {};
+    for (const source of [a, b]) for (const [id, v] of Object.entries(source[k] || {})) {
+      if (v <= Math.max(resets['*'] || 0, resets[id] || 0)) continue;
+      m[id] = id in m ? (m[id] > 1 && v > 1 ? Math.min(m[id], v) : Math.max(m[id], v)) : v;
+    }
+    out[k] = m;
+  }
+  out.resets = resets; return out;
 }
 function hasBadgeIn(a, stars) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => stars[s.id]).length >= need; }
 

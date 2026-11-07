@@ -93,7 +93,7 @@ function showHall() {
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();
   // everything earned so far is now seen; the map stops sparkling
-  Store.data.hallSeen = Object.fromEntries(hallAll().filter(b => Store.data.badges[b.id]).map(b => [b.id, 1])); Store.save();
+  Store.data.hallSeen = Object.fromEntries(hallAll().filter(b => Store.data.badges[b.id]).map(b => [b.id, Date.now()])); Store.save();
   App.greeted = true; say(HALL_HELLO, { lock: false });
 }
 addEventListener('resize', () => { if (App.view === 'hall') drawGarland($('#garland')); });

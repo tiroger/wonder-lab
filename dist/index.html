@@ -2869,20 +2869,22 @@ const Settings = {
     };
   },
   resetActivity(a) {
-    for (const s of a.stars) delete Store.data.stars[s.id];
     const tp = TOPICS.find(t => t.activities.includes(a));
-    delete Store.data.badges[a.badge.id]; delete Store.data.badges[tp.master.id]; Store.save();
+    const ids = [...a.stars.map(s => s.id), a.badge.id, tp.master.id], now = Date.now();
+    Object.assign(Store.data, mergeProgress(Store.data, { resets: Object.fromEntries(ids.map(id => [id, now])) })); Store.save();
     Sound.whoosh(); refresh(); this.renderProgress();
     const msg = 'Fresh start! Every star in this activity is ready to be found again.';
     if (App.act === a) mount(a, msg); else say(msg); // said with the intro, so one doesn't cut off the other
   },
   resetAll() {
-    Store.data.stars = {}; Store.data.badges = {}; Store.save();
+    Object.assign(Store.data, mergeProgress(Store.data, { resets: { '*': Date.now() } })); Store.save();
     Sound.whoosh(); refresh(); this.renderProgress();
+    if (App.view === 'home') renderCritters();
     const msg = 'All clear! Every star is ready to be found again.';
     if (App.act) mount(App.act, msg); else say(msg);
   },
   renderProgress() {
+    $('#resetNote').textContent = Player.on ? "Clears this player’s progress on every device after syncing." : "Clears every star and badge on this device.";
     const ul = $('#progressList'); ul.innerHTML = '';
     for (const a of TOPICS.flatMap(t => t.activities)) {
       const n = a.stars.filter(s => Store.data.stars[s.id]).length;
@@ -3123,7 +3125,7 @@ function showHome() {
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};
-    Home.fresh = new Set(grown.filter(id => !seen[id])); Store.data.gardenSeen = Object.fromEntries(grown.map(id => [id, 1])); Store.save();
+    Home.fresh = new Set(grown.filter(id => !seen[id])); Store.data.gardenSeen = Object.fromEntries(grown.map(id => [id, Date.now()])); Store.save();
   }
   const news = Home.fresh && Home.fresh.size ? GARDEN_NEW : null;
   let line = news || HOME_NEXT;
@@ -3228,7 +3230,7 @@ function showHall() {
   $('#crumbTopic').textContent = 'Trophy Hall';
   renderHall(); refresh();
   // everything earned so far is now seen; the map stops sparkling
-  Store.data.hallSeen = Object.fromEntries(hallAll().filter(b => Store.data.badges[b.id]).map(b => [b.id, 1])); Store.save();
+  Store.data.hallSeen = Object.fromEntries(hallAll().filter(b => Store.data.badges[b.id]).map(b => [b.id, Date.now()])); Store.save();
   App.greeted = true; say(HALL_HELLO, { lock: false });
 }
 addEventListener('resize', () => { if (App.view === 'hall') drawGarland($('#garland')); });
@@ -4107,12 +4109,20 @@ const DemoApi = {
   },
 };
 const WORDS_DEMO = ['maple', 'otter', 'pond', 'comet', 'tulip', 'fern', 'robin', 'acorn', 'meadow', 'lantern', 'pebble', 'willow'];
-// progress only grows: every id from both sides, the earliest time (the same rule as the API's)
-const PROGRESS_MAPS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen'];
+// Keep earned ids after the latest reset, with their earliest time (the same rule as the API's).
+const PROGRESS_MAPS = ['stars', 'badges', 'critters', 'gardenSeen', 'hallSeen', 'resets'];
 function mergeProgress(a = {}, b = {}) {
-  const out = {};
-  for (const k of PROGRESS_MAPS) { const m = { ...(a[k] || {}) }; for (const [id, v] of Object.entries(b[k] || {})) m[id] = id in m ? (m[id] > 1 && v > 1 ? Math.min(m[id], v) : Math.max(m[id], v)) : v; out[k] = m; }
-  return out;
+  const resets = { ...(a.resets || {}) }, out = {};
+  for (const [id, v] of Object.entries(b.resets || {})) resets[id] = Math.max(resets[id] || 0, v);
+  for (const k of PROGRESS_MAPS.filter(k => k !== 'resets')) {
+    const m = {};
+    for (const source of [a, b]) for (const [id, v] of Object.entries(source[k] || {})) {
+      if (v <= Math.max(resets['*'] || 0, resets[id] || 0)) continue;
+      m[id] = id in m ? (m[id] > 1 && v > 1 ? Math.min(m[id], v) : Math.max(m[id], v)) : v;
+    }
+    out[k] = m;
+  }
+  out.resets = resets; return out;
 }
 function hasBadgeIn(a, stars) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => stars[s.id]).length >= need; }
 
@@ -4347,37 +4357,46 @@ const Player = {
   get on() { return !!(this.p && this.p.token); },
   get key() { return this.p ? `wonderlab.kid.${this.p.kid.id}` : GUEST_KEY; },
   // play as this kid: their own progress on this device, the device's settings, their nickname for Pip
-  begin(p) { this.p = p; store2.set(PLAYER_KEY, p); Store.switchTo(this.key, { name: p.kid.nick }); App.greeted = false; Settings.apply(); },
+  begin(p) { Sync.cancel(); this.p = p; store2.set(PLAYER_KEY, p); Store.switchTo(this.key, { name: p.kid.nick }); App.greeted = false; Settings.apply(); },
   end() {
-    const p = this.p; this.p = null; store2.set(PLAYER_KEY, null); Store.switchTo(GUEST_KEY); App.greeted = false; Settings.apply();
+    Sync.cancel(); const p = this.p; this.p = null; store2.set(PLAYER_KEY, null); Store.switchTo(GUEST_KEY); App.greeted = false; Settings.apply();
     if (p && p.token) Api.call('POST', '/play/signout', null, { device: p.token }).catch(() => {});
   },
 };
 
 // ---------- sync: a moment after every save, send this kid's progress; merge back whatever the API knows ----------
 const Sync = {
-  timer: null, busy: false,
-  progress() { const d = Store.data; return Object.fromEntries(PROGRESS_MAPS.map(k => [k, d[k] || {}])); },
-  schedule() { if (!Player.on) return; clearTimeout(this.timer); this.timer = setTimeout(() => this.push(), 2000); },
+  timer: null, busy: null, dirty: false,
+  progress() { const d = Store.data; return Object.fromEntries(PROGRESS_MAPS.map(k => [k, { ...(d[k] || {}) }])); },
+  cancel() { clearTimeout(this.timer); this.timer = null; this.busy = null; this.dirty = false; },
+  current(p, key) { return Player.p === p && Store.key === key; },
+  schedule(delay = 2000) { if (!Player.on) return; this.dirty = true; clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = null; this.push(); }, delay); },
   take(remote) {   // merge the API's copy into ours; anything new (a star earned on another device) shows up here
     const merged = mergeProgress(this.progress(), remote), before = JSON.stringify(this.progress());
     Object.assign(Store.data, merged); Store.save(true);
-    if (JSON.stringify(merged) !== before) refresh();
+    if (JSON.stringify(merged) !== before) { refresh(); if (App.view === 'home') renderCritters(); }
   },
   async push() {
-    if (!Player.on || this.busy) return; this.busy = true;
-    try { this.take((await Api.call('PUT', '/play/progress', { progress: this.progress() }, { device: Player.p.token })).progress); }
-    catch (e) { if (e.status === 401) lostPlayer(); else this.timer = setTimeout(() => this.push(), 30000); }   // offline: try again later
-    this.busy = false;
+    if (!Player.on || this.busy) return;
+    const p = Player.p, key = Store.key, request = {}; this.busy = request; this.dirty = false;
+    try {
+      const r = await Api.call('PUT', '/play/progress', { progress: this.progress() }, { device: p.token });
+      if (this.current(p, key)) this.take(r.progress);
+    } catch (e) {
+      if (this.current(p, key)) { if (e.status === 401) lostPlayer(); else this.schedule(30000); } // offline or busy: keep the local save
+    } finally {
+      if (this.busy === request) { this.busy = null; if (this.dirty && !this.timer) this.schedule(); }
+    }
   },
   async pull() {
     if (!Player.on) return;
-    try { this.take((await Api.call('GET', '/play', null, { device: Player.p.token })).progress); }
-    catch (e) { if (e.status === 401) lostPlayer(); }
+    const p = Player.p, key = Store.key;
+    try { const r = await Api.call('GET', '/play', null, { device: p.token }); if (this.current(p, key)) this.take(r.progress); }
+    catch (e) { if (e.status === 401 && this.current(p, key)) lostPlayer(); }
   },
 };
 // the grown-up removed this kid or gave them new pictures: back to "Who's playing?"
-function lostPlayer() { const p = Player.p; try { localStorage.removeItem(Player.key); } catch (e) {} Player.p = null; store2.set(PLAYER_KEY, null); Store.switchTo(GUEST_KEY); Settings.apply(); Players.st = { step: 'code' }; if (p) Players.lost = true; go('#/players'); }
+function lostPlayer() { const p = Player.p, key = Player.key; Sync.cancel(); Player.p = null; store2.set(PLAYER_KEY, null); Store.switchTo(GUEST_KEY); try { localStorage.removeItem(key); } catch (e) {} Settings.apply(); Players.st = { step: 'code' }; if (p) Players.lost = true; go('#/players'); }
 
 // ---------- the "Who's playing?" screen (#/players, #/join/<code>) ----------
 const Players = { st: { step: 'code' }, busy: false, lost: false };
@@ -4439,7 +4458,9 @@ async function keepGuestStars(yes) {
   if (yes) {
     try {
       const g = JSON.parse(localStorage.getItem(GUEST_KEY)) || {};
-      Object.assign(Store.data, mergeProgress(Sync.progress(), g)); if (!Store.data.last && g.last) Store.data.last = g.last;
+      // Guest resets belong to the guest; importing stars must never reset this kid's existing progress.
+      const earned = Object.fromEntries(PROGRESS_MAPS.filter(k => k !== 'resets').map(k => [k, g[k] || {}]));
+      Object.assign(Store.data, mergeProgress(Sync.progress(), earned)); if (!Store.data.last && g.last) Store.data.last = g.last;
       for (const k of PROGRESS_MAPS) g[k] = {}; g.last = ''; localStorage.setItem(GUEST_KEY, JSON.stringify(g));   // moved, so no one else claims them
     } catch (e) {}
     Sound.grow(2);

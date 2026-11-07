@@ -1,8 +1,9 @@
 // Every API route. `store` is the table (DynamoDB in production, an in-memory map in tests):
 //   get(pk, sk), put(item), putNew(item) -> false if it exists, del(pk, sk), query(pk, skPrefix),
+//   compareAndPut(item, revision) -> false if another writer changed that revision,
 //   reserve(pk, sk, ttlSeconds, limit) -> false once `limit` tries are used (atomic), release(pk, sk) -> gives one back
 // `verify(idToken)` returns { sub, email } for a signed-in grown-up, or null.
-// Errors are 400, 401, 404 and 429, never 403: CloudFront turns 403s into the app's page (docs/accounts.md).
+// Errors include 409 when progress is busy; never 403 (CloudFront turns it into the app's page).
 // Grown-up accounts are invite-only: `config.admins` (emails) manage the invite list, and inviteCheck() gates sign-up.
 import { KINDS, MAX_GROUPS, LOOKS, PICTURES, newId, newCode, newPictures, newToken, hashToken, normalCode, validCode,
   cleanNick, cleanGroupName, cleanProgress, mergeProgress } from './rules.mjs';
@@ -162,9 +163,12 @@ export function routes({ store, verify, config = {} }) {
     'GET /play': async (d) => ok({ kid: publicKid(d.k), progress: mergeProgress((await store.get(`KID#${d.k.kid}`, 'PROGRESS'))?.p) }),
     'PUT /play/progress': async (d, body) => {
       const p = cleanProgress(body.progress); if (!p) return fail(400, 'bad progress');
-      const cur = await store.get(`KID#${d.k.kid}`, 'PROGRESS'), merged = mergeProgress(cur?.p, p);
-      await store.put({ pk: `KID#${d.k.kid}`, sk: 'PROGRESS', p: merged, updated: Date.now() });
-      return ok({ progress: merged });
+      const pk = `KID#${d.k.kid}`;
+      for (let i = 0; i < 16; i++) {
+        const cur = await store.get(pk, 'PROGRESS'), revision = cur?.revision || 0, merged = mergeProgress(cur?.p, p);
+        if (await store.compareAndPut({ pk, sk: 'PROGRESS', p: merged, revision: revision + 1, updated: Date.now() }, revision)) return ok({ progress: merged });
+      }
+      return fail(409, 'progress changed, try again'); // the device retains its save and retries
     },
     'POST /play/signout': async (d) => { await store.del(`TOKEN#${d.hash}`, 'META'); await store.del(`KID#${d.k.kid}`, `TOKEN#${d.hash}`); return ok({ signedOut: true }); },
   };

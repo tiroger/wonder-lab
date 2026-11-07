@@ -43,20 +43,22 @@ const Settings = {
     };
   },
   resetActivity(a) {
-    for (const s of a.stars) delete Store.data.stars[s.id];
     const tp = TOPICS.find(t => t.activities.includes(a));
-    delete Store.data.badges[a.badge.id]; delete Store.data.badges[tp.master.id]; Store.save();
+    const ids = [...a.stars.map(s => s.id), a.badge.id, tp.master.id], now = Date.now();
+    Object.assign(Store.data, mergeProgress(Store.data, { resets: Object.fromEntries(ids.map(id => [id, now])) })); Store.save();
     Sound.whoosh(); refresh(); this.renderProgress();
     const msg = 'Fresh start! Every star in this activity is ready to be found again.';
     if (App.act === a) mount(a, msg); else say(msg); // said with the intro, so one doesn't cut off the other
   },
   resetAll() {
-    Store.data.stars = {}; Store.data.badges = {}; Store.save();
+    Object.assign(Store.data, mergeProgress(Store.data, { resets: { '*': Date.now() } })); Store.save();
     Sound.whoosh(); refresh(); this.renderProgress();
+    if (App.view === 'home') renderCritters();
     const msg = 'All clear! Every star is ready to be found again.';
     if (App.act) mount(App.act, msg); else say(msg);
   },
   renderProgress() {
+    $('#resetNote').textContent = Player.on ? "Clears this player’s progress on every device after syncing." : "Clears every star and badge on this device.";
     const ul = $('#progressList'); ul.innerHTML = '';
     for (const a of TOPICS.flatMap(t => t.activities)) {
       const n = a.stars.filter(s => Store.data.stars[s.id]).length;

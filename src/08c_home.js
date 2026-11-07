@@ -195,7 +195,7 @@ function showHome() {
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};
-    Home.fresh = new Set(grown.filter(id => !seen[id])); Store.data.gardenSeen = Object.fromEntries(grown.map(id => [id, 1])); Store.save();
+    Home.fresh = new Set(grown.filter(id => !seen[id])); Store.data.gardenSeen = Object.fromEntries(grown.map(id => [id, Date.now()])); Store.save();
   }
   const news = Home.fresh && Home.fresh.size ? GARDEN_NEW : null;
   let line = news || HOME_NEXT;
