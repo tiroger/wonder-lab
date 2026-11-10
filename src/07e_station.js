@@ -23,15 +23,15 @@ const A_station = {
       return x == null ? R : st.hit(R, x, y);
     };
     const READ = {
-      thermo: { ok: () => s.temp - s.temp0 > .15, hint: 'This is a <b>thermometer</b>. It measures how hot or cold the air is. <b>Drag the sun</b> up high and watch it!', star: 'The red line went up! The sun warmed the air. The <b>temperature</b>, how hot or cold it is, went up. A thermometer measures temperature.' },
-      vane: { ok: () => s.windSeen, hint: 'This is a <b>wind vane</b>. <b>Swipe across the sky</b> to make some wind!', star: 'A <b>wind vane</b> turns to point to where the wind is coming from. Swipe the other way and watch it turn!' },
-      anemo: { ok: () => s.windSeen, hint: 'This is an <b>anemometer</b>. Its cups catch the wind. <b>Swipe across the sky</b> to make wind!', star: 'The cups are spinning! An <b>anemometer</b> measures how fast the wind blows. The faster they spin, the stronger the wind.' },
-      gauge: { ok: () => s.rain > .2, hint: 'This is a <b>rain gauge</b>. <b>Drag the cloud</b> over it, then tap the cloud to make it rain!', star: 'Look how much rain it caught! A <b>rain gauge</b> measures how much rain fell.' },
-      baro: { ok: () => s.press < .5, hint: 'This is a <b>barometer</b>. It measures <b>air pressure</b>, the push of the air all around us. When a storm is coming, the needle drops. <b>Drag the storm cloud in</b> and see!', star: 'The needle dropped! Low air pressure often brings clouds and rain.' }
+      thermo: { ok: () => s.temp - s.temp0 > .15, tip: 'This is a <b>thermometer</b>. It measures how hot or cold the air is. <b>Drag the sun</b> up high and watch it!', star: 'The red line went up! The sun warmed the air. The <b>temperature</b>, how hot or cold it is, went up. A thermometer measures temperature.' },
+      vane: { ok: () => s.windSeen, tip: 'This is a <b>wind vane</b>. <b>Swipe across the sky</b> to make some wind!', star: 'A <b>wind vane</b> turns to point to where the wind is coming from. Swipe the other way and watch it turn!' },
+      anemo: { ok: () => s.windSeen, tip: 'This is an <b>anemometer</b>. Its cups catch the wind. <b>Swipe across the sky</b> to make wind!', star: 'The cups are spinning! An <b>anemometer</b> measures how fast the wind blows. The faster they spin, the stronger the wind.' },
+      gauge: { ok: () => s.rain > .2, tip: 'This is a <b>rain gauge</b>. <b>Drag the cloud</b> over it, then tap the cloud to make it rain!', star: 'Look how much rain it caught! A <b>rain gauge</b> measures how much rain fell.' },
+      baro: { ok: () => s.press < .5, tip: 'This is a <b>barometer</b>. It measures <b>air pressure</b>, the push of the air all around us. When a storm is coming, the needle drops. <b>Drag the storm cloud in</b> and see!', star: 'The needle dropped! Low air pressure often brings clouds and rain.' }
     };
     function readTool(k) {
       const r = READ[k]; Sound.tap({ thermo: 2, vane: 4, anemo: 5, gauge: 6, baro: 7 }[k]);
-      if (!r.ok()) { s.hinted[k] = true; ui.say(r.hint); return; }
+      if (!r.ok()) { s.hinted[k] = true; ui.say(r.tip); return; }
       earn(k, ...T[k]); ui.say(r.star);
     }
     st.onDown = (x, y) => {
@@ -103,7 +103,8 @@ const A_station = {
       // the weather changes a little each frame: temperature follows the sun, wind dies down, pressure follows the cloud
       const tt = .2 + .75 * s.sunH - (raining() ? .1 : 0); s.temp += (tt - s.temp) * Math.min(1, dt * (RM ? 9 : .9));
       s.wind *= Math.exp(-dt / 5); if (Math.abs(s.wind) < .02) s.wind = 0;
-      const pt = clamp((s.cloudX - 600) / 170, 0, 1);   // high pressure in fair weather, low once the storm is over the yard s.press += (pt - s.press) * Math.min(1, dt * (RM ? 9 : 1.2));
+      // pressure is high in fair weather and low once the storm is over the yard
+      const pt = clamp((s.cloudX - 600) / 170, 0, 1); s.press += (pt - s.press) * Math.min(1, dt * (RM ? 9 : 1.2));
       s.spin += s.wind * dt * 9;
       const va = s.wind > .05 ? 0 : s.wind < -.05 ? PI : s.vaneA; s.vaneA = RM ? va : s.vaneA + clamp(va - s.vaneA, -3 * dt, 3 * dt);
       if (raining()) { const k = Math.abs(s.cloudX - GAUGE) < 130 ? 1 : 0; s.rain = Math.min(1, s.rain + k * dt * .2); }
@@ -133,7 +134,7 @@ const A_station = {
       if (idle && (s.hinted.gauge || s.hinted.baro) && s.cloudX > 680) label(c, "Drag me in!", s.cloudX - 40, 190 - bob, { size: 19, color: C.carrot });
       if (s.earnedHere && A_station.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You used every tool at the weather station. That\'s how scientists watch the weather every day!', { queue: true }); }
     };
-    ui.button('New day', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_station.intro); });
+    ui.button('New day', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_station.intro); });
     ui.hint("Try it: be a weather scientist! Each morning, write down the temperature, the wind and the clouds. What changes from day to day?");
     reset();
     return { stage: st, state: () => s, geo: { tools: T, sun: () => sunPos(), gauge: GAUGE }, destroy() { st.destroy(); } };

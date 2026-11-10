@@ -115,7 +115,7 @@ const A_clouds = {
       if (s.v && found('cumulus') && !(found('cirrus') && found('stratus')) && !s.drag && t - s.lastAct > 6) label(c, "Drag me!", s.x, s.y + 74 - bob, { size: 20, color: C.carrot });
       if (s.earnedHere && A_clouds.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You made cumulus, stratus, cirrus and a storm cloud, and even snow. You\'re a real cloud spotter!', { queue: true }); }
     };
-    ui.button('Clear the sky', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_clouds.intro); });
+    ui.button('Clear the sky', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_clouds.intro); });
     ui.hint("Try it: look up today. Are the clouds puffy, flat or wispy? Puffy cumulus, flat stratus, wispy cirrus!");
     reset();
     return { stage: st, state: () => s, geo: { sea: SEA, high: HIGH, low: LOW, th: TH, freeze: FREEZE }, destroy() { st.destroy(); } };

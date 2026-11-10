@@ -32,63 +32,67 @@ function drawQuizPic(cv, pic) {
   if (pic === 'roots') arrow(c, 610, 545, 478, 468);
   if (pic === 'leaves') { const lc = P.leafCenters[1]; arrow(c, 600, 170, lc[0] + 22, lc[1] - 10); }
 }
-const A_quiz = {
-  id: 'quiz', name: 'Plant Quiz', icon: 'quiz', html: true, badgeNeed: 10,
+// A quiz activity for any topic: rounds of 8, unseen questions first, a star only on the first try.
+// `prefix` starts its star ids, `prefix` starts its star ids, `expert` is what Pip says after a great round (recorded)
+function makeQuiz({ id, name, icon, badge, badgeNeed = 10, questions, prefix, intro, expert, drawPic, picLabel = 'A picture' }) {
+  const A = {
+    id, name, icon, html: true, badgeNeed, badge, intro,
+    stars: questions.map(q => ({ id: prefix + q.id, name: q.name })),
+    mount(host, ui) {
+      const box = document.createElement('div'); box.className = 'quiz-box'; host.appendChild(box);
+      let round, idx, results, tries;
+      const got = q => !!Store.data.stars[prefix + q.id];
+      function newRound(lead) {
+        round = shuffle(shuffle(questions.filter(q => !got(q))).concat(shuffle(questions.filter(got))).slice(0, 8)); idx = 0; results = []; show(lead);
+      }
+      function show(lead) {
+        const q = round[idx]; tries = 0; box.innerHTML = '';
+        const meta = document.createElement('div'); meta.className = 'q-meta';
+        meta.innerHTML = `<span>Question ${idx + 1} of ${round.length}</span><span class="q-dots">${round.map((_, i) => `<i class="${results[i] === 1 ? 'ok' : results[i] === 0 ? 'meh' : ''} ${i === idx ? 'now' : ''}"></i>`).join('')}</span>`;
+        const body = document.createElement('div'); body.className = 'q-body';
+        if (q.pic && drawPic) { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', picLabel); body.appendChild(cv); requestAnimationFrame(() => drawPic(cv, q.pic)); }
+        const h = document.createElement('p'); h.className = 'q-text'; h.textContent = q.q; body.appendChild(h);
+        const ch = document.createElement('div'); ch.className = 'choices';
+        shuffle(q.a).forEach((txt, i) => { const b = document.createElement('button'); b.className = 'choice'; b.textContent = txt; b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b); });
+        const foot = document.createElement('div'); foot.className = 'q-foot';
+        box.append(meta, body, ch, foot); ui.say((lead ? lead + ' ' : '') + q.q, { lock: true });
+      }
+      function answer(btn, right, q) {
+        if (btn.disabled) return;
+        if (inputLocked()) { const r = btn.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); }
+        tries++; const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (right) {
+          btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
+          results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
+          // a new star celebrates once Pip has explained; the sparkle answers the tap right away
+          if (tries === 1) { if (ui.award(prefix + q.id, cx, cy)) Sound.sparkle(); else Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+          else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
+          const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
+          nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
+        } else { btn.classList.add('wrong'); btn.disabled = true; Sound.oops(); ui.say(`Not quite. Hint: ${q.hint}`, { lock: true }); }
+      }
+      function end() {
+        const n = results.filter(x => x === 1).length, great = n >= 6; box.innerHTML = '';
+        const e = document.createElement('div'); e.className = 'q-end';
+        e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : great ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
+        const b = document.createElement('button'); b.className = 'btn go'; b.textContent = 'Play again'; b.onclick = () => { Sound.pop(); newRound(); }; e.appendChild(b);
+        box.appendChild(e); Sound.badge(); const r = box.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + 80, 70);
+        ui.say(great ? expert : 'Every scientist learns by trying. Play again and see how many you can get!');
+      }
+      ui.button('New round', () => { ui.fresh(); Sound.pop(); newRound(); });
+      ui.hint('Stars only count on the first try, so take your time and think!');
+      newRound(ui.intro);
+      return { destroy() { box.remove(); } };
+    }
+  };
+  return A;
+}
+const A_quiz = makeQuiz({
+  id: 'quiz', name: 'Plant Quiz', icon: 'quiz', prefix: 'quiz.', questions: QUIZ, drawPic: drawQuizPic, picLabel: 'Picture with an arrow pointing to a part',
   badge: { id: 'b.quiz', name: 'Quiz Champ', desc: 'You earned 10 quiz stars. You really know your plants!', how: 'Not yet! Earn 10 stars in the <b>Plant Quiz</b>. You get a star when you answer right on the first try.', reward: 'starFlag' },
-  stars: QUIZ.map(q => ({ id: 'quiz.' + q.id, name: q.name })),
   intro: 'Ready for a challenge? Get it right on the <b>first try</b> to earn a star. Collect 10 quiz stars for the Quiz Champ badge!',
-  mount(host, ui) {
-    const box = document.createElement('div'); box.className = 'quiz-box'; host.appendChild(box);
-    let round, idx, results, tries;
-    function newRound(lead) {
-      const unseen = shuffle(QUIZ.filter(q => !Store.data.stars['quiz.' + q.id]));
-      const seen = shuffle(QUIZ.filter(q => Store.data.stars['quiz.' + q.id]));
-      round = shuffle(unseen.concat(seen).slice(0, 8)); idx = 0; results = []; show(lead);
-    }
-    // lead: the tab's intro, said together with the first question so neither cuts the other off
-    function show(lead) {
-      const q = round[idx]; tries = 0; box.innerHTML = '';
-      const meta = document.createElement('div'); meta.className = 'q-meta';
-      meta.innerHTML = `<span>Question ${idx + 1} of ${round.length}</span><span class="q-dots">${round.map((_, i) => `<i class="${results[i] === 1 ? 'ok' : results[i] === 0 ? 'meh' : ''} ${i === idx ? 'now' : ''}"></i>`).join('')}</span>`;
-      const body = document.createElement('div'); body.className = 'q-body';
-      if (q.pic) { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Picture with an arrow pointing to a part'); body.appendChild(cv); requestAnimationFrame(() => drawQuizPic(cv, q.pic)); }
-      const h = document.createElement('p'); h.className = 'q-text'; h.textContent = q.q; body.appendChild(h);
-      const ch = document.createElement('div'); ch.className = 'choices';
-      shuffle(q.a).forEach((txt, i) => {
-        const b = document.createElement('button'); b.className = 'choice'; b.textContent = txt;
-        b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b);
-      });
-      const foot = document.createElement('div'); foot.className = 'q-foot';
-      box.append(meta, body, ch, foot); ui.say((lead ? lead + ' ' : '') + q.q, { lock: true });
-    }
-    function answer(btn, right, q) {
-      if (btn.disabled) return;
-      if (inputLocked()) { const r = btn.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); }
-      tries++;
-      const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      if (right) {
-        btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
-        results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
-        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); else Sound.tap(7); ui.say(`Yes! ${q.why}`, { lock: true }); }
-        else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
-        const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
-        nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
-      } else { btn.classList.add('wrong'); btn.disabled = true; Sound.oops(); ui.say(`Not quite. Hint: ${q.hint}`, { lock: true }); }
-    }
-    function end() {
-      const n = results.filter(x => x === 1).length; box.innerHTML = '';
-      const e = document.createElement('div'); e.className = 'q-end';
-      e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : n >= 6 ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
-      const b = document.createElement('button'); b.className = 'btn go'; b.textContent = 'Play again'; b.onclick = () => { Sound.pop(); newRound(); }; e.appendChild(b);
-      box.appendChild(e); Sound.badge(); const r = box.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + 80, 70);
-      ui.say(n >= 6 ? 'Wow, you\'re a plant expert! Play again to collect more stars.' : 'Every scientist learns by trying. Play again and see how many you can get!');
-    }
-    ui.button('New round', () => { ui.fresh(); Sound.pop(); newRound(); });
-    ui.hint('Stars only count on the first try, so take your time and think!');
-    newRound(ui.intro);
-    return { destroy() { box.remove(); } };
-  }
-};
+  expert: 'Wow, you\'re a plant expert! Play again to collect more stars.'
+});
 
 /* ============ little icons for tabs and badges (drawn in a 100x100 box) ============ */
 const ICONS = {

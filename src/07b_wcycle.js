@@ -257,7 +257,7 @@ const A_wcycle = {
       if (!s.puff && !heavy() && !raining() && !s.flow && t - s.lastAct > 4) label(c, "Tap the sun!", SUN[0] + 10, SUN[1] + 82 - (RM ? 0 : Math.abs(Math.sin(t * 4)) * 6), { size: 20, color: C.carrot });
       if (s.earnedHere && A_wcycle.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('Evaporation, condensation, precipitation, collection. Around and around it goes. That\'s the <b>water cycle</b>!', { queue: true }); }
     };
-    ui.button('Start over', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_wcycle.intro); });
+    ui.button('Start over', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_wcycle.intro); });
     ui.hint("Try it: on a sunny day, draw around a puddle with chalk. Check it every hour. Where does the water go?");
     reset();
     return { stage: st, state: () => s, geo: { sun: SUN, lake: LAKE, cy: CY, cold: COLD, mountain: MTN }, destroy() { st.destroy(); } };

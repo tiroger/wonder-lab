@@ -152,7 +152,7 @@ const A_jar = {
       label(c, s.day ? `Day ${s.day}` : "", 700, 206, { size: 22, color: WC.accent });
       if (s.earnedHere && A_jar.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('The water goes around and around inside the jar. It\'s a tiny water cycle, so the plant hardly ever needs watering!', { queue: true }); }
     };
-    ui.button('Build a new jar', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_jar.intro); });
+    ui.button('Build a new jar', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_jar.intro); });
     ui.hint("Try it: put a clear lid on a cup of damp soil and set it in a sunny window. Look for drops on the lid the next day!");
     reset();
     return { stage: st, state: () => s, geo: { home: HOME, jar: JAR, sun: SUN, mid: MID, soil: SOIL, drops: DROPS, leaves: () => leafSpots().map(([lx, ly, r]) => [lx + Math.cos(r * DEG) * 26, ly + Math.sin(r * DEG) * 26]) }, destroy() { st.destroy(); } };
