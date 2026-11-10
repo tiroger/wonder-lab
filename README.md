@@ -6,7 +6,7 @@ Live at **https://wonderlab.camp**
 
 ## What it's like
 
-You start on a map of the Lab's grounds. Each topic is a building along a winding trail (a greenhouse for **Plants & Seeds**), and a little bean seed named **Pip** walks to whichever one you tap. The grounds are full of things to poke: a pond with a frog, a flower bed that calls a bee, a rock with a pill bug under it. Tap Pip and he shares a fact from something you've already explored. Every badge plants something new in a Badge Garden on the map, and the greenhouse fills with plants as the stars add up. The map follows the clock and the seasons, and if you tap a cloud, it rains. Six critters hide around the grounds; find them all for the Explorer badge. Inside, every activity is a small hands-on scene:
+You start on a map of the Lab's grounds. Each topic is a building along a winding trail (a greenhouse for **Plants & Seeds**, a little weather station for **Weather & Water**), and a little bean seed named **Pip** walks to whichever one you tap. The grounds are full of things to poke: a pond with a frog, a flower bed that calls a bee, a rock with a pill bug under it. Tap Pip and he shares a fact from something you've already explored. Every badge plants something new in a Badge Garden on the map, and the greenhouse fills with plants as the stars add up. The map follows the clock and the seasons, and if you tap a cloud, it rains. Six critters hide around the grounds; find them all for the Explorer badge. Inside, every activity is a small hands-on scene:
 
 - **Meet the Plant:** tap roots, stem, leaves, flower and pod to learn their jobs.
 - **Open a Seed:** soak a bean, peel it, split it, and find the baby plant inside.
@@ -19,6 +19,14 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 - **Light Seeker:** move a lamp and watch a seedling bend toward it; tip the cup and the roots still grow down.
 - **Plant Needs:** a fair test. Guess which bean plant will do best, let a week go by, and see what water and light do.
 - **Plant Quiz:** stars for answers right on the first try.
+
+**Weather & Water** follows the class's weather unit:
+
+- **Water Cycle:** warm a lake with the sun, drag the vapor up into a cloud, make it rain or snow, and follow the river home.
+- **Terrarium:** build a jar garden layer by layer, close the lid, and watch a tiny water cycle inside.
+- **Cloud Maker:** grow cumulus, stratus and cirrus clouds, overfill one into a thunderstorm, and make it snow.
+- **Weather Station:** change the weather and read a thermometer, wind vane, anemometer, rain gauge and barometer.
+- **Weather Quiz:** stars for answers right on the first try.
 
 Pip reads every line aloud. Discoveries earn stars and badges, finished topics earn trophies, and they're all on display in the **Trophy Hall**.
 

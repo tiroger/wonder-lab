@@ -121,6 +121,55 @@ const GARDEN = {
     c.restore();
     if (k) for (let j = 0; j < 4; j++) { const f = 1 - k, x = -20 + j * 14, y = -190 + f * f * 200; if (y < 0) { c.fillStyle = '#3A2A1A'; c.beginPath(); c.ellipse(x, y, 3, 5, 0, 0, TAU); c.fill(); } }
   } },
+  // ---- Weather & Water ----
+  umbrella: { sound() { Sound.drip(); Sound.tap(5); }, draw(c, t, e) {   // a striped umbrella; tapped, it spins and shakes off drops
+    const k = poked(e, 1.4); c.save(); c.translate(0, -60); c.rotate(-.15 + Math.sin(e * 12) * .12 * k);
+    c.strokeStyle = C.ink; c.lineWidth = 5; c.beginPath(); c.moveTo(0, -40); c.lineTo(0, 54); c.arc(-9, 54, 9, 0, PI); c.stroke(); c.lineWidth = 4;
+    const canopy = new Path2D('M-58 -30 Q0 -96 58 -30 Q44 -38 29 -30 Q14 -38 0 -30 Q-14 -38 -29 -30 Q-44 -38 -58 -30 Z');
+    c.fillStyle = '#E04B4B'; c.fill(canopy); c.save(); c.clip(canopy); c.fillStyle = '#FFFDF5'; for (const x of [-36, 8]) { c.beginPath(); c.moveTo(0, -90); c.lineTo(x, -20); c.lineTo(x + 22, -20); c.closePath(); c.fill(); } c.restore(); c.stroke(canopy); c.restore();
+    if (k) for (let j = 0; j < 5; j++) { const a = j * 1.3 + e * 4, r = 40 + (1 - k) * 50; c.fillStyle = C.water; c.beginPath(); c.arc(Math.cos(a) * r, -90 + Math.sin(a) * r * .4, 4, 0, TAU); c.fill(); }
+  } },
+  birdbath: { sound() { Sound.splash(); Sound.chirp(.2); }, draw(c, t, e) {   // a stone bath; tapped, a bird splashes in it
+    const k = poked(e, 1.8); c.fillStyle = '#B7BEC6'; c.fillRect(-12, -70, 24, 70); c.strokeRect(-12, -70, 24, 70); c.fillRect(-30, -8, 60, 8); c.strokeRect(-30, -8, 60, 8);
+    const bowl = new Path2D('M-52 -84 L52 -84 Q46 -62 0 -62 Q-46 -62 -52 -84 Z'); c.fillStyle = '#B7BEC6'; c.fill(bowl); c.stroke(bowl);
+    const w = ellipse(0, -84, 50, 8); c.fillStyle = C.water; c.fill(w); c.stroke(w);
+    if (k) { drawBird(c, 8, -96, t, 1); c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2.5; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 30, -96, 8 + (1 - k) * 10, PI * 1.1, PI * 1.9); c.stroke(); } c.lineWidth = 4; c.strokeStyle = C.ink; }
+  } },
+  kite: { sound() { Sound.whoosh(); }, draw(c, t, e) {   // a diamond kite on a stick; tapped, it swoops up high and back
+    const k = poked(e, 2.2), up = Math.sin(PI * (1 - k)) * 70 * (k ? 1 : 0), sw = RM ? 0 : Math.sin(t * 1.8) * 6;
+    const kx = 20 + sw, ky = -118 - up;
+    c.strokeStyle = C.ink; c.lineWidth = 2; c.beginPath(); c.moveTo(-26, -20); c.quadraticCurveTo(-10, -60 - up * .5, kx, ky + 30); c.stroke(); c.lineWidth = 4;
+    c.fillStyle = '#A87445'; c.fillRect(-30, -40, 8, 40); c.strokeRect(-30, -40, 8, 40);
+    c.save(); c.translate(kx, ky); c.rotate(.2 + sw * .02); const d = new Path2D('M0 -32 L24 0 L0 30 L-24 0 Z'); c.fillStyle = C.sun; c.fill(d); c.save(); c.clip(d); c.fillStyle = WC.accent; c.fillRect(-24, -32, 24, 32); c.fillRect(0, 0, 24, 30); c.restore(); c.stroke(d);
+    c.lineWidth = 2; c.beginPath(); c.moveTo(0, 30); c.quadraticCurveTo(10, 44, 0, 58); c.quadraticCurveTo(-10, 70, 2, 84); c.stroke(); for (const y of [46, 66]) { c.fillStyle = C.petal; c.beginPath(); c.moveTo(-6, y); c.lineTo(6, y - 5); c.lineTo(6, y + 5); c.closePath(); c.fill(); } c.restore();
+  } },
+  windsock: { sound() { Sound.whoosh(); Sound.tap(7); }, draw(c, t, e) {   // an orange wind sock; tapped, a gust fills it out straight
+    const k = poked(e, 2), flap = (RM ? 0 : Math.sin(t * 4) * .1) * (1 - k), droop = .6 * (1 - k);
+    c.fillStyle = '#C8CDD2'; c.fillRect(-5, -130, 10, 130); c.strokeRect(-5, -130, 10, 130);
+    c.save(); c.translate(5, -118); c.rotate(droop + flap); const sock = new Path2D('M0 -16 L74 -8 L74 8 L0 16 Z'); c.fillStyle = '#FFFDF5'; c.fill(sock);
+    c.save(); c.clip(sock); c.fillStyle = C.carrot; for (const x of [0, 30, 60]) c.fillRect(x, -18, 15, 36); c.restore(); c.stroke(sock); c.restore();
+    if (k && !RM) { c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 3; for (const y of [-150, -96]) { const x = -60 + (1 - k) * 120; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 30, y); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
+  } },
+  snowman: { sound() { Sound.boing(); Sound.snowfall(); }, draw(c, t, e) {   // a snowman; tapped, his hat hops and a little snow falls
+    const k = poked(e, 1.2), hop = Math.sin(PI * (1 - k)) * 22 * (k ? 1 : 0);
+    for (const [y, r] of [[-30, 32], [-82, 24], [-120, 17]]) { c.fillStyle = '#F4FAFF'; c.beginPath(); c.arc(0, y, r, 0, TAU); c.fill(); c.stroke(); }
+    c.fillStyle = C.ink; for (const ex of [-6, 6]) { c.beginPath(); c.arc(ex, -124, 2.6, 0, TAU); c.fill(); } for (const y of [-90, -76]) { c.beginPath(); c.arc(0, y, 3, 0, TAU); c.fill(); }
+    c.fillStyle = C.carrot; c.beginPath(); c.moveTo(0, -118); c.lineTo(18, -114); c.lineTo(0, -112); c.closePath(); c.fill(); c.lineWidth = 2; c.stroke(); c.lineWidth = 4;
+    c.strokeStyle = '#8A6B3E'; c.beginPath(); c.moveTo(-22, -86); c.lineTo(-48, -104); c.moveTo(22, -86); c.lineTo(48, -100); c.stroke(); c.strokeStyle = C.ink;
+    c.fillStyle = WC.accent; c.fillRect(-20, -82 - 22, 40, 8); c.strokeRect(-20, -82 - 22, 40, 8);
+    c.save(); c.translate(0, -134 - hop); c.fillStyle = C.ink; c.fillRect(-20, 0, 40, 6); c.fillRect(-12, -22, 24, 22); c.restore();
+    if (k) { c.fillStyle = '#F4FAFF'; c.strokeStyle = 'rgba(36,54,40,.5)'; c.lineWidth = 1.5; for (let j = 0; j < 6; j++) { const x = -40 + j * 16, y = -160 + (1 - k) * 140 + (j % 2) * 12; c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fill(); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
+  } },
+  windmill: { tall: true, sound() { Sound.whoosh(); Sound.grow(3); }, draw(c, t, e) {   // the Weather & Water landmark: a windmill whose sails turn in the breeze
+    const k = poked(e, 2.4), spin = (RM ? 0 : t * .8) + (k ? (1 - k) * 10 : 0);
+    const tower = new Path2D('M-30 0 L-18 -170 L18 -170 L30 0 Z'); c.fillStyle = '#FFFDF5'; c.fill(tower); c.stroke(tower);
+    c.strokeStyle = 'rgba(36,54,40,.35)'; c.lineWidth = 2.5; for (let y = -30; y > -170; y -= 30) { c.beginPath(); c.moveTo(-30 + (-y / 170) * 12, y); c.lineTo(30 - (-y / 170) * 12, y); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4;
+    const door = rrect(-10, -34, 20, 34, 9); c.fillStyle = '#A87445'; c.fill(door); c.stroke(door);
+    const cap = new Path2D('M-26 -168 Q0 -204 26 -168 Z'); c.fillStyle = '#5BA8D6'; c.fill(cap); c.stroke(cap);
+    c.save(); c.translate(0, -178); c.rotate(spin);
+    for (let i = 0; i < 4; i++) { c.save(); c.rotate(i * PI / 2); const sail = rrect(6, -12, 78, 24, 4); c.fillStyle = i % 2 ? C.carrot : C.sun; c.fill(sail); c.stroke(sail); c.lineWidth = 2; c.beginPath(); c.moveTo(6, 0); c.lineTo(84, 0); c.moveTo(32, -12); c.lineTo(32, 12); c.moveTo(58, -12); c.lineTo(58, 12); c.stroke(); c.lineWidth = 4; c.restore(); }
+    c.fillStyle = C.ink; c.beginPath(); c.arc(0, 0, 8, 0, TAU); c.fill(); c.restore();
+  } },
 };
 function kidneyAt(x, y) { const p = new Path2D(); p.ellipse(x, y, 9, 6, -.2, 0, TAU); return p; }
 function drawApple(c, x, y) { c.fillStyle = '#E04B4B'; c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, 8, 0, TAU); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(x - 3, y - 3, 2.2, 0, TAU); c.fill(); c.lineWidth = 4; }
