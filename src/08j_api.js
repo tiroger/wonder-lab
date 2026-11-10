@@ -14,7 +14,12 @@ const Grownup = {
   get demo() { return !!(this.s && this.s.demo); },
   save(s) { this.s = s; store2.set(GROWNUP_KEY, s); },
   // what the API says the app needs to reach Cognito
-  async config() { return this.cfg || (this.cfg = await (await fetch('/api/config')).json()); },
+  async config() {   // kept only once it's real, so one failed load doesn't break sign-in until a reload
+    if (this.cfg) return this.cfg;
+    const j = await fetch('/api/config').then(r => r.json()).catch(() => null);
+    if (!j || !j.region || !j.clientId) throw new ApiError(0, "Couldn’t reach Wonder Lab. Check the connection and try again.");
+    return (this.cfg = j);
+  },
   async cognito(target, body) {
     const cfg = await this.config();
     const r = await fetch(`https://cognito-idp.${cfg.region}.amazonaws.com/`, { method: 'POST', body: JSON.stringify({ ClientId: cfg.clientId, ...body }),
@@ -56,8 +61,12 @@ const Grownup = {
   async idToken() {
     if (!this.s || !this.s.refresh) return null;
     if (Date.now() < this.s.exp - 60000) return this.s.id;
+    // only Cognito saying no to the refresh token signs the grown-up out; a network blip just fails this request
     try { const r = await this.cognito('InitiateAuth', { AuthFlow: 'REFRESH_TOKEN_AUTH', AuthParameters: { REFRESH_TOKEN: this.s.refresh } }); this.keep(this.s.email, r.AuthenticationResult); return this.s.id; }
-    catch (e) { this.save(null); return null; }
+    catch (e) {
+      if (e.code === 'NotAuthorizedException' || e.code === 'UserNotFoundException') { this.save(null); return null; }
+      throw new ApiError(0, "Couldn’t reach Wonder Lab. Check the connection and try again.");
+    }
   },
   async signOut() {
     const s = this.s; this.save(null);
@@ -83,7 +92,9 @@ const Api = {
     else if (!anon) { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers['X-Wonder-Auth'] = `Bearer ${t}`; }
     if (data) headers['x-amz-content-sha256'] = await sha256Hex(data);
     const r = await fetch(`/api${path}`, { method, headers, body: data });
-    const j = await r.json().catch(() => ({}));
+    // the API always answers JSON; anything else (CloudFront serves the app page for a 403) is a failure, never a success
+    const json = /application\/json/.test(r.headers.get('content-type') || ''), j = json ? await r.json().catch(() => null) : null;
+    if (!j) throw new ApiError(r.ok ? 502 : r.status, 'Something went wrong');
     if (!r.ok) { if (r.status === 401 && !device && !anon) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
     return j;
   },

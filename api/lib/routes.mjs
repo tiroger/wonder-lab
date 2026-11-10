@@ -5,7 +5,7 @@
 // `verify(idToken)` returns { sub, email } for a signed-in grown-up, or null.
 // Errors include 409 when progress is busy; never 403 (CloudFront turns it into the app's page).
 // Grown-up accounts are invite-only: `config.admins` (emails) manage the invite list, and inviteCheck() gates sign-up.
-import { KINDS, MAX_GROUPS, LOOKS, PICTURES, newId, newCode, newPictures, newToken, hashToken, normalCode, validCode,
+import { KINDS, MAX_GROUPS, LOOKS, PICTURES, newId, newCode, newPictures, newToken, hashToken, normalCode, validCode, rateKey,
   cleanNick, cleanGroupName, cleanProgress, mergeProgress } from './rules.mjs';
 
 const TOKEN_DAYS = 400, JOIN_FAILS_PER_HOUR = 20, PICTURE_FAILS = 5, PICTURE_WINDOW = 300;
@@ -130,7 +130,7 @@ export function routes({ store, verify, config = {} }) {
   // --- kid routes ---
   async function findGroup(code, ip) {
     // take a try before looking (so simultaneous guesses can't slip past the limit), and give it back if the code is real
-    const c = normalCode(code), rate = `RATE#join#${ip}`, hour = String(Math.floor(Date.now() / 3_600_000));
+    const c = normalCode(code), rate = `RATE#join#${rateKey(ip)}`, hour = String(Math.floor(Date.now() / 3_600_000));
     if (!(await store.reserve(rate, hour, 3600, JOIN_FAILS_PER_HOUR))) return { error: fail(429, 'too many tries, wait a bit') };
     const link = validCode(c) && await store.get(`CODE#${c}`, 'META'), g = link && await groupMeta(link.gid);
     if (!g) return { error: NOT_FOUND };
@@ -200,6 +200,7 @@ export function routes({ store, verify, config = {} }) {
       return NOT_FOUND;
     } catch (e) {
       if (e instanceof SyntaxError) return fail(400, 'bad json');
+      if (e instanceof URIError) return fail(400, 'bad path');   // a broken %-escape in the path
       console.error(e); return fail(500, 'something went wrong');
     }
   };

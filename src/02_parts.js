@@ -73,7 +73,7 @@ const A_parts = {
       flower: 'The <b>flower</b> is where seeds get started. Bright petals invite bees, and the bees bring <b>pollen</b>.',
       fruit: 'This pod is the plant\'s <b>fruit</b>! A fruit holds and protects the <b>seeds</b>. Every bean inside could grow a brand new plant.'
     };
-    const sounds = { roots: () => Sound.slurp(), stem: () => Sound.boing(), leaves: () => Sound.sparkle(), flower: () => Sound.buzz(true), fruit: () => { Sound.crack(); [0, 1, 2, 3].forEach(i => setTimeout(() => Sound.pop(), 200 + i * 110)); } };
+    const sounds = { roots: () => Sound.slurp(), stem: () => Sound.boing(), leaves: () => Sound.sparkle(), flower: () => Sound.buzz(true), fruit: () => { Sound.crack(); [0, 1, 2, 3].forEach(i => ui.later(() => Sound.pop(), 200 + i * 110)); } };
     const found = k => !!Store.data.stars['parts.' + k];
     function spawnDrops(fromStem) {
       for (let i = 0; i < 16; i++) s.drops.push(fromStem ? { mode: 'stem', u: 0, d: i * .14 } : { mode: 'root', ri: i % 5, u: 1, d: i * .12 });
@@ -82,7 +82,7 @@ const A_parts = {
       s.sel = part; s.selT = st.t; s.fx[part] = st.t; s.lastAct = st.t; ui.say(facts[part]); sounds[part]();
       if (part === 'fruit') s.podTarget = s.podTarget ? 0 : 1;
       if (part === 'roots') spawnDrops(false); if (part === 'stem') spawnDrops(true);
-      if (part === 'flower') setTimeout(() => { if (st.t - s.fx.flower > 5.5) Sound.buzz(false); }, 6000);
+      if (part === 'flower') ui.later(() => { if (st.t - s.fx.flower > 5.5) Sound.buzz(false); }, 6000);
       ui.award('parts.' + part, ...st.client(x, y));
     }
     function which(x, y) {
@@ -124,9 +124,9 @@ const A_parts = {
       // sunlight + sparkles on leaves
       const le = t - s.fx.leaves;
       if (le < 4.5) {
-        c.save(); c.globalAlpha = Math.min(1, 4.5 - le); c.setLineDash([12, 12]); c.lineDashOffset = -t * 50; c.strokeStyle = 'rgba(255,196,40,.9)'; c.lineWidth = 5; c.lineCap = 'round';
+        c.save(); c.globalAlpha = Math.min(1, 4.5 - le); c.setLineDash([12, 12]); c.lineDashOffset = RM ? 0 : -t * 50; c.strokeStyle = 'rgba(255,196,40,.9)'; c.lineWidth = 5; c.lineCap = 'round';
         for (const lc of P.leafCenters) { c.beginPath(); c.moveTo(125, 115); c.lineTo(lc[0], lc[1]); c.stroke(); }
-        c.setLineDash([]); for (const [i, lc] of P.leafCenters.entries()) sparkle(c, lc[0] + Math.sin(t * 5 + i) * 12, lc[1] - 14 + Math.cos(t * 4 + i) * 8, 7 + 4 * Math.abs(Math.sin(t * 6 + i)));
+        c.setLineDash([]); for (const [i, lc] of P.leafCenters.entries()) sparkle(c, lc[0] + (RM ? 0 : Math.sin(t * 5 + i) * 12), lc[1] - 14 + (RM ? 0 : Math.cos(t * 4 + i) * 8), RM ? 9 : 7 + 4 * Math.abs(Math.sin(t * 6 + i)));
         c.restore();
       }
       // the bee visits the flower
@@ -135,7 +135,7 @@ const A_parts = {
         bee(c, F[0] + Math.cos(a) * 115, F[1] - 10 + Math.sin(a * 2) * 40, t, k, { flip: Math.sin(a) > 0, pollen: fe > 2 });
       } else if (fe < 6.3) Sound.buzz(false);
       // butterfly
-      const bx = 620 + Math.cos(t * .37) * 140, by = 200 + Math.sin(t * .83) * 70;
+      const bx = 620 + (RM ? 1 : Math.cos(t * .37)) * 140, by = 200 + (RM ? 0 : Math.sin(t * .83)) * 70;
       butterfly(c, bx, by, t, .9, '#8D6CD9'); s.butterPath = circle(bx, by, 34); st.over(s.butterPath);
       st.over(circle(95, 88, 60));
       // labels for parts already found
@@ -150,7 +150,7 @@ const A_parts = {
       const todo = ['roots', 'stem', 'leaves', 'flower', 'fruit'].filter(k => !found(k));
       if (todo.length && t - s.lastAct > 7) {
         const pos = { roots: [400, 460], stem: sp, leaves: lc, flower: F, fruit: pc }[todo[0]];
-        c.save(); c.strokeStyle = C.carrot; c.lineWidth = 5; c.setLineDash([10, 8]); c.lineDashOffset = -t * 30; c.beginPath(); c.arc(pos[0], pos[1], 34 + Math.sin(t * 5) * 6, 0, TAU); c.stroke(); c.restore();
+        c.save(); c.strokeStyle = C.carrot; c.lineWidth = 5; c.setLineDash([10, 8]); c.lineDashOffset = RM ? 0 : -t * 30; c.beginPath(); c.arc(pos[0], pos[1], 34 + (RM ? 0 : Math.sin(t * 5) * 6), 0, TAU); c.stroke(); c.restore();
         label(c, 'Try here!', pos[0], pos[1] - 52, { size: 20, color: C.carrot });
       }
     };

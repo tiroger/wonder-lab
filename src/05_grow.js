@@ -22,7 +22,7 @@ const A_grow = {
     function reset() { s = { g: 0, water: 0, sunM: 45, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, dryT: 0, told: {}, spokeT: -99, factQ: [], cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
     function paintChips() { if (!chips) return; chips.innerHTML = STAGES.map((n, i) => `<span class="${i <= s.stage ? 'on' : ''}">${n}</span>`).join('<i>›</i>'); }
     const canTip = () => { const e = st.t - s.pourT; if (e > 1.6) return 0; return e < .3 ? ease(e / .3) : e < 1.25 ? 1 : 1 - ease((e - 1.25) / .35); };
-    function water(x, y) { if (st.t - s.pourT < 1.6) return; s.pourT = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
+    function water(x, y) { if (st.t - s.pourT < 1.6) { Sound.drip(); return; } s.pourT = st.t; Sound.splash(); ui.later(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
     function shine() { s.sunT = st.t; s.sunM = 100; Sound.grow(4); Sound.sparkle(.2); if (s.g < 1.9 && !s.toldSun) { s.toldSun = true; ui.say('Warm sunshine! The seed is still under the ground, so it only needs <b>water</b> and <b>warmth</b> for now.'); } }
     function onStage(n) {
       paintChips();
@@ -48,7 +48,7 @@ const A_grow = {
       c.restore();
       if (k > .7 && st.t - s.pourT < 1.3) { const sx = x + Math.cos(rot) * 92 + Math.sin(rot) * 38, sy = y - Math.sin(rot) * 92 - Math.cos(rot) * 38 + 30; for (let i = 0; i < 2; i++) s.drops.push({ x: sx + rand(-8, 8), y: sy, vx: rand(50, 130), vy: rand(-20, 40) }); s.water = Math.min(100, s.water + 58 * dt); }
       // the can itself is the reminder: it bounces and asks for a tap when the soil is dry (or at the very start)
-      if (!k && (s.g < .05 || s.water < 1)) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, s.g < .05 ? 'Tap me!' : 'Water me!', CAN[0], CAN[1] - 62 - b, { size: 19, color: C.carrot }); }
+      if (!k && (s.g < .05 || s.water < 1 && s.g < 7)) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, s.g < .05 ? 'Tap me!' : 'Water me!', CAN[0], CAN[1] - 62 - b, { size: 19, color: C.carrot }); }
     }
     function drawPlantAt(c, t, g) {
       const droop = clamp(s.thirst / 2, 0, 1) * (g >= 1.9 ? 1 : 0), sw = RM ? 0 : Math.sin(t * 1.3) * 4;
@@ -124,17 +124,17 @@ const A_grow = {
       sky(c, mix('#86CFEA', '#7F97A6', dim), mix('#E2F6FC', '#B8C6CC', dim), GY);
       const cov = clamp((55 - s.sunM) / 40, 0, 1) * (above ? 1 : 0); s.cloudX += ((t - s.sunT < 1.5 ? 900 : lerp(880, 640, cov)) - s.cloudX) * Math.min(1, dt * 2);
       sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); st.over(circle(...SUN, 70)); // pointer cursor over the sun
-      cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + ((t * 10) % 300), 60, .6);
+      cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + (RM ? 120 : (t * 10) % 300), 60, .6);
       if (above && s.sunM < 1 && s.g < 7) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, 'Tap the sun!', SUN[0] - 10, SUN[1] + 66 - b, { size: 19, color: C.carrot }); }
       ground(c, GY, t);
       // wet soil
       if (s.water > 0) { const wg = c.createRadialGradient(SX, GY + 30, 10, SX, GY + 30, 190); wg.addColorStop(0, `rgba(45,25,12,${s.water / 100 * .5})`); wg.addColorStop(1, 'rgba(45,25,12,0)'); c.fillStyle = wg; c.fillRect(SX - 200, GY + 6, 400, 260); }
       drawPlantAt(c, t, s.g);
       // falling seeds
-      if (s.g >= 7 && !s.dropped && s.pods.length) { s.dropped = true; for (const [px, py] of s.pods) for (let i = 0; i < 2; i++) s.seeds.push({ x: px + rand(-6, 6), y: py, vx: rand(-60, 60), vy: rand(-80, -20), rest: false }); Sound.ptoo(); setTimeout(() => Sound.ptoo(), 150); }
+      if (s.g >= 7 && !s.dropped && s.pods.length) { s.dropped = true; for (const [px, py] of s.pods) for (let i = 0; i < 2; i++) s.seeds.push({ x: px + rand(-6, 6), y: py, vx: rand(-60, 60), vy: rand(-80, -20), rest: false }); Sound.ptoo(); ui.later(() => Sound.ptoo(), 150); }
       for (const q of s.seeds) { if (!q.rest) { q.vy += 700 * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > GY + 2) { q.y = GY + 2; q.vy *= -.3; q.vx *= .5; if (Math.abs(q.vy) < 30) { q.rest = true; Sound.drip(); } } } c.save(); c.translate(q.x, q.y); c.fillStyle = '#E8D29C'; c.strokeStyle = '#A88445'; c.lineWidth = 2; const K = kidney(18, 12); c.fill(K); c.stroke(K); c.restore(); }
       // bees when flowers bloom
-      if (s.flowers.length) { const f = s.flowers[Math.floor(t / 2.5) % s.flowers.length]; const a = t * 3; bee(c, f[0] + Math.cos(a) * 34, f[1] - 14 + Math.sin(a * 2) * 12, t, .7, { flip: Math.sin(a) > 0 }); }
+      if (s.flowers.length) { const f = s.flowers[Math.floor(t / 2.5) % s.flowers.length]; const a = RM ? 1 : t * 3; bee(c, f[0] + Math.cos(a) * 34, f[1] - 14 + Math.sin(a * 2) * 12, t, .7, { flip: Math.sin(a) > 0 }); }
       // water drops
       for (const d of s.drops) { d.vy += 700 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > GY) { d.dead = true; if (Math.random() < .15) Sound.drip(); } c.fillStyle = C.water; c.beginPath(); c.arc(d.x, d.y, 4, 0, TAU); c.fill(); }
       s.drops = s.drops.filter(d => !d.dead);
@@ -152,7 +152,7 @@ const A_grow = {
     };
     ui.button('Water', () => water(), '');
     ui.button('Sunshine', () => shine(), '');
-    ui.button('Plant a new seed', () => { reset(); Sound.pop(); ui.say(A_grow.intro); }, 'go');
+    ui.button('Plant a new seed', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_grow.intro); }, 'go');
     chips = ui.extraEl('div', 'cycle');
     reset();
     return { stage: st, state: () => s, destroy() { st.destroy(); } }; // state() is for tests

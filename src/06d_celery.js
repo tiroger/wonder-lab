@@ -21,7 +21,7 @@ const A_celery = {
     const onStalk = (x, y) => Math.abs(x - GLASS[0]) < 130 && y > TOP + 40 && y < GLASS[1] - 90; // a swipe can start beside the stalk
     function addDye(k) {
       if (s.dye) { Sound.tap(3); return ui.say(s.dye === k ? 'The color is already in!' : 'One color at a time. Tap <b>New celery</b> to try the other one!'); }
-      s.dye = k; s.dyeT = st.t; Sound.drip(); setTimeout(() => Sound.drip(), 160); setTimeout(() => Sound.splash(), 380);
+      s.dye = k; s.dyeT = st.t; Sound.drip(); ui.later(() => Sound.drip(), 160); ui.later(() => Sound.splash(), 380);
       earn('color', ...BOTTLES[k]); ui.say(k === 'blue' ? 'Drip, drip! Now the water is blue. Tap the <b>clock</b> to let the hours go by.' : 'Drip, drip! Now the water is red. Tap the <b>clock</b> to let the hours go by.');
     }
     function wait() {
@@ -131,7 +131,7 @@ const A_celery = {
       if (s.knife && st.p.down) { st.cursor = 'none'; c.save(); c.translate(st.p.x - 40, st.p.y); c.fillStyle = '#DCE3E8'; c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, -8); c.lineTo(70, -5); c.quadraticCurveTo(82, 2, 68, 7); c.lineTo(0, 8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#8A5A36'; c.fill(rrect(-44, -7, 44, 14, 6)); c.stroke(rrect(-44, -7, 44, 14, 6)); c.restore(); }
     };
     ui.button('Wait an hour', () => wait());
-    ui.button('New celery', () => { reset(); Sound.pop(); ui.say(A_celery.intro); });
+    ui.button('New celery', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_celery.intro); });
     ui.hint("Try it for real! Ask a grown-up to cut the bottom off a celery stalk. Stand it in water with lots of food coloring. Check it after one day!");
     reset();
     return { stage: st, state: () => s, geo: { bottles: BOTTLES, clock: CLOCK, window: [WINDOW[0] + WINDOW[2] / 2, WINDOW[1] + WINDOW[3] / 2], stalk: [GLASS[0], 300] }, destroy() { st.destroy(); } };

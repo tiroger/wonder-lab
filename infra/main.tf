@@ -123,7 +123,8 @@ resource "aws_cloudfront_function" "www_redirect" {
 data "aws_cloudfront_cache_policy" "optimized" { name = "Managed-CachingOptimized" }
 data "aws_cloudfront_response_headers_policy" "security" { name = "Managed-SecurityHeadersPolicy" }
 data "aws_cloudfront_cache_policy" "disabled" { name = "Managed-CachingDisabled" }
-# every viewer header but Host (a function URL needs its own Host), so Authorization and CloudFront-Viewer-Address reach the API
+# every viewer header but Host (a function URL needs its own Host), so X-Wonder-Auth and CloudFront-Viewer-Address reach the API
+# (Authorization doesn't: origin access control replaces it with CloudFront's own signature)
 data "aws_cloudfront_origin_request_policy" "api" { name = "Managed-AllViewerExceptHostHeader" }
 
 resource "aws_cloudfront_distribution" "site" {

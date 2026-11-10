@@ -208,7 +208,7 @@ const A_produce = {
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t; const b = s.board;
-      if (b && b.fly) return;
+      if (b && b.fly) { Sound.tap(2); return; }
       if (b && b.cut) {
         const bin = binAt(x, y); if (bin) return sort(bin);
         if (onBoardItem(x - b.off[0], y - b.off[1])) { s.drag = { x0: x - b.off[0], y0: y - b.off[1] }; Sound.fwip(); return; }
@@ -339,7 +339,7 @@ const A_produce = {
       if (b && !b.cut && st.t - b.t0 > 1.2) { const o = RM ? 0 : (t * 60) % 40; c.save(); c.setLineDash([12, 10]); c.lineDashOffset = -o; c.strokeStyle = C.carrot; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(BOARD[0] - 120, BOARD[1] + 70); c.lineTo(BOARD[0] + 120, BOARD[1] + 70); c.stroke(); c.restore(); label(c, "Swipe to cut!", BOARD[0], BOARD[1] + 96, { size: 20, color: C.carrot }); }
       if (b && b.cut && !b.fly && idle) label(c, "Pick a bin!", 687, 250 - (RM ? 0 : Math.abs(Math.sin(t * 5)) * 6), { size: 22, color: C.carrot });
     };
-    ui.button('Get a new basket', () => { reset(); Sound.pop(); ui.say(A_produce.intro); });
+    ui.button('Get a new basket', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_produce.intro); });
     ui.hint("At home, ask a grown-up to help you cut open a pepper or an apple. Count the seeds!");
     reset();
     return { stage: st, state: () => s, geo: { board: BOARD, bins: Object.fromEntries(Object.entries(BINS).map(([k, b]) => [k, [b.x + b.w / 2, b.y + b.h / 2]])), slot: id => s.slots[id] }, destroy() { st.destroy(); } };

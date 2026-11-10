@@ -9,6 +9,21 @@ const URL = process.env.WL_URL || 'http://localhost:8799/';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
 
+// every line in the source, not just the ones this run says: voice/lines.json must be current (voice/lines.py makes it)
+// and every message in it recorded in every pack. lines.json is put back as it was, so the test changes nothing.
+function scriptCoverage() {
+  const fs = require('fs'), path = require('path'), root = path.join(__dirname, '..'), file = path.join(root, 'voice/lines.json');
+  const before = fs.readFileSync(file, 'utf8'); let fresh = false;
+  try { require('child_process').execFileSync('python3', ['voice/lines.py'], { cwd: root, stdio: 'ignore' }); fresh = fs.readFileSync(file, 'utf8') === before; }
+  finally { fs.writeFileSync(file, before); }
+  const lines = JSON.parse(before), out = { linesFresh: fresh };
+  for (const f of fs.readdirSync(path.join(root, 'voice/packs')).filter(f => f.endsWith('.json'))) {
+    const map = JSON.parse(fs.readFileSync(path.join(root, 'voice/packs', f), 'utf8'));
+    out[f.slice(0, -5)] = Object.keys(lines).filter(k => !map[k]).map(k => lines[k]);
+  }
+  return out;
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: 1100, height: 1300 } });
@@ -195,9 +210,12 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
   needs.guessFirst = (await page.evaluate(() => App.current)).includes('First, tap the plant') && (await nstate()).week === 0;
   await tap(...ng.pots[2]); await tap(...ng.calendar);                       // guess the no-light plant, then let a week go by
   needs.guessed = (await nstate()).guess === 2 && (await stars('needs.')).includes('needs.predict');
+  needs.notToldYet = !(await page.evaluate(() => window.__said.some(h => h.includes('One week later'))));   // the plants are still under wraps
   await tap(...ng.pots[0]);                                                  // still growing: the plants wait
   needs.waits = !(await stars('needs.')).includes('needs.best');
   await sleep(4000);
+  // Pip tells how the guess did only after the plants are revealed; listen to him, then look at each plant
+  needs.resultAfterReveal = await page.waitForFunction(() => window.__said.some(h => h.includes('One week later')) && !Listen.on, null, { timeout: 15000 }).then(() => true, () => false);
   for (const pt of ng.pots) await tap(...pt);
   needs.allSeen = (await nstate()).seen.every(Boolean);
   needs.fairLine = await page.waitForFunction(() => window.__said.some(h => h.includes('Those were fair tests')), null, { timeout: 30000 }).then(() => true, () => false);
@@ -606,6 +624,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     return { messagesSaid: said.length, ...out };
   }, extraSaid);
 
+  report.script = scriptCoverage();
   report.errors = errors; report.noRecordingWarnings = warnings.filter(w => w.includes('No recording'));
   console.log(JSON.stringify(report, null, 1));
   await page.screenshot({ path: 'tests/last-run.png' });
@@ -624,8 +643,8 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Flower Lab: fruit can be tapped': report.flower.fruitTapWorks,
     'Grow a Bean: 6 stars': report.grow.final.length === 6,
     'Grow a Bean: one thirsty reminder, not a stream': report.grow.thirstyReminders === 1,
-    'Rapid taps on one part start one line': report.rapidTaps.sameTapClips <= 1,
-    'Quick taps on several parts: only the last one speaks': report.rapidTaps.quickTapClips <= 1 && report.rapidTaps.newestWins,
+    'Rapid taps on one part start one line': report.rapidTaps.sameTapClips === 1,
+    'Quick taps on several parts: only the last one speaks': report.rapidTaps.quickTapClips === 1 && report.rapidTaps.newestWins,
     'Listen first: taps wait while Pip explains, with a nudge': report.listen.lockedNow && report.listen.heldTap.stillRoots && report.listen.heldTap.nudge && report.listen.stemAfter,
     'Listen first: the star arrives when Pip finishes': report.travelListen.during === report.travelListen.before && report.travelListen.after === report.travelListen.before + 1 && report.travelListen.animalHeld && report.travelListen.animalAfter,
     'Grow a Bean: no line cuts off another': report.grow.linesCutOff.length === 0,
@@ -653,6 +672,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Plant Needs: guess first, and the plants wait for the week to pass': report.needs.guessFirst && report.needs.guessed && report.needs.waits,
     'Plant Needs: every plant tapped, then Pip explains the fair test': report.needs.allSeen && report.needs.fairLine,
     'Plant Needs: the week line plays before the plant facts, not after': report.needs.inOrder,
+    'Plant Needs: Pip tells how the guess did only after the plants are revealed': report.needs.notToldYet && report.needs.resultAfterReveal,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
@@ -699,7 +719,7 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Trophy Hall: a locked badge says how to earn it, an earned one how you earned it': report.hall.locked.line === 'Not yet! Take the flower apart and help the bee in Flower Lab.' && report.hall.earnedLine.startsWith('You earned the Plant Pal badge!') && report.hall.trophyLine.includes('win the Botanist trophy'),
     'Trophy Hall: listen first holds badge taps while Pip explains': report.hall.locked.holds && report.hall.held.still && report.hall.held.nudge,
     'Pacing: no line talks over another in the Trophy Hall': report.hall.talkover.length === 0,
-    'Pacing: rapid badge taps start one line (newest wins)': report.hall.rapid.clips <= 1 && report.hall.rapid.last.startsWith('Not yet! Earn 10 stars'),
+    'Pacing: rapid badge taps start one line (newest wins)': report.hall.rapid.clips === 1 && report.hall.rapid.last.startsWith('Not yet! Earn 10 stars'),
     'Trophy Hall: back to the map, the sparkle is gone': report.hall.back.view === 'home' && !report.hall.back.sparkle && report.hall.back.line === 'Where should we explore next?',
     'Trophy Hall: reachable from a topic\'s badge shelf': report.hall.fromShelf === 'hall',
     'Theme: inside a topic, the page takes its accent': report.theme.topic.ground === '#E8F3E1' && report.theme.topic.bold === '#2A7340' && report.theme.topic.tab === 'rgb(255, 201, 60)' && report.theme.topic.stage === 'rgb(191, 230, 244)',
@@ -710,9 +730,11 @@ const plainText0 = h => h.replace(/<[^>]+>/g, '').slice(0, 80);
     'Trophy Hall: phone layout, no sideways scrolling': report.hall.phone.view === 'hall' && !report.hall.phone.sideways && report.hall.phone.minTap >= 44,
     'Topic ids are unique (new topics prefixed)': report.routing.ids.length === 0,
     'Every line recorded in every voice': Object.entries(report.voiceCoverage).every(([k, v]) => k === 'messagesSaid' || v === 'all recorded'),
+    'voice/lines.json is up to date with the source (run python3 voice/lines.py)': report.script.linesFresh,
+    'Every line in voice/lines.json is in every voice pack': Object.entries(report.script).every(([k, v]) => k === 'linesFresh' || !v.length),
     'No page errors': report.errors.length === 0 && report.noRecordingWarnings.length === 0
   };
   const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
   for (const [name, ok] of Object.entries(checks)) console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
   process.exit(failed.length ? 1 : 0);
-})();
+})().catch(e => { console.log(`FAIL  the test itself crashed: ${e && e.stack || e}`); process.exit(1); });

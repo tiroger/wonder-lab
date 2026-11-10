@@ -27,7 +27,7 @@ const A_example = {
     st.onDown = (x, y) => { /* x, y are logical 800x560 coords */ };
     st.onMove = (x, y) => {}; st.onUp = (x, y) => {};
     st.draw = (c, t, dt) => { /* draw the whole scene every frame; update state with dt */ };
-    ui.button('Start again', () => { reset(); ui.say(A_example.intro); });
+    ui.button('Start again', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_example.intro); });
     return { stage: st, destroy() { st.destroy(); } };     // stop any sound loops (Sound.buzz(false)) in destroy
   }
 };
@@ -43,6 +43,7 @@ const A_example = {
 - Set `fillStyle`, `strokeStyle` and `lineWidth` right before each fill or stroke. Whatever the last draw left behind leaks in otherwise (Plant Needs' first pot rim came out as a thick white band from the window frame).
 
 ## Stars, badges, narration
+- `ui.later(fn, ms)` for a delayed sound or effect (never a bare `setTimeout`): it's cleared when the activity closes or calls `ui.fresh()`. Any in-activity reset button calls `ui.fresh()` first, which also drops lines Pip had queued for the old round.
 - `ui.award('example.first', ...st.client(x, y))` gives a star once (it returns false if already earned). Badges are awarded automatically when an activity's stars are complete.
 - `ui.say(html)` sets Pip's bubble and plays the recording. Options: `{ polite: true }` for reminders (skipped if Pip is talking or the last message is fresh; returns false so you can retry later), `{ queue: true }` for news that must not interrupt.
 - Lines of 8+ words lock input until Pip finishes ("listen first"); pass `{ lock: false }` for an instruction the kid must act on mid-gesture, or `{ lock: true }` to lock a short line. The Stage, `ui.button` buttons and the quiz already respect the lock; custom DOM controls should check `inputLocked()` and call `nudge(x, y)`.

@@ -55,7 +55,7 @@ function groundsTap(x, y) {
   } else if (h.kind === 'tree') {
     const tr = L.trees[h.i]; G.shake[h.i] = t; G.taps[h.i] = (G.taps[h.i] || 0) + 1; Sound.fwip(); Sound.tap(1);
     if (!RM) for (let k = 0; k < 2; k++) G.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy + rand(-14, 10), gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: Math.sign(rand(-1, 1)) || 1, color: seasonTree(tr.x).fill });
-    if (G.taps[h.i] % 3 === 0) { G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
+    if (G.taps[h.i] % 3 === 0) { if (!RM) G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
   } else if (h.kind === 'water') { G.ripples.push({ x, y, t0: t }); Sound.drip(); critterWater(x, y); }
   else if (h.kind === 'trail') strollTo(h.i);
   return true;
@@ -64,7 +64,8 @@ function groundsTap(x, y) {
 function pokePip() { Sound.ensure(); Grounds.pokeT = Loop.t; Sound.babble(3); say(pipFact(), { lock: false }); }
 // the button follows him around the map
 function placePipBtn(x, y) {
-  const L = Home.L, b = $('#pipBtn'), w = 70, h = 76, st = { left: (x - w / 2) / L.w * 100 + '%', top: (y - h * .55) / L.h * 100 + '%', width: w / L.w * 100 + '%', height: h / L.h * 100 + '%' };
+  // at least 46 CSS px each way, however small the map is drawn (a phone)
+  const L = Home.L, b = $('#pipBtn'), k = L.w / (Home.cv.clientWidth || L.w), w = Math.max(70, 46 * k), h = Math.max(76, 46 * k), st = { left: (x - w / 2) / L.w * 100 + '%', top: (y - h * .55) / L.h * 100 + '%', width: w / L.w * 100 + '%', height: h / L.h * 100 + '%' };
   for (const k in st) if (b.style[k] !== st[k]) b.style[k] = st[k];
 }
 // Pip shares a fact from an activity you've played, a different one each time until they've all been said
@@ -78,6 +79,7 @@ function pipFact() {
 function pipIdxNow(t = Loop.t) { const w = Home.walk; return w ? lerp(w.from, w.to, ease(clamp((t - w.t0) / w.dur, 0, 1))) : Home.pipIdx; }
 function strollTo(i) {
   const from = pipIdxNow(); Sound.hop();
+  if (Home.walk && Home.walk.href) return;   // already on his way into a building: that tap wins
   if (RM) { Home.walk = null; Home.pipIdx = i; return; }
   Home.walk = { from, to: i, t0: Loop.t, dur: clamp(.3 + Math.abs(i - from) / 70, .3, 1.3), href: null };
 }

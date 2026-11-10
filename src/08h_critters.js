@@ -20,11 +20,11 @@ function critterSpots(t = Loop.t) {
   const L = Home.L, G = Grounds, out = {}; if (!L || !L.pond) return out;
   if (G.bloom[2] && t - G.bloom[2] > .5) { const f = L.flowers[2]; out.ladybug = { x: f.x + 7, y: f.y - 5 }; }
   const P = L.pond, reed = { x: P.x + .82 * P.rx, y: P.y - P.ry * .2 };
-  if (t - Critters.reedT < 7) out.snail = { x: reed.x - 4 + Math.min(1, (t - Critters.reedT) / 1.2) * 26, y: reed.y + 6 };
+  if (t - Critters.reedT < 7) out.snail = { x: reed.x - 4 + (RM ? 1 : Math.min(1, (t - Critters.reedT) / 1.2)) * 26, y: reed.y + 6 };
   if (G.rock.open && rockAt(t).o > .9) out.pillbug = { x: L.rock.x, y: L.rock.y + 4 };
   const ti = owlTree(), tr = L.trees[ti]; if (tr && (t - (G.shake[ti] ?? -99) < 6 || Sky.night() > .5)) out.owl = { x: tr.x + 12 * tr.s, y: tr.cy - 4 * tr.s, s: tr.s };
   if (t - Critters.wormT < 7) out.worm = { x: Critters.wormX, y: L.bed.y + 2 };
-  if (Critters.fishAt && t - Critters.fishT < 6) { const e = Math.min(1, (t - Critters.fishT) / 1), a = Critters.fishAt; out.fish = { x: a.x + e * 50, y: a.y - Math.sin(PI * e) * 60, jump: e < 1 }; }
+  if (Critters.fishAt && t - Critters.fishT < 6) { const e = RM ? 1 : Math.min(1, (t - Critters.fishT) / 1), a = Critters.fishAt; out.fish = { x: a.x + e * 50, y: a.y - Math.sin(PI * e) * 60, jump: e < 1 }; }
   return out;
 }
 // the owl naps in the tree farthest down the map

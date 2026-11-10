@@ -26,7 +26,7 @@ const A_travel = {
     st.onDown = (x, y) => {
       const k = keys[hit(x, y)], t = st.t; let go = false;
       if (k === 'wind' && s.wind.state === 'ready') { s.wind.state = 'blow'; s.wind.t0 = t; s.wind.seeds.forEach((q, i) => { q.d = i * .04 + Math.random() * .1; }); Sound.whoosh(); go = true; }
-      if (k === 'animal' && s.ani.state === 'sit') { s.ani.state = 'hop'; s.ani.t0 = t; s.ani.carried = false; s.ani.hopN = 0; go = true; }
+      if (k === 'animal' && s.ani.state === 'sit') { s.ani.state = 'hop'; s.ani.t0 = t; s.ani.carried = false; s.ani.hopN = 0; Sound.hop(); go = true; }
       if (k === 'water' && s.wat.state === 'ready') { s.wat.state = 'fall'; s.wat.t0 = t; s.wat.x = 100; s.wat.y = 86; s.wat.vy = 0; Sound.fwip(); go = true; }
       if (k === 'pop' && s.pop.state === 'ready') { s.pop.state = 'shake'; s.pop.t0 = t; Sound.wobble(400, .45, .08, 30, 80, 'triangle'); go = true; }
       if (go) { ui.say(facts[k]); ui.award('travel.' + k, ...st.client(x, y)); } else Sound.tap(Math.floor(x / 80));
@@ -51,7 +51,7 @@ const A_travel = {
       const W0 = s.wind, A = s.ani, Wt = s.wat, Pp = s.pop;
       // ---- wind ----
       panel(c, 0, 0, c => {
-        cloud(c, (t * 15) % 520 - 90, 50, .7); grass(c, 240);
+        cloud(c, RM ? 120 : (t * 15) % 520 - 90, 50, .7); grass(c, 240);
         if (W0.state === 'blow') { c.save(); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 4; c.lineCap = 'round'; for (let i = 0; i < 4; i++) { const x = ((t - W0.t0) * 380 + i * 90) % 520 - 60, y = 70 + i * 40; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + 40, y - 14, x + 80, y); c.stroke(); } c.restore(); }
         const sw = RM ? 0 : Math.sin(t * 1.4) * 5;
         c.save(); c.strokeStyle = C.leafDeep; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(HX, 245); c.quadraticCurveTo(HX - 8, 180, HX + sw, HY); c.stroke(); c.restore();
@@ -96,7 +96,7 @@ const A_travel = {
         sun(c, 330, 50, 22, t, { face: false });
         const sea = c.createLinearGradient(0, 200, 0, 280); sea.addColorStop(0, '#4FB3E8'); sea.addColorStop(1, '#2C7FB8'); c.fillStyle = sea; c.fillRect(0, 205, 400, 75);
         c.fillStyle = '#F2D48B'; c.beginPath(); c.ellipse(40, 232, 100, 40, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(372, 226, 72, 30, 0, 0, TAU); c.fill();
-        c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); for (let x = 120; x <= 310; x += 10) { const y = 222 + i * 18 + Math.sin(x * .06 + t * 2 + i) * 4; x === 120 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); }
+        c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); for (let x = 120; x <= 310; x += 10) { const y = 222 + i * 18 + Math.sin(x * .06 + (RM ? 0 : t * 2) + i) * 4; x === 120 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); }
         // palm
         c.save(); c.strokeStyle = '#8A5A36'; c.lineWidth = 12; c.lineCap = 'round'; c.beginPath(); c.moveTo(60, 215); c.quadraticCurveTo(62, 130, 95, 78); c.stroke(); c.restore();
         for (const r of [-170, -135, -60, -20, 10, 160]) drawLeaf(c, 95, 74, r + (RM ? 0 : Math.sin(t * 1.5 + r) * 4), .55, '#4E9E36');
@@ -106,7 +106,7 @@ const A_travel = {
         else {
           const e = t - Wt.t0;
           if (Wt.state === 'fall') { Wt.vy += 700 * dt; Wt.y += Wt.vy * dt; Wt.x += 30 * dt; if (Wt.y >= 222) { Wt.state = 'float'; Wt.t0 = t; Sound.splash(); } }
-          else if (Wt.state === 'float') { const k = clamp(e / 5, 0, 1); Wt.x = lerp(130, 318, ease(k)); Wt.y = 224 + Math.sin(t * 3) * 4; if (k >= 1) { Wt.state = 'land'; Wt.t0 = t; } }
+          else if (Wt.state === 'float') { const k = clamp(e / 5, 0, 1); Wt.x = lerp(130, 318, ease(k)); Wt.y = 224 + (RM ? 0 : Math.sin(t * 3) * 4); if (k >= 1) { Wt.state = 'land'; Wt.t0 = t; } }
           else if (Wt.state === 'land') { const k = clamp(e / .8, 0, 1); Wt.x = lerp(318, 350, k); Wt.y = lerp(224, 205, k); if (k >= 1) { Wt.state = 'grown'; Wt.t0 = t; Wt.sprout = t; Sound.grow(2); } }
           else if (Wt.state === 'grown' && e > 2.5) Wt.state = 'ready';
           if (Wt.state !== 'grown') coco(Wt.x, Wt.y);
@@ -125,7 +125,7 @@ const A_travel = {
           const k = Pp.state === 'regrow' ? clamp(e / 1, 0, 1) : 1, wob = Pp.state === 'shake' ? Math.sin(e * 50) * 8 : 0;
           c.save(); c.translate(112, 118); c.rotate((-100 + wob) * DEG); c.scale(1.1 * k, 1.1 * k); drawPod(c, 0, t, .6); c.restore();
           if (Pp.state === 'shake' && e > .45) {
-            Pp.state = 'burst'; Pp.t0 = t; Sound.crack(); for (let i = 0; i < 6; i++) setTimeout(() => Sound.ptoo(), i * 60);
+            Pp.state = 'burst'; Pp.t0 = t; Sound.crack(); for (let i = 0; i < 6; i++) ui.later(() => Sound.ptoo(), i * 60);
             Pp.seeds = Array.from({ length: 6 }, () => ({ x: 160, y: 112, vx: rand(60, 290) * (Math.random() < .25 ? -1 : 1), vy: rand(-340, -170), rest: false, rt: 0 }));
           }
           if (Pp.state === 'regrow' && e > 1) Pp.state = 'ready';
