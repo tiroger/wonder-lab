@@ -5,7 +5,7 @@ For anyone (agent or person) who changes the interface, builds the home page or 
 Read it with `.claude/CLAUDE.md` (the rules) and the `wonder-lab-activity` skill (how an activity is built).
 When code and this guide disagree, the code is the truth: fix the guide in the same PR.
 
-**Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15), plus campus life: the grounds, the Badge Garden, the living sky and the critter hunt (section 16). Space and Weather in the tables are examples until those topics exist.
+**Status (2026-10-03):** everything in this guide is built: the **Lab campus map** home page and the **Trophy Hall** (section 16), and per-topic accent colors and Pip costumes (section 15), plus campus life: the grounds, the Badge Garden, the living sky and the critter hunt (section 16). Two topics exist: Plants & Seeds and Weather & Water (2026-11-09). Space in the tables is an example until that topic exists.
 
 ---
 
@@ -311,13 +311,13 @@ Leaf green as the shared "on/go" color (switches, `.go`, listen bar) can stay: g
   activities: [...], master: { id: 'space.b.master', name: '...', icon: '...', desc: '...' } }
 ```
 
-Chosen accent palettes (Roger approved these and the costumes on 2026-10-03; Space and Weather are examples until those topics exist):
+Chosen accent palettes (Roger approved these and the costumes on 2026-10-03; Space is an example until that topic exists):
 
 | Topic | ground | dot | selected tab | stage | bold word |
 |---|---|---|---|---|---|
 | Plants & Seeds (today) | `#E8F3E1` | `#D3E8CB` | `#FFC93C` | `#BFE6F4` | `#2A7340` |
 | Space (example) | `#E7E8F7` | `#D4D7F0` | `#AEB6F2` | `#2E3A6B` | `#3F4FB8` |
-| Weather (example) | `#E3F2F9` | `#CBE5F1` | `#8FD0EE` | `#BFE6F4` | `#1D6E99` |
+| Weather & Water | `#E3F2F9` | `#CBE5F1` | `#8FD0EE` | `#BFE6F4` | `#1D6E99` |
 
 Accent rules:
 - Text on an accent is always `--ink`, at 4.5:1 or better.
@@ -437,9 +437,9 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 - **State** lives in `Grounds` for the session (a reload resets the blooms and the rock). With `RM` on, nothing flies or falls: blooms, hops and flips happen at once.
 
 ### The campus grows (as built, src/08f_garden.js)
-- **The building fills in:** `building(c, t, p)` gets `p`, the share of the topic's stars earned. The greenhouse adds a seedling pot (15%), a tomato plant (35%), a hanging basket (60%) and a bean pole (85%).
-- **The Badge Garden:** a row under the grounds (9 across, 3 on a phone, more rows as it fills) that starts with a "Badge Garden" sign. Each earned badge plants its `reward`, oldest first. The pieces live in `GARDEN`, a shared library any topic can pick from: birdhouse, wheelbarrow, beehive, pumpkins, scarecrow, dandelions, appleTree, sprinkler, beanTeepee, gnome, starFlag. Each one is drawn in a 100×130 box and does something when tapped (a bird peeks out, the dandelions blow away and grow back, the sprinkler sprays), with a sound and no speech. Tapping the sign: Pip says `GARDEN_SIGN`.
-- **Landmarks:** a topic's `landmark` (a `GARDEN` piece flagged `tall`) rises beside its building when its trophy is won, taking the place of the tree there. Plants & Seeds: the giant `sunflower`.
+- **The building fills in:** `building(c, t, p)` gets `p`, the share of the topic's stars earned. The greenhouse adds a seedling pot (15%), a tomato plant (35%), a hanging basket (60%) and a bean pole (85%). The weather station (`drawWeatherStation`, src/07b_wcycle.js) adds a rain gauge, a thermometer, a rainbow and a weather balloon at the same steps.
+- **The Badge Garden:** a row under the grounds (9 across, 3 on a phone, more rows as it fills) that starts with a "Badge Garden" sign. Each earned badge plants its `reward`, oldest first. The pieces live in `GARDEN`, a shared library any topic can pick from: birdhouse, wheelbarrow, beehive, pumpkins, scarecrow, dandelions, appleTree, sprinkler, beanTeepee, gnome, starFlag, and for Weather & Water: umbrella, birdbath, kite, windsock, snowman. Each one is drawn in a 100×130 box and does something when tapped (a bird peeks out, the dandelions blow away and grow back, the sprinkler sprays), with a sound and no speech. Tapping the sign: Pip says `GARDEN_SIGN`.
+- **Landmarks:** a topic's `landmark` (a `GARDEN` piece flagged `tall`) rises beside its building when its trophy is won, taking the place of the tree there. Plants & Seeds: the giant `sunflower`. Weather & Water: a `windmill` whose sails turn.
 - **News:** pieces that weren't there on the last visit sparkle during this visit, until they're tapped, and Pip says `GARDEN_NEW` once, in place of "Where should we explore…" (`Store.data.gardenSeen`).
 - `checkIds()` checks that every `reward` and `landmark` names a real piece.
 

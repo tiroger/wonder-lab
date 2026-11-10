@@ -2720,6 +2720,823 @@ const ICONS = {
   trophy(c) { c.fillStyle = C.sun; c.strokeStyle = C.ink; c.lineWidth = 4; c.beginPath(); c.moveTo(26, 16); c.lineTo(74, 16); c.quadraticCurveTo(74, 62, 50, 64); c.quadraticCurveTo(26, 62, 26, 16); c.fill(); c.stroke(); c.beginPath(); c.arc(22, 32, 11, PI * .5, PI * 1.5); c.moveTo(78, 21); c.arc(78, 32, 11, -PI * .5, PI * .5); c.stroke(); c.fillRect(44, 64, 12, 14); c.strokeRect(44, 64, 12, 14); c.fillStyle = C.soil; c.fillRect(32, 78, 36, 12); c.strokeRect(32, 78, 36, 12); drawLeaf(c, 50, 44, -120, .22); drawLeaf(c, 50, 44, -60, .22); }
 };
 function drawIcon(cv, name, t = 0) { const c = cv.getContext('2d'); c.setTransform(cv.width / 100, 0, 0, cv.width / 100, 0, 0); c.clearRect(0, 0, 100, 100); ICONS[name](c, t); }
+/* ============ Weather & Water: shared drawing and sounds ============ */
+// Named colors for the weather topic (docs/design.md, section 3: a topic adds its own next to C)
+const WC = { sky1: '#7EC4E8', sky2: '#DDF1FA', cloud: '#FFFFFF', storm: '#8C99AB', stormDeep: '#5F6B7D', vapor: 'rgba(255,255,255,.75)',
+  lake: '#4FB3E8', lakeDeep: '#2F86C2', rock: '#9AA3AE', rockDeep: '#6F7884', snow: '#F4FAFF', glass: 'rgba(221,243,247,.45)', red: '#E04B4B', accent: '#1D6E99' };
+Object.assign(Sound, {
+  thunder() { this.noise(1.6, .14, 'lowpass', 160, 0, 1, 60); this.noise(.6, .08, 'lowpass', 420, .05, 1, 90); this.tone(55, 1.2, 'sine', .07, 0, .8); },
+  steam() { this.noise(.9, .07, 'bandpass', 1200, 0, 2, 3200); this.tone(PENTA[2], .2, 'sine', .05, .05, 1.5); },
+  snowfall() { for (let i = 0; i < 6; i++) this.tone(PENTA[5 + (i % 4)], .18, 'sine', .035, i * .14); }
+});
+// a puffy sticker cloud centered at (x, y): the ink goes on first, the fill on top, so only the outer edge shows
+const PUFFS = [[-52, 10, 30], [-20, -12, 38], [22, -8, 34], [54, 10, 26], [0, 14, 32]];
+// face: null, or { t, full } for a friendly face that blinks (and puffs its cheeks when the cloud is full)
+function puffCloud(c, x, y, s = 1, fill = WC.cloud, { line = 4, face = null } = {}) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = C.ink; for (const [px, py, r] of PUFFS) { c.beginPath(); c.arc(px, py, r + line / s, 0, TAU); c.fill(); }
+  c.fillStyle = fill; for (const [px, py, r] of PUFFS) { c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); }
+  c.shadowBlur = 0; c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-22, -26, 18, 7, -.3, 0, TAU); c.fill();
+  if (face) cloudFace(c, 0, 10, face.t, face.full);
+  c.restore(); return ellipse(x, y, 88 * s, 52 * s);
+}
+function cloudFace(c, x, y, t, full = false) {
+  const blink = !RM && (t % 4.1) < .13;
+  c.fillStyle = C.ink; for (const ex of [-16, 16]) { c.beginPath(); c.ellipse(x + ex, y - 4, 4.5, blink ? 1 : 5.5, 0, 0, TAU); c.fill(); if (!blink) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x + ex + 1.5, y - 6, 1.6, 0, TAU); c.fill(); c.fillStyle = C.ink; } }
+  c.fillStyle = 'rgba(242,102,139,.45)'; const ch = full ? 8 : 5.5; for (const ex of [-28, 28]) { c.beginPath(); c.ellipse(x + ex, y + 6, ch, ch * .7, 0, 0, TAU); c.fill(); }
+  c.strokeStyle = C.ink; c.lineWidth = 2.5; c.lineCap = 'round'; c.beginPath();
+  if (full) { c.moveTo(x - 6, y + 9); c.lineTo(x + 6, y + 9); } else c.arc(x, y + 4, 7, .15 * PI, .85 * PI);
+  c.stroke();
+}
+// little splashes where rain lands along y, between x0 and x1
+function splashes(c, t, x0, x1, y, n = 6) {
+  if (RM) return; const r = seeded(17); c.save(); c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2.5; c.lineCap = 'round';
+  for (let i = 0; i < n; i++) { const x = lerp(x0, x1, r()), k = (t * 2.2 + r()) % 1, w = 4 + k * 10; c.globalAlpha = 1 - k; c.beginPath(); c.arc(x, y, w, PI * 1.15, PI * 1.85); c.stroke(); }
+  c.restore();
+}
+// a rainbow arc that fades in and out over `life` seconds (a = 0..1 strength)
+function rainbow(c, x, y, r, a) {
+  if (a <= 0) return; c.save(); c.globalAlpha = a * .8; c.lineCap = 'round';
+  ['#E04B4B', C.carrot, C.sun, C.leaf, C.water, '#8D6CD9'].forEach((col, i) => { c.strokeStyle = col; c.lineWidth = 9; c.beginPath(); c.arc(x, y, r - i * 9, PI * 1.08, PI * 1.92); c.stroke(); });
+  c.restore();
+}
+// a zigzag lightning bolt (drawn, never a screen flash)
+function bolt(c, x, y, s = 1) {
+  c.save(); c.translate(x, y); c.scale(s, s); const P = new Path2D('M4 0 L-14 34 L0 34 L-10 66 L18 24 L4 24 L14 0 Z');
+  c.fillStyle = C.sun; c.fill(P); c.strokeStyle = C.ink; c.lineWidth = 3 / s; c.lineJoin = 'round'; c.stroke(P); c.restore();
+}
+// a long, flat, low blanket of cloud
+function stratusCloud(c, x, y, s = 1, fill = '#D6DCE4') {
+  c.save(); c.translate(x, y); c.scale(s, s); const P = new Path2D();
+  P.moveTo(-150, 14); for (let i = 0; i <= 10; i++) P.quadraticCurveTo(-150 + i * 30 - 15, -14 - (i % 2) * 6, -150 + i * 30, -6);
+  P.lineTo(150, 14); P.quadraticCurveTo(0, 26, -150, 14); P.closePath();
+  c.fillStyle = fill; c.fill(P); c.strokeStyle = C.ink; c.lineWidth = 4 / s; c.lineJoin = 'round'; c.stroke(P); c.restore();
+  return rrect(x - 150 * s, y - 24 * s, 300 * s, 48 * s, 20 * s);
+}
+// high, thin, wispy streaks of ice
+function cirrusCloud(c, x, y, s = 1, t = 0) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.lineCap = 'round';
+  for (const [dx, dy, len, curl] of [[-70, -8, 120, 18], [-20, 10, 140, 22], [30, -16, 110, 14]]) {
+    const sw = RM ? 0 : Math.sin(t * .6 + dx) * 3, p = new Path2D(); p.moveTo(dx - len / 2, dy + 10); p.quadraticCurveTo(dx, dy - 8 + sw, dx + len / 2, dy - curl);
+    c.strokeStyle = 'rgba(36,54,40,.55)'; c.lineWidth = 12; c.stroke(p); c.strokeStyle = '#FFFFFF'; c.lineWidth = 7; c.stroke(p);
+  }
+  c.restore(); return ellipse(x, y, 110 * s, 40 * s);
+}
+// a towering thunderstorm cloud with a flat, anvil-shaped top
+function stormCloud(c, x, y, s = 1, fill = WC.storm) {
+  c.save(); c.translate(x, y); c.scale(s, s); const P = new Path2D();
+  P.moveTo(-70, 40); P.quadraticCurveTo(-96, 10, -66, -10); P.quadraticCurveTo(-74, -60, -40, -80); P.quadraticCurveTo(-60, -130, -110, -150);
+  P.quadraticCurveTo(-20, -170, 0, -160); P.quadraticCurveTo(20, -170, 110, -150); P.quadraticCurveTo(60, -130, 42, -82);
+  P.quadraticCurveTo(80, -60, 70, -10); P.quadraticCurveTo(100, 12, 72, 40); P.quadraticCurveTo(0, 56, -70, 40); P.closePath();
+  const g = c.createLinearGradient(0, -160, 0, 50); g.addColorStop(0, '#E6EAF0'); g.addColorStop(1, fill);
+  c.fillStyle = g; c.fill(P); c.strokeStyle = C.ink; c.lineWidth = 4 / s; c.lineJoin = 'round'; c.stroke(P); c.restore();
+  return rrect(x - 110 * s, y - 165 * s, 220 * s, 215 * s, 30 * s);
+}
+// falling rain or snow under a cloud: streaks from (x0..x1, y0) down to y1
+function precip(c, t, x0, x1, y0, y1, snow = false, n = 22) {
+  const r = seeded(11); c.save();
+  for (let i = 0; i < n; i++) {
+    const x = lerp(x0, x1, r()), sp = snow ? 60 + r() * 30 : 260 + r() * 120, len = y1 - y0, k = RM ? r() : ((t * sp + r() * len) % len) / len, y = y0 + k * len, dx = snow ? Math.sin(t * 2 + i) * 6 : 0;
+    if (snow) { c.fillStyle = WC.snow; c.strokeStyle = 'rgba(36,54,40,.5)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x + dx, y, 4.5, 0, TAU); c.fill(); c.stroke(); }
+    else { c.strokeStyle = C.water; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.lineTo(x - 3, y + 14); c.stroke(); }
+  }
+  c.restore();
+}
+// a wavy little cloud of water vapor
+function vaporPuff(c, x, y, t, a = 1) {
+  c.save(); c.globalAlpha = a; c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 5; c.lineCap = 'round';
+  for (const dx of [-16, 0, 16]) { const w = RM ? 0 : Math.sin(t * 3 + dx) * 4; c.beginPath(); c.moveTo(x + dx, y + 26); c.bezierCurveTo(x + dx + 10 + w, y + 12, x + dx - 10 - w, y - 4, x + dx + w, y - 22); c.stroke(); }
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(x, y, 30, 0, TAU); c.fill(); c.restore();
+}
+function raindrop(c, x, y, s = 1, fill = C.water) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, -14); c.quadraticCurveTo(11, 2, 8, 7); c.arc(0, 6, 8, .1 * PI, .9 * PI); c.quadraticCurveTo(-11, 2, 0, -14); c.closePath();
+  c.fillStyle = fill; c.fill(); c.strokeStyle = C.ink; c.lineWidth = 2.5 / s; c.stroke(); c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.arc(-3, 4, 2.4, 0, TAU); c.fill(); c.restore();
+}
+
+/* ============ the Weather & Water building on the campus map: a little weather station ============ */
+// a white instrument hut with louvers, a mast with spinning wind cups and a fluttering wind sock;
+// it fills in as stars are earned: a rain gauge, a thermometer, a rainbow, a weather balloon
+function drawWeatherStation(c, t, p = 0) {
+  const spin = RM ? .4 : t * 3.2, flap = RM ? 0 : Math.sin(t * 4) * .12;
+  c.save(); c.translate(-110, -160); c.lineJoin = 'round'; c.lineCap = 'round';
+  c.fillStyle = 'rgba(36,54,40,.18)'; c.beginPath(); c.ellipse(110, 156, 98, 10, 0, 0, TAU); c.fill();
+  if (p >= .6) { for (const [r, col] of [[70, '#E04B4B'], [62, C.sun], [54, C.leaf], [46, C.water]]) { c.strokeStyle = col; c.lineWidth = 8; c.beginPath(); c.arc(90, 132, r, PI * 1.05, PI * 1.95); c.stroke(); } }
+  if (p >= .85) { const by = RM ? 0 : Math.sin(t * 1.2) * 4; c.strokeStyle = 'rgba(36,54,40,.6)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(40, 72); c.quadraticCurveTo(30, 40, 34, 18 + by); c.stroke(); c.fillStyle = '#FFFDF5'; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.arc(34, 6 + by, 13, 0, TAU); c.fill(); c.stroke(); }
+  // the mast, the wind sock and the cups
+  c.strokeStyle = C.ink; c.lineWidth = 9; c.beginPath(); c.moveTo(176, 150); c.lineTo(176, 24); c.stroke(); c.strokeStyle = '#C8CDD2'; c.lineWidth = 4; c.stroke();
+  c.save(); c.translate(178, 62); c.rotate(flap); const sock = new Path2D('M0 -12 L52 -6 L52 6 L0 12 Z'); c.fillStyle = '#FFFDF5'; c.fill(sock);
+  c.save(); c.clip(sock); c.fillStyle = C.carrot; for (const x of [0, 26]) c.fillRect(x, -14, 13, 28); c.restore(); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(sock); c.restore();
+  c.save(); c.translate(176, 22);
+  for (let i = 0; i < 3; i++) { const a = spin + i * TAU / 3, x = Math.cos(a) * 24, y = Math.sin(a) * 7; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0); c.lineTo(x, y); c.stroke(); c.fillStyle = WC.accent; c.beginPath(); c.arc(x, y, 6.5, 0, TAU); c.fill(); c.stroke(); }
+  c.fillStyle = C.ink; c.beginPath(); c.arc(0, 0, 4, 0, TAU); c.fill(); c.restore();
+  // the hut: a roof, louvered walls and a door
+  const hut = rrect(34, 74, 112, 76, 6); c.fillStyle = '#FFFDF5'; c.fill(hut);
+  c.strokeStyle = 'rgba(36,54,40,.35)'; c.lineWidth = 2.5; for (let y = 84; y < 146; y += 9) { c.beginPath(); c.moveTo(42, y); c.lineTo(138, y + 3); c.stroke(); }
+  c.strokeStyle = C.ink; c.lineWidth = 4; c.stroke(hut);
+  const roof = new Path2D('M22 78 L90 36 L158 78 Z'); c.fillStyle = '#5BA8D6'; c.fill(roof); c.stroke(roof);
+  c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 4; c.beginPath(); c.moveTo(48, 68); c.lineTo(86, 46); c.stroke();
+  const door = rrect(76, 102, 28, 48, 4); c.fillStyle = '#A87445'; c.fill(door); c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(door);
+  c.fillStyle = C.sun; c.beginPath(); c.arc(98, 128, 2.5, 0, TAU); c.fill();
+  if (p >= .35) { c.fillStyle = '#FFFDF5'; c.strokeStyle = C.ink; c.lineWidth = 2.5; const tb = rrect(118, 86, 12, 46, 6); c.fill(tb); c.stroke(tb); c.fillStyle = WC.red; c.fillRect(122, 104, 4, 22); c.beginPath(); c.arc(124, 128, 5, 0, TAU); c.fill(); c.stroke(); }
+  if (p >= .15) { c.fillStyle = 'rgba(221,243,247,.9)'; c.strokeStyle = C.ink; c.lineWidth = 3; const g = rrect(10, 112, 16, 38, 3); c.fill(g); c.fillStyle = C.water; c.fillRect(12, 132, 12, 16); c.stroke(g); c.beginPath(); c.moveTo(6, 112); c.lineTo(30, 112); c.stroke(); }
+  const base = rrect(6, 146, 208, 10, 4); c.fillStyle = '#C9955A'; c.fill(base); c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(base);
+  c.restore();
+}
+
+/* ============ Activity: The Water Cycle ============ */
+// Water's never-ending trip: the sun warms the lake (evaporation), the vapor is dragged up into the cold sky and
+// becomes a cloud (condensation), the full cloud rains or snows (precipitation), and the river carries it home (collection).
+const A_wcycle = {
+  id: 'weather.cycle', name: 'Water Cycle', icon: 'wcycle',
+  badge: { id: 'weather.b.cycle', name: 'Water Cycler', desc: 'You followed water all the way around the water cycle!', how: 'Not yet! Follow the water all the way around in <b>Water Cycle</b>.', reward: 'umbrella' },
+  stars: [{ id: 'weather.cycle.evap', name: 'Evaporation' }, { id: 'weather.cycle.condense', name: 'Condensation' }, { id: 'weather.cycle.precip', name: 'Precipitation' }, { id: 'weather.cycle.collect', name: 'Collection' }, { id: 'weather.cycle.snow', name: 'Snow on the mountain' }],
+  intro: 'Water goes on a trip that never ends! <b>Tap the sun</b> to warm up the lake.',
+  facts: ['Did you know? The water you drink today might have been rain on a dinosaur long ago! Earth keeps using the same water over and over.', 'Did you know? The sun is the engine of the water cycle. Its heat keeps the water moving!'],
+  mount(host, ui) {
+    const st = new Stage(host, 'A sunny valley with a lake, a river and a snowy mountain. Tap the sun to warm the lake, drag the water vapor up into the sky to make a cloud, then make it rain or snow.');
+    const SUN = [100, 92], LAKE = [175, 478], COLD = 175, CY = 104, MTN = 560;
+    const RIVER = [[628, 318], [560, 430], [430, 372], [312, 462]];
+    const found = k => !!Store.data.stars['weather.cycle.' + k];
+    const earn = (k, x, y) => { if (ui.award('weather.cycle.' + k, ...st.client(x, y))) s.earnedHere = true; };
+    let s;
+    function reset() { s = { puff: null, drops: 0, cloudX: 420, drag: null, rainT: -9, snowT: -9, snowcap: .35, flow: null, lake: 0, heavyTold: 0, lastAct: Loop.t, told: {}, earnedHere: false }; }
+    const cloudScale = () => .55 + s.drops * .17, heavy = () => s.drops >= 3;
+    const raining = () => st.t - s.rainT < 2.6, overMountain = () => s.cloudX > MTN;
+    const riverAt = u => bez(...RIVER, u);
+    const cloudPath = () => ellipse(s.cloudX, CY, 90 * cloudScale(), 55 * cloudScale());
+    function tapSun() {
+      Sound.steam(); s.sunT = st.t;
+      if (s.puff) { ui.say('First, drag the vapor up high!', { polite: true }); return; }
+      if (heavy()) { ui.say('The cloud is full. Tap it!', { polite: true }); return; }
+      if (raining() || s.flow) return;
+      s.puff = { x: LAKE[0] + 30, y: LAKE[1] - 40, risen: RM, join: null };
+      if (RM) s.puff.y = 300;
+      if (!found('evap')) { earn('evap', ...SUN); ui.say('The sun warms the lake. Tiny bits of water float up into the air as <b>water vapor</b>. It\'s a gas you can\'t see. This is <b>evaporation</b>, like a puddle drying up on a sunny day!'); ui.say('Now <b>drag the vapor up</b> into the cold sky!', { queue: true }); }
+    }
+    function joinCloud() {
+      const p = s.puff; p.join = st.t; Sound.pop(); Sound.tap(5 + s.drops);
+    }
+    function joined() {
+      s.puff = null; s.drops++;
+      if (!found('condense')) { earn('condense', s.cloudX, CY); ui.say('High up, the air is cold. The vapor cools and turns back into tiny drops of water. The drops crowd together and make a cloud! This is <b>condensation</b>.'); ui.say('Make the cloud bigger! <b>Tap the sun</b> again.', { queue: true }); return; }
+      if (heavy()) {
+        if (!s.heavyTold) ui.say('The cloud is full and heavy! <b>Tap it</b> to make it rain, or <b>drag it</b> over the mountain first.');
+        else if (!found('snow')) ui.say('The cloud is full again! This time, <b>drag it over the mountain</b>, then tap it.');
+        s.heavyTold++;
+      }
+    }
+    function rain() {
+      s.rainT = st.t; const snow = overMountain(); s.rainSnow = snow; s.drops = 0; Sound.rain();
+      if (snow) { Sound.snowfall(); s.snowcap = Math.min(1, s.snowcap + .3); }
+      const precipNew = !found('precip'); earn('precip', s.cloudX, CY + 60);
+      if (snow && !found('snow')) { earn('snow', 660, 200); ui.say('Up on the cold mountain, the water froze and fell as snow! Snow is <b>precipitation</b> too. When it melts, the water runs down the mountain.'); }
+      else if (precipNew) ui.say('Drip, drop! The drops got so big and heavy that they fell. Water falling from clouds is <b>precipitation</b>. Rain, snow and hail are all precipitation!');
+      // the water reaches the river where it fell (over the mountain: at the top) and flows to the lake
+      const u0 = snow ? 0 : clamp(1 - (s.cloudX - 312) / (628 - 312), 0, 1);
+      s.flow = { u0, t0: st.t + (RM ? 0 : 1.4), dur: RM ? 0 : 2.2 * (1 - u0) + .4 };
+    }
+    function arrived() {
+      s.flow = null; s.lake = Math.min(1, s.lake + .25); Sound.splash();
+      if (!found('collect')) { earn('collect', LAKE[0], LAKE[1] - 20); ui.say('The water runs into rivers, and the rivers carry it back to the lake. This is <b>collection</b>. Now the sun can warm it up again!', { queue: true }); }
+      if (!found('snow') && !s.told.again) { s.told.again = true; ui.say('Let\'s go around again! This time, make it snow on the mountain.', { queue: true }); }
+    }
+    st.onDown = (x, y) => {
+      s.lastAct = st.t;
+      if (s.puff && !s.puff.join && dist(x, y, s.puff.x, s.puff.y) < 55) { s.drag = { kind: 'puff', dx: s.puff.x - x, dy: s.puff.y - y }; Sound.fwip(); return; }
+      if (s.drops && !raining() && st.hit(cloudPath(), x, y)) { s.drag = { kind: 'cloud', dx: s.cloudX - x, x0: x, moved: 0 }; Sound.fwip(); return; }
+      if (dist(x, y, ...SUN) < 62) { tapSun(); return; }
+      if (x > MTN && y > 170 && y < 400) { Sound.tap(8); ui.say('Brrr! It\'s cold up on the mountain.'); return; }
+      if (dist(x, y, ...LAKE) < 150 && y > 420) { Sound.drip(); return; }
+      Sound.tap(Math.floor(x / 80));
+    };
+    st.onMove = (x, y) => {
+      const d = s.drag; if (!d) return;
+      if (d.kind === 'puff') { s.puff.x = clamp(x + d.dx, 40, 760); s.puff.y = clamp(y + d.dy, 40, 520); s.puff.risen = true; }
+      else { s.cloudX = clamp(x + d.dx, 250, 720); d.moved = Math.max(d.moved, Math.abs(x - d.x0)); }
+    };
+    st.onUp = () => {
+      const d = s.drag; s.drag = null; if (!d) return;
+      if (d.kind === 'puff') { if (s.puff.y < COLD) joinCloud(); else Sound.tap(2); return; }
+      if (d.moved < 10) { if (heavy()) rain(); else { Sound.tap(3); ui.say('It needs more water first! Tap the sun.'); } }
+      else Sound.tap(overMountain() ? 8 : 4);
+    };
+
+    function drawMountain(c) {
+      const M = new Path2D('M500 402 L660 168 L716 236 L760 196 L840 402 Z'); c.fillStyle = WC.rock; c.fill(M); c.strokeStyle = C.ink; c.lineWidth = 4; c.lineJoin = 'round'; c.stroke(M);
+      c.save(); c.clip(M); c.fillStyle = WC.rockDeep; c.beginPath(); c.moveTo(660, 168); c.lineTo(700, 402); c.lineTo(840, 402); c.lineTo(760, 196); c.lineTo(716, 236); c.closePath(); c.globalAlpha = .35; c.fill(); c.globalAlpha = 1;
+      const h = 40 + s.snowcap * 70; c.fillStyle = WC.snow; c.fillRect(480, 160, 380, h); c.restore();
+      c.strokeStyle = C.ink; c.lineWidth = 4; c.stroke(M);
+    }
+    function drawRiver(c, t) {
+      const R = new Path2D(); R.moveTo(...RIVER[0]); R.bezierCurveTo(...RIVER[1], ...RIVER[2], ...RIVER[3]);
+      c.save(); c.lineCap = 'round'; c.strokeStyle = C.ink; c.lineWidth = 20; c.stroke(R); c.strokeStyle = WC.lake; c.lineWidth = 13; c.stroke(R);
+      if (s.flow && st.t > s.flow.t0) { // a bright rush of water running down to the lake
+        const k = s.flow.dur ? clamp((st.t - s.flow.t0) / s.flow.dur, 0, 1) : 1, u = lerp(s.flow.u0, 1, k);
+        c.strokeStyle = '#BFE8FF'; c.lineWidth = 7; c.beginPath(); for (let v = Math.max(s.flow.u0, u - .25); v <= u + .001; v += .02) { const [px, py] = riverAt(Math.min(1, v)); v === Math.max(s.flow.u0, u - .25) ? c.moveTo(px, py) : c.lineTo(px, py); } c.stroke();
+        if (k >= 1) arrived();
+      }
+      c.restore();
+    }
+    st.draw = (c, t, dt) => {
+      sky(c, WC.sky1, WC.sky2, 410);
+      // the cold air up high, so it's clear where vapor becomes cloud
+      c.save(); c.setLineDash([8, 10]); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 3; c.beginPath(); c.moveTo(220, COLD); c.lineTo(W, COLD); c.stroke(); c.restore();
+      label(c, "Cold air up high", 300, COLD - 16, { size: 17, color: WC.accent });
+      // the sun
+      const sg = st.over(circle(...SUN, 62)); if (sg) glowOn(c); sun(c, ...SUN, 40, t, { glow: st.t - (s.sunT || -9) < 1 ? 1 : sg ? .6 : 0 }); c.shadowBlur = 0;
+      // after a shower, when the sun comes back out, a rainbow shows up and fades away
+      if (s.rainT > 0 && !s.rainSnow) { const e = st.t - s.rainT - 2.4; rainbow(c, 520, 420, 230, e > 0 ? clamp(Math.min(e / 1.2, (8 - e) / 1.5), 0, 1) : 0); }
+      drawMountain(c);
+      // the land and the lake
+      c.fillStyle = C.grass; c.beginPath(); c.moveTo(0, 400); c.quadraticCurveTo(300, 380, 520, 398); c.lineTo(W, 398); c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill(); c.strokeStyle = C.grassDeep; c.lineWidth = 4; c.stroke();
+      drawRiver(c, t);
+      const lake = ellipse(LAKE[0], LAKE[1] + 10, 175, 62 + s.lake * 6); c.fillStyle = WC.lake; c.fill(lake); c.strokeStyle = C.ink; c.lineWidth = 4; c.stroke(lake);
+      c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; for (const [wx, wy] of [[110, 470], [210, 500], [250, 462]]) { const w = RM ? 0 : Math.sin(t * 2 + wx) * 4; c.beginPath(); c.moveTo(wx - 18 + w, wy); c.quadraticCurveTo(wx + w, wy - 6, wx + 18 + w, wy); c.stroke(); }
+      for (const [tx, ty] of [[420, 470], [470, 440], [700, 470]]) { c.fillStyle = C.leafDeep; c.strokeStyle = C.ink; c.lineWidth = 3; c.fillRect(tx - 4, ty, 8, 20); c.strokeRect(tx - 4, ty, 8, 20); c.fillStyle = C.leaf; c.beginPath(); c.arc(tx, ty - 8, 20, 0, TAU); c.fill(); c.stroke(); }
+      // evaporation: wisps rise from the warm lake while a puff of vapor floats up
+      if (s.puff) {
+        const p = s.puff;
+        if (p.join != null) { const k = RM ? 1 : clamp((st.t - p.join) / .6, 0, 1); p.x = lerp(p.x, s.cloudX, k); p.y = lerp(p.y, CY, k); vaporPuff(c, p.x, p.y, t, 1 - k); if (k >= 1) joined(); }
+        else {
+          if (!p.risen && !s.drag) { p.y -= 90 * dt; if (p.y <= 300) { p.y = 300; p.risen = true; } }
+          if (!RM && !p.risen) for (let i = 0; i < 3; i++) { const k = (t * .8 + i / 3) % 1; c.strokeStyle = `rgba(255,255,255,${.7 * (1 - k)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(120 + i * 50, 460 - k * 60); c.quadraticCurveTo(130 + i * 50, 440 - k * 60, 120 + i * 50, 420 - k * 60); c.stroke(); }
+          if (st.over(circle(p.x, p.y, 55)) || (s.drag && s.drag.kind === 'puff')) { c.save(); glowOn(c); vaporPuff(c, p.x, p.y, t); c.restore(); } else vaporPuff(c, p.x, p.y, t);
+          if (p.risen && !s.drag) label(c, "Drag me up!", p.x, p.y - 52 - (RM ? 0 : Math.abs(Math.sin(t * 4)) * 6), { size: 20, color: C.carrot });
+          if (s.drag && s.drag.kind === 'puff') st.cursor = 'grabbing';
+        }
+      }
+      // the cloud: bigger with every puff, grey when it's full
+      if (s.drops || raining()) {
+        const r = raining(), k = r ? clamp(1 - (st.t - s.rainT) / 2.6, 0, 1) : 0, sc = r ? .55 + .5 * k : cloudScale();
+        if (r) precip(c, t, s.cloudX - 70 * sc, s.cloudX + 70 * sc, CY + 30, s.rainSnow ? 240 : 400, s.rainSnow, 24);
+        const col = r ? mix(WC.storm, WC.cloud, 1 - k) : mix(WC.cloud, WC.storm, Math.max(0, s.drops - 1) / 2);
+        const over = !r && st.over(cloudPath());
+        c.save(); if (over || (s.drag && s.drag.kind === 'cloud')) glowOn(c); puffCloud(c, s.cloudX, CY + (heavy() && !RM ? Math.sin(t * 3) * 2 : 0), sc, col, { face: { t, full: heavy() } }); c.restore();
+        if (r && !s.rainSnow) splashes(c, t, s.cloudX - 70 * sc, s.cloudX + 70 * sc, s.cloudX < 340 ? 462 : 404, 7);
+        if (heavy() && !s.drag) label(c, overMountain() ? "Tap to snow!" : "Tap to rain!", s.cloudX, CY + 74 - (RM ? 0 : Math.abs(Math.sin(t * 4)) * 6), { size: 20, color: C.carrot });
+        if (s.drops && !heavy() && !s.puff) for (let i = 0; i < 3; i++) { c.fillStyle = i < s.drops ? C.water : 'rgba(255,255,255,.8)'; c.strokeStyle = C.ink; c.lineWidth = 2; c.beginPath(); c.arc(s.cloudX - 24 + i * 24, CY + 62, 7, 0, TAU); c.fill(); c.stroke(); }
+      }
+      if (!s.puff && !heavy() && !raining() && !s.flow && t - s.lastAct > 4) label(c, "Tap the sun!", SUN[0] + 10, SUN[1] + 82 - (RM ? 0 : Math.abs(Math.sin(t * 4)) * 6), { size: 20, color: C.carrot });
+      if (s.earnedHere && A_wcycle.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('Evaporation, condensation, precipitation, collection. Around and around it goes. That\'s the <b>water cycle</b>!', { queue: true }); }
+    };
+    ui.button('Start over', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_wcycle.intro); });
+    ui.hint("Try it: on a sunny day, draw around a puddle with chalk. Check it every hour. Where does the water go?");
+    reset();
+    return { stage: st, state: () => s, geo: { sun: SUN, lake: LAKE, cy: CY, cold: COLD, mountain: MTN }, destroy() { st.destroy(); } };
+  }
+};
+/* ============ Activity: Terrarium (a water cycle in a jar) ============ */
+// Like the class's terrarium: build the layers (rocks, soil, a plant), water it, close the lid and let sunny days go by.
+// Water rises from the soil and the leaves (transpiration), fogs the glass (condensation) and drips back down like rain.
+const A_jar = {
+  id: 'weather.jar', name: 'Terrarium', icon: 'jar',
+  badge: { id: 'weather.b.jar', name: 'Jar Gardener', desc: 'You built a tiny world with its own water cycle!', how: 'Not yet! Build a jar garden and watch the water in <b>Terrarium</b>.', reward: 'birdbath' },
+  stars: [{ id: 'weather.jar.layers', name: 'Build the layers' }, { id: 'weather.jar.closed', name: 'A closed jar' }, { id: 'weather.jar.condense', name: 'Drops on the glass' }, { id: 'weather.jar.transpire', name: 'Leaves give off water' }, { id: 'weather.jar.rain', name: 'Rain in a jar' }],
+  intro: 'Let\'s build a <b>terrarium</b>, a tiny garden in a closed jar! <b>Drag the rocks</b> in first.',
+  facts: ['Did you know? A closed terrarium can go for months without being watered. The same water goes around and around!', 'Did you know? Plants give off lots of water from their leaves. A big tree can give off enough to fill a bathtub every day!'],
+  mount(host, ui) {
+    const st = new Stage(host, 'A big glass jar on a kitchen table, with rocks, soil, a little plant, a watering can and a lid on the shelves beside it, and a sunny window.');
+    const JAR = { x: 300, y: 170, w: 260, h: 296 }, MID = JAR.x + JAR.w / 2, SOIL = 366, TABLE = 470, SUN = [690, 104];
+    const ORDER = ['gravel', 'soil', 'plant', 'water', 'lid'];
+    const HOME = { gravel: [110, 196], soil: [110, 318], plant: [110, 432], water: [712, 332], lid: [712, 452] };
+    const NEXT = { gravel: 'First, the rocks go in!', soil: 'Next comes the soil!', plant: 'Now add the plant!', water: 'Now give it a drink!', lid: 'Now put the lid on!' };
+    const found = k => !!Store.data.stars['weather.jar.' + k];
+    const earn = (k, x, y) => { if (ui.award('weather.jar.' + k, ...st.client(x, y))) s.earnedHere = true; };
+    let s;
+    function reset() {
+      s = { step: 0, pos: Object.fromEntries(Object.entries(HOME).map(([k, v]) => [k, [...v]])), drag: null, pourT: null, wet: 0, day: 0, dayT: -9, fog: 0, bigDrops: 0, fall: null, lastAct: Loop.t, told: {}, earnedHere: false };
+    }
+    const next = () => ORDER[s.step], closed = () => s.step >= 5;
+    const inJar = (x, y) => x > JAR.x - 20 && x < JAR.x + JAR.w + 20 && y > JAR.y - 60 && y < TABLE;
+    const plantH = () => 80 + Math.min(4, Math.max(0, s.day - 1)) * 10;
+    const leafSpots = () => { const h = plantH(), top = SOIL - h; return [[MID - 4, top + 6, -150], [MID + 4, top + 6, -30], [MID, SOIL - h * .45, -160], [MID, SOIL - h * .6, -20]]; };
+    const leafHit = (x, y) => s.step >= 3 && leafSpots().some(([lx, ly, r]) => dist(x, y, lx + Math.cos(r * DEG) * 26, ly + Math.sin(r * DEG) * 26) < 34);
+    const DROPS = [[MID - 60, JAR.y + 14], [MID, JAR.y + 18], [MID + 60, JAR.y + 14]];
+
+    function drop(item) {
+      if (item !== next()) { s.pos[item] = [...HOME[item]]; Sound.oops(); ui.say(NEXT[next()]); return; }
+      if (item === 'water') { s.pourT = st.t; s.pos.water = [MID + 110, JAR.y - 70]; Sound.splash(); return; }
+      s.step++; s.pos[item] = null; s.lastAct = st.t;
+      if (item === 'gravel') { Sound.crack(); Sound.tap(2); ui.say('Rocks go on the bottom. Extra water drains down there, so the roots don\'t get soggy.'); }
+      if (item === 'soil') { Sound.squish(); ui.say('Next, soil. The roots will grow in it.'); }
+      if (item === 'plant') { Sound.grow(1); earn('layers', MID, SOIL - 60); ui.say('Rocks, soil and a plant. Your tiny world is ready! Now <b>give it a drink</b> with the watering can.'); }
+      if (item === 'lid') { Sound.plunk(); earn('closed', MID, JAR.y - 10); ui.say('The jar is closed tight. No water can get in or out! Now <b>tap the sun</b> to let a day go by.'); }
+    }
+    function watered() { s.pourT = null; s.pos.water = null; s.step++; s.wet = 1; Sound.drip(); ui.say('Now <b>put the lid on</b>, so no water can get out!'); }
+    function sunnyDay() {
+      Sound.steam(); s.sunT = st.t;
+      if (!closed()) { ui.say(NEXT[next()]); return; }
+      if (st.t - s.dayT < (RM ? .3 : 2.2)) return;   // a day is still going by
+      s.day++; s.dayT = st.t;
+      if (s.day === 1) ui.say('The sun warms the jar. Water rises from the wet soil and from the leaves as <b>water vapor</b>.');
+      else if (s.day === 2) ui.say('Another sunny day. Keep an eye on the lid!');
+      else { Sound.grow(s.day % 5); ui.say('Another day in the jar!'); }
+    }
+    function dayDone() {   // the vapor cools on the glass: fog first, then big drops under the lid
+      s.fog = 1; if (s.day >= 2) s.bigDrops = 3;
+      if (s.day === 1 && !found('condense')) ui.say('Look closely at the glass. <b>Tap the drops</b>!', { queue: true });
+      if (s.day === 2 && !found('rain')) ui.say('<b>Tap a big drop</b> on the lid!', { queue: true });
+    }
+    st.onDown = (x, y) => {
+      s.lastAct = st.t;
+      if (s.pourT == null) for (const k of ORDER) { const p = s.pos[k]; if (p && dist(x, y, ...p) < 55) { s.drag = { item: k, dx: p[0] - x, dy: p[1] - y }; Sound.fwip(); return; } }
+      if (s.pourT != null) { Sound.drip(); return; }
+      if (dist(x, y, ...SUN) < 60) { sunnyDay(); return; }
+      if (s.bigDrops && !s.fall && y < JAR.y + 50 && Math.abs(x - MID) < JAR.w / 2) {
+        const i = DROPS.findIndex(([dx]) => Math.abs(x - dx) < 34); if (i >= 0) { s.fall = { x: DROPS[i][0], t0: st.t }; s.bigDrops--; Sound.drip(); return; }
+      }
+      if (leafHit(x, y)) {
+        Sound.tap(6);
+        if (s.day >= 1 && !found('transpire')) { earn('transpire', x, y); ui.say('Plants give off water vapor from tiny holes in their leaves. This is called <b>transpiration</b>. It\'s like the plant is breathing out water!'); }
+        else if (s.day < 1) ui.say('What a happy little plant!');
+        return;
+      }
+      if (s.fog && x > JAR.x && x < JAR.x + JAR.w && y > JAR.y && y < SOIL - 10) {
+        Sound.drip();
+        if (!found('condense')) {
+          earn('condense', x, y); ui.say('Drops on the glass! The water vapor touched the cool glass and turned back into water. That\'s <b>condensation</b>, just like a cloud.');
+          if (!found('transpire')) ui.say('Where else did the water come from? <b>Tap a leaf</b>!', { queue: true });
+        }
+        return;
+      }
+      Sound.tap(Math.floor(x / 80));
+    };
+    st.onMove = (x, y) => { const d = s.drag; if (d) s.pos[d.item] = [clamp(x + d.dx, 30, 770), clamp(y + d.dy, 40, 530)]; };
+    st.onUp = (x, y) => {
+      const d = s.drag; s.drag = null; if (!d) return; const p = s.pos[d.item];
+      if (inJar(...p)) drop(d.item); else { s.pos[d.item] = [...HOME[d.item]]; Sound.tap(3); }
+    };
+
+    // ---- drawing ----
+    function sack(c, x, y, col, top, speck) {
+      const P = new Path2D(`M${x - 38} ${y + 40} Q${x - 46} ${y - 10} ${x - 26} ${y - 34} L${x + 26} ${y - 34} Q${x + 46} ${y - 10} ${x + 38} ${y + 40} Z`);
+      c.fillStyle = col; c.fill(P); c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(P);
+      c.fillStyle = top; c.beginPath(); c.ellipse(x, y - 34, 26, 8, 0, 0, TAU); c.fill(); c.stroke();
+      const r = seeded(x + y); for (let i = 0; i < 7; i++) { c.fillStyle = speck; c.beginPath(); c.arc(x - 18 + r() * 36, y - 37 + r() * 6, 3 + r() * 2, 0, TAU); c.fill(); }
+    }
+    function pebbles(c, x0, x1, y0, y1, n, seed) { const r = seeded(seed); for (let i = 0; i < n; i++) { const x = lerp(x0, x1, r()), y = lerp(y0, y1, r()); c.fillStyle = ['#9AA3AE', '#B7BEC6', '#7F8893'][i % 3]; c.strokeStyle = 'rgba(36,54,40,.6)'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(x, y, 7 + r() * 5, 5 + r() * 3, r() * 3, 0, TAU); c.fill(); c.stroke(); } }
+    function sprout(c, x, y, h, t, s2 = 1) {
+      const sw = RM ? 0 : Math.sin(t * 1.4) * 2;
+      c.save(); c.translate(x, y); c.scale(s2, s2); c.lineCap = 'round'; c.strokeStyle = C.leafDeep; c.lineWidth = 7; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-4, -h * .5, sw, -h); c.stroke();
+      drawLeaf(c, sw - 4, -h + 6, -150, .42); drawLeaf(c, sw + 4, -h + 6, -30, .42); drawLeaf(c, 0, -h * .45, -160, .32); drawLeaf(c, 0, -h * .6, -20, .32); c.restore();
+    }
+    function can(c, x, y, tilt) {
+      c.save(); c.translate(x, y); c.rotate(tilt); c.strokeStyle = C.ink; c.lineWidth = 3.5; c.lineJoin = 'round';
+      const body = rrect(-34, -26, 60, 52, 10); c.fillStyle = '#6FA8DC'; c.fill(body); c.stroke(body);
+      c.fillStyle = '#6FA8DC'; c.beginPath(); c.moveTo(-34, 6); c.lineTo(-66, -26); c.lineTo(-60, -32); c.lineTo(-30, -6); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.arc(-4, -26, 22, PI, TAU); c.stroke(); c.restore();
+    }
+    const lidPath = (x, y) => rrect(x - 124, y - 12, 248, 24, 9);
+    function drawLid(c, x, y) { const p = lidPath(x, y); c.fillStyle = '#C8CDD2'; c.fill(p); c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(p); c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(x - 100, y - 4); c.lineTo(x + 60, y - 4); c.stroke(); }
+    function drawItem(c, k, x, y, t) {
+      if (k === 'gravel') { sack(c, x, y, '#D9CBB0', '#9AA3AE', '#7F8893'); label(c, "Rocks", x, y + 8, { size: 17 }); }
+      if (k === 'soil') { sack(c, x, y, '#C9955A', C.soilDeep, C.soil); label(c, "Soil", x, y + 8, { size: 17 }); }
+      if (k === 'plant') { const pot = new Path2D(`M${x - 24} ${y} L${x + 24} ${y} L${x + 18} ${y + 36} L${x - 18} ${y + 36} Z`); c.fillStyle = '#C8653A'; c.fill(pot); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(pot); sprout(c, x, y + 2, 60, t, .7); }
+      if (k === 'water') can(c, x, y, s.pourT != null ? -.7 : 0);
+      if (k === 'lid') { c.save(); c.translate(x, y); c.scale(.42, 1); drawLid(c, 0, 0); c.restore(); }
+    }
+    st.draw = (c, t, dt) => {
+      // a kitchen wall with a sunny window, and the table
+      const g = c.createLinearGradient(0, 0, 0, TABLE); g.addColorStop(0, '#F3EBDD'); g.addColorStop(1, '#E9DCC6'); c.fillStyle = g; c.fillRect(0, 0, W, TABLE);
+      const win = rrect(604, 24, 172, 150, 12); c.fillStyle = WC.sky2; c.fill(win); c.save(); c.clip(win); sky(c, WC.sky1, WC.sky2, 180);
+      const sg = st.over(circle(...SUN, 60)); if (sg) glowOn(c); sun(c, ...SUN, 32, t, { glow: st.t - (s.sunT || -9) < 1.2 ? 1 : sg ? .6 : 0 }); c.shadowBlur = 0; c.restore();
+      c.strokeStyle = C.ink; c.lineWidth = 5; c.stroke(win); c.lineWidth = 3; c.beginPath(); c.moveTo(690, 24); c.lineTo(690, 60); c.stroke();
+      for (const y of [236, 358]) { c.fillStyle = '#C9955A'; c.strokeStyle = C.ink; c.lineWidth = 3; c.fillRect(30, y, 160, 12); c.strokeRect(30, y, 160, 12); }
+      c.fillStyle = '#C9955A'; c.fillRect(632, 360, 160, 12); c.strokeRect(632, 360, 160, 12);
+      const tg = c.createLinearGradient(0, TABLE, 0, H); tg.addColorStop(0, '#B98A55'); tg.addColorStop(1, '#9A6E40'); c.fillStyle = tg; c.fillRect(0, TABLE, W, H - TABLE); c.fillStyle = '#8A5E33'; c.fillRect(0, TABLE - 6, W, 8);
+      // the jar: what's inside, then the glass on top
+      const body = rrect(JAR.x, JAR.y, JAR.w, JAR.h, 34);
+      c.save(); c.clip(body); c.fillStyle = 'rgba(221,243,247,.5)'; c.fillRect(JAR.x, JAR.y, JAR.w, JAR.h);
+      if (s.step >= 1) { c.fillStyle = '#D9D4CC'; c.fillRect(JAR.x, 426, JAR.w, 44); pebbles(c, JAR.x + 6, JAR.x + JAR.w - 6, 432, 462, 36, 5); }
+      if (s.step >= 2) { c.fillStyle = mix(C.soilLight, C.soilDeep, s.wet); c.fillRect(JAR.x, SOIL, JAR.w, 62); const r = seeded(9); for (let i = 0; i < 24; i++) { c.fillStyle = 'rgba(50,28,12,.3)'; c.beginPath(); c.arc(JAR.x + r() * JAR.w, SOIL + 8 + r() * 50, 2 + r() * 3, 0, TAU); c.fill(); } }
+      // a day goes by: vapor rises from the soil and the leaves
+      const dk = RM ? 1 : clamp((st.t - s.dayT) / 2.2, 0, 1);
+      if (s.dayT > 0 && dk < 1) { for (let i = 0; i < 6; i++) { const k = (dk * 1.6 + i / 6) % 1, x = JAR.x + 30 + i * 40; vaporPuff(c, x, SOIL - 20 - k * 150, t, .5 * (1 - k)); } }
+      if (s.dayT > 0 && dk >= 1 && !s.told['day' + s.day]) { s.told['day' + s.day] = true; dayDone(); }
+      if (s.step >= 3) {
+        sprout(c, MID, SOIL + 4, plantH(), t);
+        if (s.day >= 1 && !found('transpire') && !RM) for (const [lx, ly, r] of leafSpots()) { const k = (t * .7 + lx * .01) % 1; c.strokeStyle = `rgba(255,255,255,${.8 * (1 - k)})`; c.lineWidth = 2.5; c.beginPath(); c.arc(lx + Math.cos(r * DEG) * 30, ly + Math.sin(r * DEG) * 30 - k * 24, 4 + k * 4, 0, TAU); c.stroke(); }
+      }
+      if (s.pourT != null) { const k = RM ? 1 : clamp((st.t - s.pourT) / 1.3, 0, 1); c.strokeStyle = C.water; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(MID + 52, JAR.y - 40); c.quadraticCurveTo(MID + 20, JAR.y + 40, MID + 10, SOIL); c.stroke(); s.wet = Math.max(s.wet, k); if (k >= 1) watered(); }
+      // fog: lots of tiny drops on the inside of the glass
+      if (s.fog) { c.fillStyle = 'rgba(255,255,255,.22)'; c.fillRect(JAR.x, JAR.y, JAR.w, SOIL - JAR.y); const r = seeded(21); for (let i = 0; i < 70; i++) { const side = r(), x = side < .35 ? JAR.x + 6 + r() * 34 : side < .7 ? JAR.x + JAR.w - 40 + r() * 34 : JAR.x + 30 + r() * (JAR.w - 60), y = side < .7 ? JAR.y + 20 + r() * (SOIL - JAR.y - 40) : JAR.y + 8 + r() * 30; c.fillStyle = 'rgba(255,255,255,.85)'; c.strokeStyle = 'rgba(47,134,194,.55)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 2 + r() * 3, 0, TAU); c.fill(); c.stroke(); } }
+      for (let i = 0; i < 3; i++) if (i < s.bigDrops) raindrop(c, DROPS[i][0], DROPS[i][1] + 10 + (RM ? 0 : Math.sin(t * 3 + i) * 1.5), .9);
+      if (s.fall) { const k = RM ? 1 : clamp((st.t - s.fall.t0) / .8, 0, 1); raindrop(c, s.fall.x, lerp(JAR.y + 24, SOIL - 6, k * k), .9);
+        if (k >= 1) { s.fall = null; Sound.plunk(); if (!found('rain')) { earn('rain', MID, SOIL - 20); ui.say('Plop! The big drops fall back onto the soil, just like rain. It\'s the jar\'s own <b>precipitation</b>!'); } } }
+      c.restore();
+      c.strokeStyle = 'rgba(36,54,40,.7)'; c.lineWidth = 4; c.stroke(body); c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(JAR.x + 22, JAR.y + 50); c.lineTo(JAR.x + 22, JAR.y + 220); c.stroke();
+      const rim = rrect(JAR.x + 14, JAR.y - 16, JAR.w - 28, 22, 8); c.fillStyle = 'rgba(221,243,247,.8)'; c.fill(rim); c.strokeStyle = 'rgba(36,54,40,.7)'; c.lineWidth = 3.5; c.stroke(rim);
+      if (closed()) drawLid(c, MID, JAR.y - 22);
+      // the things on the shelves (the one being dragged on top)
+      for (const k of ORDER) { const p = s.pos[k]; if (!p || (s.drag && s.drag.item === k)) continue; const hov = st.over(circle(...p, 55)); c.save(); if (hov && s.pourT == null) glowOn(c); drawItem(c, k, ...p, t); c.restore(); }
+      if (s.drag) { st.cursor = 'grabbing'; drawItem(c, s.drag.item, ...s.pos[s.drag.item], t); }
+      // what to do next, shown before Pip says it
+      const bob = RM ? 0 : Math.abs(Math.sin(t * 4)) * 6, idle = t - s.lastAct > 4;
+      if (!closed() && !s.drag && s.pourT == null && idle) { const p = s.pos[next()]; if (p) label(c, "Drag me in!", p[0], p[1] - 66 - bob, { size: 19, color: C.carrot }); }
+      if (closed() && s.day === 0 && idle) label(c, "Tap the sun!", SUN[0], 200 - bob, { size: 19, color: C.carrot });
+      if (s.fog && !found('condense') && dk >= 1) label(c, "Tap the drops!", MID, JAR.y + 120 - bob, { size: 19, color: C.carrot });
+      if (s.bigDrops && !found('rain')) label(c, "Tap a big drop!", MID, JAR.y - 56 - bob, { size: 19, color: C.carrot });
+      label(c, s.day ? `Day ${s.day}` : "", 700, 206, { size: 22, color: WC.accent });
+      if (s.earnedHere && A_jar.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('The water goes around and around inside the jar. It\'s a tiny water cycle, so the plant hardly ever needs watering!', { queue: true }); }
+    };
+    ui.button('Build a new jar', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_jar.intro); });
+    ui.hint("Try it: put a clear lid on a cup of damp soil and set it in a sunny window. Look for drops on the lid the next day!");
+    reset();
+    return { stage: st, state: () => s, geo: { home: HOME, jar: JAR, sun: SUN, mid: MID, soil: SOIL, drops: DROPS, leaves: () => leafSpots().map(([lx, ly, r]) => [lx + Math.cos(r * DEG) * 26, ly + Math.sin(r * DEG) * 26]) }, destroy() { st.destroy(); } };
+  }
+};
+/* ============ Activity: Cloud Maker ============ */
+// A cloud sandbox: tap the sea to add water vapor, drag the cloud high or low to change what kind it is,
+// overfill it in the middle of the sky to grow a thunderstorm, and drag the thermometer below freezing for snow.
+const A_clouds = {
+  id: 'weather.clouds', name: 'Cloud Maker', icon: 'clouds',
+  badge: { id: 'weather.b.clouds', name: 'Cloud Spotter', desc: 'You made four kinds of clouds and a snowstorm!', how: 'Not yet! Make every kind of cloud, and some snow, in <b>Cloud Maker</b>.', reward: 'kite' },
+  stars: [{ id: 'weather.clouds.cumulus', name: 'Cumulus' }, { id: 'weather.clouds.stratus', name: 'Stratus' }, { id: 'weather.clouds.cirrus', name: 'Cirrus' }, { id: 'weather.clouds.storm', name: 'Storm cloud' }, { id: 'weather.clouds.snow', name: 'Snow' }],
+  intro: 'Let\'s make clouds! <b>Tap the sea</b> to add water vapor. Then <b>drag the cloud</b> up and down.',
+  facts: ['Did you know? A big puffy cloud can weigh as much as 100 elephants! Its drops are so tiny and spread out that it floats.', 'Did you know? Fog is a cloud that sits right on the ground.'],
+  mount(host, ui) {
+    const st = new Stage(host, 'A big sky over the sea, with a cloud you can drag up and down, a height scale on the left and a thermometer on the right.');
+    const SEA = 470, HIGH = 190, LOW = 330, TH = { x: 730, top: 110, bot: 420 }, FREEZE = .3, MAXV = 6;
+    const NAMES = { cumulus: "Cumulus", stratus: "Stratus", cirrus: "Cirrus", storm: "Cumulonimbus" };
+    const found = k => !!Store.data.stars['weather.clouds.' + k];
+    const earn = (k, x, y) => { if (ui.award('weather.clouds.' + k, ...st.client(x, y))) s.earnedHere = true; };
+    let s;
+    function reset() { s = { v: 0, x: 400, y: 260, drag: null, temp: .8, puffs: [], shown: null, prev: null, fadeT: -9, settle: 0, storm: null, boltT: -9, lastAct: Loop.t, told: {}, earnedHere: false }; }
+    const kind = () => !s.v ? null : s.y < HIGH ? 'cirrus' : s.y > LOW ? 'stratus' : s.storm || s.v >= MAXV ? 'storm' : 'cumulus';
+    const freezing = () => s.temp < FREEZE, thY = v => lerp(TH.bot, TH.top, v);
+    const LINES = {
+      cumulus: 'A puffy cloud, like a cotton ball! This is a <b>cumulus</b> cloud. Cumulus clouds usually mean nice weather.',
+      stratus: 'A low, flat, grey blanket! This is a <b>stratus</b> cloud. Fog is a stratus cloud right on the ground.',
+      cirrus: 'Way up high, it\'s freezing, so this cloud is made of tiny bits of ice. Thin and wispy, like feathers! It\'s called <b>cirrus</b>.',
+      storm: 'Whoa! All that vapor made the cloud grow super tall. It\'s a <b>cumulonimbus</b>, a thunderstorm cloud! Storm clouds bring heavy rain.'
+    };
+    // what's still left to make, said after a new kind of cloud (queued, so it follows the explanation)
+    function nextIdea() {
+      if (!found('cirrus') || !found('stratus')) ui.say('Now drag the cloud way up high, or way down low!', { queue: true });
+      else if (!found('storm')) ui.say('Bring the cloud back to the middle. Then <b>tap the sea</b> lots of times!', { queue: true });
+      else if (!found('snow') && !freezing()) ui.say('What if the air were freezing? <b>Drag the thermometer</b> down, then make a storm cloud!', { queue: true });
+    }
+    function settled(k) {   // a kind of cloud the kid made and let go of
+      if (!k || found(k)) return;
+      earn(k, s.x, s.y); ui.say(LINES[k]); nextIdea();
+    }
+    function startStorm() { s.storm = { t0: st.t }; s.boltT = st.t; Sound.thunder(); }
+    st.onDown = (x, y) => {
+      s.lastAct = st.t;
+      if (Math.abs(x - TH.x) < 40 && y > TH.top - 20 && y < TH.bot + 40) { s.drag = { kind: 'th' }; Sound.tap(Math.round(s.temp * 8)); st.onMove(x, y); return; }
+      if (s.v && dist(x, y, s.x, s.y) < (kind() === 'stratus' ? 150 : 110) && Math.abs(y - s.y) < 110) { s.drag = { kind: 'cloud', dx: s.x - x, dy: s.y - y }; Sound.fwip(); return; }
+      if (y > SEA) {
+        if (s.v >= MAXV) { Sound.drip(); ui.say('The cloud is full of vapor!', { polite: true }); return; }
+        Sound.steam(); s.puffs.push({ x, t0: st.t });
+        return;
+      }
+      Sound.tap(Math.floor(x / 80));
+    };
+    st.onMove = (x, y) => {
+      const d = s.drag; if (!d) return;
+      if (d.kind === 'th') { const v = clamp((TH.bot - y) / (TH.bot - TH.top), 0, 1); if (Math.round(v * 8) !== Math.round(s.temp * 8)) Sound.tap(Math.round(v * 8)); s.temp = v; }
+      else { s.x = clamp(x + d.dx, 170, 620); s.y = clamp(y + d.dy, 100, 420); }
+    };
+    st.onUp = () => {
+      const d = s.drag; s.drag = null; if (!d) return;
+      if (d.kind === 'cloud') { const k = kind(); Sound.tap(k === 'cirrus' ? 8 : k === 'stratus' ? 1 : 4); s.settle = st.t; }
+    };
+
+    function drawKind(c, k, t, a) {
+      if (!k || a <= 0) return; c.save(); c.globalAlpha = a; const hov = !s.drag && st.p.inside && dist(st.p.x, st.p.y, s.x, s.y) < 110; if (hov || (s.drag && s.drag.kind === 'cloud')) { glowOn(c); st.cursor = s.drag ? 'grabbing' : 'grab'; }
+      if (k === 'cumulus') puffCloud(c, s.x, s.y, .7 + s.v * .06, WC.cloud, { face: { t } });
+      if (k === 'stratus') { stratusCloud(c, s.x, s.y, 1); c.shadowBlur = 0; cloudFace(c, s.x, s.y + 2, t); }
+      if (k === 'cirrus') cirrusCloud(c, s.x, s.y, 1, t);
+      if (k === 'storm') { stormCloud(c, s.x, s.y + 20, 1); c.shadowBlur = 0; cloudFace(c, s.x, s.y + 6, t, true); }
+      c.restore();
+    }
+    st.draw = (c, t, dt) => {
+      // the sky darkens a little toward the top, where it's high and cold
+      sky(c, '#5DAEE0', WC.sky2, SEA);
+      c.save(); c.setLineDash([8, 12]); c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; for (const y of [HIGH, LOW]) { c.beginPath(); c.moveTo(120, y); c.lineTo(660, y); c.stroke(); } c.restore();
+      // the height scale
+      c.fillStyle = '#FFFDF5'; c.strokeStyle = C.ink; c.lineWidth = 3; const pole = rrect(26, 70, 18, SEA - 70, 9); c.fill(pole); c.stroke(pole);
+      for (const [y, txt] of [[130, "High"], [260, "Middle"], [400, "Low"]]) label(c, txt, 74, y, { size: 19, color: C.ink, align: 'left' });
+      // the sea, with a little island for scale
+      c.fillStyle = WC.lake; c.fillRect(0, SEA, W, H - SEA); c.strokeStyle = C.ink; c.lineWidth = 4; c.beginPath(); c.moveTo(0, SEA); c.lineTo(W, SEA); c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; for (let x = 30; x < W; x += 90) { const w = RM ? 0 : Math.sin(t * 2 + x) * 5; c.beginPath(); c.moveTo(x + w, SEA + 30 + (x % 3) * 12); c.quadraticCurveTo(x + 20 + w, SEA + 22 + (x % 3) * 12, x + 40 + w, SEA + 30 + (x % 3) * 12); c.stroke(); }
+      const isl = ellipse(560, SEA + 4, 70, 18); c.fillStyle = '#F1DDB0'; c.fill(isl); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(isl);
+      c.strokeStyle = '#8A6B3E'; c.lineWidth = 6; c.beginPath(); c.moveTo(560, SEA - 6); c.quadraticCurveTo(552, SEA - 40, 566, SEA - 70); c.stroke(); for (const r of [-160, -110, -60, -10]) drawLeaf(c, 566, SEA - 70, r, .3);
+      // vapor rising from the sea to the cloud
+      s.puffs = s.puffs.filter(p => {
+        const k = RM ? 1 : clamp((st.t - p.t0) / .9, 0, 1); vaporPuff(c, lerp(p.x, s.v ? s.x : 400, k), lerp(SEA - 20, s.v ? s.y : 260, k), t, 1 - k * .6);
+        if (k < 1) return true;
+        if (!s.v) { s.x = 400; s.y = 260; }
+        s.v = Math.min(MAXV, s.v + 1); Sound.pop(); s.settle = st.t; return false;
+      });
+      // the cloud: when its kind changes, the old shape fades into the new one
+      const k = kind();
+      if (k !== s.shown) { s.prev = s.shown; s.shown = k; s.fadeT = st.t; if (k === 'storm' && !s.storm) startStorm(); }
+      const fk = RM ? 1 : clamp((st.t - s.fadeT) / .5, 0, 1);
+      // a storm rains (or snows) itself out, using up its vapor
+      if (s.storm) {
+        const snow = freezing(), e = st.t - s.storm.t0;
+        if (k === 'storm') {
+          precip(c, t, s.x - 80, s.x + 80, s.y + 60, SEA, snow, 28); if (!snow) splashes(c, t, s.x - 80, s.x + 80, SEA + 6, 6);
+          if (st.t - s.boltT > 3.6) { s.boltT = st.t; Sound.thunder(); }
+          if (st.t - s.boltT < .35) bolt(c, s.x + 30, s.y + 54, 1.1);
+          if (snow && !found('snow') && found('storm')) { earn('snow', s.x, s.y + 120); ui.say('Brrr! The air is below freezing, so the water falls as <b>snow</b> instead of rain.', { queue: true }); }
+          if (e > 8) { s.storm = null; s.v = 4; }
+        } else s.storm = null;
+      }
+      drawKind(c, s.prev, t, 1 - fk); drawKind(c, k, t, fk);
+      if (k && !s.drag) tag(c, NAMES[k], s.x, k === 'storm' ? s.y - 175 : s.y - 78);
+      // award a kind once the cloud has settled there for a moment
+      if (k && !s.drag && st.t - s.settle > .5 && fk >= 1) settled(k);
+      // the thermometer: red liquid on a scale from warm to freezing
+      const tube = rrect(TH.x - 14, TH.top - 16, 28, TH.bot - TH.top + 32, 14); c.fillStyle = '#FFFDF5'; c.fill(tube);
+      const ly = thY(s.temp); c.fillStyle = freezing() ? '#6FA8DC' : WC.red; c.fillRect(TH.x - 6, ly, 12, TH.bot + 16 - ly);
+      c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(tube); c.beginPath(); c.arc(TH.x, TH.bot + 30, 20, 0, TAU); c.fillStyle = freezing() ? '#6FA8DC' : WC.red; c.fill(); c.stroke();
+      c.strokeStyle = WC.accent; c.lineWidth = 3; c.beginPath(); c.moveTo(TH.x - 26, thY(FREEZE)); c.lineTo(TH.x + 26, thY(FREEZE)); c.stroke();
+      label(c, "Warm", TH.x, TH.top - 34, { size: 17 }); label(c, "Freezing", TH.x - 40, thY(FREEZE), { size: 16, align: 'right', color: WC.accent });
+      const hb = st.over(rrect(TH.x - 40, TH.top - 20, 80, TH.bot - TH.top + 60, 20)); if (hb || (s.drag && s.drag.kind === 'th')) { st.cursor = 'ns-resize'; c.save(); glowOn(c); c.fillStyle = '#FFFDF5'; c.beginPath(); c.arc(TH.x, ly, 9, 0, TAU); c.fill(); c.restore(); }
+      c.fillStyle = '#FFFDF5'; c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.arc(TH.x, ly, 9, 0, TAU); c.fill(); c.stroke();
+      // hints on the canvas before Pip says them
+      const bob = RM ? 0 : Math.abs(Math.sin(t * 4)) * 6;
+      if (!s.v && !s.puffs.length && t - s.lastAct > 3) label(c, "Tap the sea!", 300, SEA + 46 - bob, { size: 21, color: C.carrot });
+      if (s.v && found('cumulus') && !(found('cirrus') && found('stratus')) && !s.drag && t - s.lastAct > 6) label(c, "Drag me!", s.x, s.y + 74 - bob, { size: 20, color: C.carrot });
+      if (s.earnedHere && A_clouds.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You made cumulus, stratus, cirrus and a storm cloud, and even snow. You\'re a real cloud spotter!', { queue: true }); }
+    };
+    ui.button('Clear the sky', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_clouds.intro); });
+    ui.hint("Try it: look up today. Are the clouds puffy, flat or wispy? Puffy cumulus, flat stratus, wispy cirrus!");
+    reset();
+    return { stage: st, state: () => s, geo: { sea: SEA, high: HIGH, low: LOW, th: TH, freeze: FREEZE }, destroy() { st.destroy(); } };
+  }
+};
+/* ============ Activity: Weather Station ============ */
+// The class's daily weather readings: change the weather (drag the sun, swipe up wind, drag in a rain cloud and tap it)
+// and read each tool: thermometer, wind vane, anemometer, rain gauge and barometer.
+const A_station = {
+  id: 'weather.station', name: 'Weather Station', icon: 'station',
+  badge: { id: 'weather.b.station', name: 'Weather Watcher', desc: 'You used every tool at the weather station!', how: 'Not yet! Try every tool at the <b>Weather Station</b>.', reward: 'windsock' },
+  stars: [{ id: 'weather.station.thermo', name: 'Thermometer' }, { id: 'weather.station.vane', name: 'Wind vane' }, { id: 'weather.station.anemo', name: 'Anemometer' }, { id: 'weather.station.gauge', name: 'Rain gauge' }, { id: 'weather.station.baro', name: 'Barometer' }],
+  intro: 'Scientists use tools to measure the weather. <b>Tap a tool</b> to find out what it does!',
+  facts: ['Did you know? <b>Weather</b> is what the sky is doing today. <b>Climate</b> is the usual weather of a place over many years.', 'Did you know? Wind is moving air. It blows from where the air pushes hard to where it pushes less.'],
+  mount(host, ui) {
+    const st = new Stage(host, 'A school weather station in a grassy yard: a thermometer, a wind vane, spinning wind cups, a rain gauge and a barometer, with a sun you can drag, a rain cloud and a sky you can swipe to make wind.');
+    const GROUND = 330, BASE = 476, GAUGE = 560;
+    const T = { thermo: [120, 380], vane: [270, 300], anemo: [420, 320], gauge: [GAUGE, 420], baro: [690, 380] };
+    const found = k => !!Store.data.stars['weather.station.' + k];
+    const earn = (k, x, y) => { if (ui.award('weather.station.' + k, ...st.client(x, y))) s.earnedHere = true; };
+    let s;
+    function reset() { s = { sunH: .25, temp: .35, temp0: .35, wind: 0, windSeen: false, vaneA: PI / 2, spin: 0, cloudX: 770, rainT: -9, rain: 0, press: 1, drag: null, lastAct: Loop.t, hinted: {}, told: {}, earnedHere: false }; }
+    const sunPos = (h = s.sunH) => [lerp(90, 210, h), lerp(300, 78, h)];
+    const raining = () => st.t - s.rainT < 4;
+    const cloudPath = () => ellipse(s.cloudX, 104, 110, 62);
+    const tool = (k, x, y) => {
+      const R = { thermo: rrect(88, 270, 64, 210, 12), vane: rrect(200, 210, 140, 270, 12), anemo: rrect(360, 240, 120, 240, 12), gauge: rrect(522, 350, 76, 130, 12), baro: rrect(640, 320, 100, 160, 16) }[k];
+      return x == null ? R : st.hit(R, x, y);
+    };
+    const READ = {
+      thermo: { ok: () => s.temp - s.temp0 > .15, hint: 'This is a <b>thermometer</b>. It measures how hot or cold the air is. <b>Drag the sun</b> up high and watch it!', star: 'The red line went up! The sun warmed the air. The <b>temperature</b>, how hot or cold it is, went up. A thermometer measures temperature.' },
+      vane: { ok: () => s.windSeen, hint: 'This is a <b>wind vane</b>. <b>Swipe across the sky</b> to make some wind!', star: 'A <b>wind vane</b> turns to point to where the wind is coming from. Swipe the other way and watch it turn!' },
+      anemo: { ok: () => s.windSeen, hint: 'This is an <b>anemometer</b>. Its cups catch the wind. <b>Swipe across the sky</b> to make wind!', star: 'The cups are spinning! An <b>anemometer</b> measures how fast the wind blows. The faster they spin, the stronger the wind.' },
+      gauge: { ok: () => s.rain > .2, hint: 'This is a <b>rain gauge</b>. <b>Drag the cloud</b> over it, then tap the cloud to make it rain!', star: 'Look how much rain it caught! A <b>rain gauge</b> measures how much rain fell.' },
+      baro: { ok: () => s.press < .5, hint: 'This is a <b>barometer</b>. It measures <b>air pressure</b>, the push of the air all around us. When a storm is coming, the needle drops. <b>Drag the storm cloud in</b> and see!', star: 'The needle dropped! Low air pressure often brings clouds and rain.' }
+    };
+    function readTool(k) {
+      const r = READ[k]; Sound.tap({ thermo: 2, vane: 4, anemo: 5, gauge: 6, baro: 7 }[k]);
+      if (!r.ok()) { s.hinted[k] = true; ui.say(r.hint); return; }
+      earn(k, ...T[k]); ui.say(r.star);
+    }
+    st.onDown = (x, y) => {
+      s.lastAct = st.t; const [sx, sy] = sunPos();
+      if (dist(x, y, sx, sy) < 58) { s.drag = { kind: 'sun' }; Sound.fwip(); return; }
+      if (st.hit(cloudPath(), x, y)) { s.drag = { kind: 'cloud', dx: s.cloudX - x, x0: x, moved: 0 }; Sound.fwip(); return; }
+      for (const k of Object.keys(T)) if (tool(k, x, y)) { readTool(k); return; }
+      if (y < GROUND) { s.drag = { kind: 'wind', x0: x, t0: st.t, last: x }; Sound.tap(Math.floor(x / 90)); return; }
+      Sound.tap(Math.floor(x / 80));
+    };
+    st.onMove = (x, y) => {
+      const d = s.drag; if (!d) return;
+      if (d.kind === 'sun') { const h = clamp((300 - y) / 222, 0, 1); s.sunH = h; }
+      if (d.kind === 'cloud') { s.cloudX = clamp(x + d.dx, 330, 770); d.moved = Math.max(d.moved, Math.abs(x - d.x0)); }
+      if (d.kind === 'wind') { const v = (x - d.last); d.last = x; if (Math.abs(v) > 6) { s.wind = clamp(s.wind + v / 160, -1.6, 1.6); if (Math.abs(s.wind) > .35 && !s.windSeen) { s.windSeen = true; Sound.whoosh(); } } }
+    };
+    st.onUp = () => {
+      const d = s.drag; s.drag = null; if (!d) return;
+      if (d.kind === 'cloud' && d.moved < 10) { if (raining()) Sound.drip(); else { s.rainT = st.t; Sound.rain(); } }
+      if (d.kind === 'wind' && Math.abs(s.wind) > .35) Sound.whoosh();
+    };
+
+    function drawThermo(c) {
+      const [x] = T.thermo, F = Math.round(40 + s.temp * 50);
+      c.fillStyle = '#C9955A'; c.strokeStyle = C.ink; c.lineWidth = 3; c.fillRect(x - 6, 440, 12, BASE - 440); c.strokeRect(x - 6, 440, 12, BASE - 440);
+      const board = rrect(x - 28, 276, 56, 168, 10); c.fillStyle = '#FFFDF5'; c.fill(board); c.stroke(board);
+      const top = 292, bot = 414, ly = lerp(bot, top, s.temp);
+      const tube = rrect(x - 7, top - 4, 14, bot - top + 12, 7); c.fillStyle = '#EEF4F8'; c.fill(tube); c.fillStyle = WC.red; c.fillRect(x - 3.5, ly, 7, bot + 6 - ly); c.strokeStyle = C.ink; c.lineWidth = 2.5; c.stroke(tube);
+      c.fillStyle = WC.red; c.beginPath(); c.arc(x, bot + 14, 10, 0, TAU); c.fill(); c.stroke();
+      c.lineWidth = 2; for (let i = 0; i <= 5; i++) { const y = lerp(bot, top, i / 5); c.beginPath(); c.moveTo(x + 9, y); c.lineTo(x + 16, y); c.stroke(); }
+      label(c, `${F}°`, x + 34, 300, { size: 20, color: WC.red, align: 'left' });
+    }
+    function drawVane(c) {
+      const [x] = T.vane, y = 300, len = 64 * Math.cos(s.vaneA);   // seen from the side: the arrow looks shorter as it turns toward us
+      c.strokeStyle = C.ink; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, BASE); c.lineTo(x, y); c.stroke(); c.strokeStyle = '#C8CDD2'; c.lineWidth = 3; c.stroke();
+      c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x - 46, 340); c.lineTo(x + 46, 340); c.stroke(); label(c, "W", x - 58, 340, { size: 17 }); label(c, "E", x + 58, 340, { size: 17 });
+      c.save(); c.translate(x, y); c.lineJoin = 'round'; c.strokeStyle = C.ink; c.lineWidth = 5; c.beginPath(); c.moveTo(-len, 0); c.lineTo(len, 0); c.stroke();
+      // the head points into the wind; the tail fin catches it
+      c.fillStyle = C.carrot; c.lineWidth = 3; c.beginPath(); c.moveTo(-len - 18 * Math.sign(len || 1), 0); c.lineTo(-len, -11); c.lineTo(-len, 11); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = WC.accent; c.beginPath(); c.moveTo(len, 0); c.lineTo(len + 16 * Math.sign(len || 1), -20); c.lineTo(len + 22 * Math.sign(len || 1), 0); c.lineTo(len + 16 * Math.sign(len || 1), 20); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = C.ink; c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.fill(); c.restore();
+    }
+    function drawAnemo(c) {
+      const [x] = T.anemo, y = 270;
+      c.strokeStyle = C.ink; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, BASE); c.lineTo(x, y); c.stroke(); c.strokeStyle = '#C8CDD2'; c.lineWidth = 3; c.stroke();
+      for (let i = 0; i < 3; i++) { const a = s.spin + i * TAU / 3, cx = x + Math.cos(a) * 42, cy = y + Math.sin(a) * 12, back = Math.sin(a) < 0;
+        c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(x, y); c.lineTo(cx, cy); c.stroke();
+        c.fillStyle = back ? '#3E7FA8' : WC.accent; c.beginPath(); c.arc(cx, cy, 11, 0, TAU); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(cx - 3, cy - 3, 3.5, 0, TAU); c.fill(); }
+      c.fillStyle = C.ink; c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill();
+    }
+    function drawGauge(c) {
+      const x = GAUGE, top = 372, bot = BASE - 8, lvl = lerp(bot, top + 14, clamp(s.rain, 0, 1));
+      c.fillStyle = '#C9955A'; c.strokeStyle = C.ink; c.lineWidth = 3; c.fillRect(x - 24, bot, 48, 10); c.strokeRect(x - 24, bot, 48, 10);
+      const tube = rrect(x - 16, top, 32, bot - top, 6); c.fillStyle = 'rgba(221,243,247,.9)'; c.fill(tube); c.fillStyle = C.water; c.fillRect(x - 14, lvl, 28, bot - lvl); c.stroke(tube);
+      c.fillStyle = 'rgba(221,243,247,.9)'; c.beginPath(); c.moveTo(x - 30, top - 14); c.lineTo(x + 30, top - 14); c.lineTo(x + 16, top + 6); c.lineTo(x - 16, top + 6); c.closePath(); c.fill(); c.stroke();
+      c.lineWidth = 2; for (let i = 1; i <= 4; i++) { const y = lerp(bot, top + 14, i / 4); c.beginPath(); c.moveTo(x + 6, y); c.lineTo(x + 16, y); c.stroke(); }
+    }
+    function drawBaro(c) {
+      const [x, y] = T.baro, a = lerp(PI * 1.2, PI * 1.8, s.press);
+      c.fillStyle = '#A87445'; c.strokeStyle = C.ink; c.lineWidth = 3; c.fillRect(x - 6, y + 44, 12, BASE - y - 44); c.strokeRect(x - 6, y + 44, 12, BASE - y - 44);
+      c.fillStyle = '#C9955A'; c.beginPath(); c.arc(x, y, 50, 0, TAU); c.fill(); c.lineWidth = 4; c.stroke();
+      c.fillStyle = '#FFFDF5'; c.beginPath(); c.arc(x, y, 40, 0, TAU); c.fill(); c.lineWidth = 2.5; c.stroke();
+      c.lineWidth = 6; c.lineCap = 'butt'; for (const [a0, a1, col] of [[1.15, 1.42, '#6FA8DC'], [1.42, 1.58, '#C8CDD2'], [1.58, 1.85, C.sun]]) { c.strokeStyle = col; c.beginPath(); c.arc(x, y, 32, a0 * PI, a1 * PI); c.stroke(); }
+      label(c, "Rain", x - 22, y + 16, { size: 13, stroke: null }); label(c, "Fair", x + 22, y + 16, { size: 13, stroke: null });
+      c.strokeStyle = WC.red; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 30, y + Math.sin(a) * 30); c.stroke();
+      c.fillStyle = C.ink; c.beginPath(); c.arc(x, y, 4.5, 0, TAU); c.fill();
+    }
+    st.draw = (c, t, dt) => {
+      // the weather changes a little each frame: temperature follows the sun, wind dies down, pressure follows the cloud
+      const tt = .2 + .75 * s.sunH - (raining() ? .1 : 0); s.temp += (tt - s.temp) * Math.min(1, dt * (RM ? 9 : .9));
+      s.wind *= Math.exp(-dt / 5); if (Math.abs(s.wind) < .02) s.wind = 0;
+      const pt = clamp((s.cloudX - 600) / 170, 0, 1);   // high pressure in fair weather, low once the storm is over the yard s.press += (pt - s.press) * Math.min(1, dt * (RM ? 9 : 1.2));
+      s.spin += s.wind * dt * 9;
+      const va = s.wind > .05 ? 0 : s.wind < -.05 ? PI : s.vaneA; s.vaneA = RM ? va : s.vaneA + clamp(va - s.vaneA, -3 * dt, 3 * dt);
+      if (raining()) { const k = Math.abs(s.cloudX - GAUGE) < 130 ? 1 : 0; s.rain = Math.min(1, s.rain + k * dt * .2); }
+      // sky and sun
+      const dim = 1 - s.press; sky(c, mix(WC.sky1, '#8E9DB0', dim * .6), mix(WC.sky2, '#D3DAE3', dim * .6), GROUND + 4);
+      const [sx, sy] = sunPos(), sg = st.over(circle(sx, sy, 58)) || (s.drag && s.drag.kind === 'sun'); if (sg) glowOn(c); sun(c, sx, sy, 36, t, { glow: sg ? .7 : 0 }); c.shadowBlur = 0;
+      // wind: white streaks blowing across, in the wind's direction
+      if (s.wind) { c.save(); c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; c.lineCap = 'round'; const r = seeded(4);
+        for (let i = 0; i < 8; i++) { const y = 60 + r() * 380, sp = 300 * s.wind, x = RM ? r() * W : (((r() * W + t * sp) % (W + 200)) + W + 200) % (W + 200) - 100, len = 50 * Math.min(1, Math.abs(s.wind)); c.globalAlpha = Math.min(1, Math.abs(s.wind)); c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x - Math.sign(s.wind) * len * .5, y - 6, x - Math.sign(s.wind) * len, y); c.stroke(); }
+        c.restore(); }
+      // the yard
+      c.fillStyle = C.grass; c.fillRect(0, GROUND, W, H - GROUND); c.strokeStyle = C.grassDeep; c.lineWidth = 4; c.beginPath(); c.moveTo(0, GROUND); c.lineTo(W, GROUND); c.stroke();
+      const r = seeded(3); c.strokeStyle = C.grassDeep; c.lineWidth = 3; c.lineCap = 'round';
+      for (let i = 0; i < 70; i++) { const bx = r() * W, by = GROUND + 20 + r() * 200, bh = 8 + r() * 10, sw = (RM ? 0 : Math.sin(t * 2 + bx * .05) * 2) + s.wind * 6; c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + sw * .5, by - bh * .5, bx + sw, by - bh); c.stroke(); }
+      c.fillStyle = '#E9DCC6'; c.strokeStyle = C.ink; c.lineWidth = 3; const pad = rrect(60, BASE - 6, 700, 18, 9); c.fill(pad); c.stroke(pad);
+      // the tools, each glowing when the pointer is over it
+      for (const [k, fn] of [['thermo', drawThermo], ['vane', drawVane], ['anemo', drawAnemo], ['gauge', drawGauge], ['baro', drawBaro]]) { c.save(); if (st.over(tool(k))) glowOn(c); fn(c); c.restore(); if (found(k)) tag(c, { thermo: "Thermometer", vane: "Wind vane", anemo: "Anemometer", gauge: "Rain gauge", baro: "Barometer" }[k], T[k][0], 520); }
+      // the rain cloud
+      if (raining()) { precip(c, t, s.cloudX - 90, s.cloudX + 90, 140, BASE, false, 26); splashes(c, t, s.cloudX - 90, s.cloudX + 90, BASE + 4, 6); }
+      const hc = st.over(cloudPath()) || (s.drag && s.drag.kind === 'cloud'); c.save(); if (hc) glowOn(c); puffCloud(c, s.cloudX, 104 + (RM ? 0 : Math.sin(t * 1.3) * 3), 1.2, mix(WC.cloud, WC.storm, .7), { face: { t, full: raining() } }); c.restore();
+      if (s.drag) st.cursor = 'grabbing';
+      // hints, shown before Pip says them again
+      const bob = RM ? 0 : Math.abs(Math.sin(t * 4)) * 6, idle = t - s.lastAct > 4;
+      if (idle && !Object.keys(s.hinted).length && !A_station.stars.some(q => Store.data.stars[q.id])) label(c, "Tap a tool!", 420, 216 - bob, { size: 21, color: C.carrot });
+      if (idle && s.hinted.thermo && !READ.thermo.ok()) label(c, "Drag the sun!", sx + 40, sy + 64 - bob, { size: 19, color: C.carrot, align: 'left' });
+      if (idle && (s.hinted.vane || s.hinted.anemo) && !s.windSeen) label(c, "Swipe the sky!", 400, 190 - bob, { size: 21, color: C.carrot });
+      if (idle && (s.hinted.gauge || s.hinted.baro) && s.cloudX > 680) label(c, "Drag me in!", s.cloudX - 40, 190 - bob, { size: 19, color: C.carrot });
+      if (s.earnedHere && A_station.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You used every tool at the weather station. That\'s how scientists watch the weather every day!', { queue: true }); }
+    };
+    ui.button('New day', () => { reset(); Sound.pop(); App.sayQ.length = 0; ui.say(A_station.intro); });
+    ui.hint("Try it: be a weather scientist! Each morning, write down the temperature, the wind and the clouds. What changes from day to day?");
+    reset();
+    return { stage: st, state: () => s, geo: { tools: T, sun: () => sunPos(), gauge: GAUGE }, destroy() { st.destroy(); } };
+  }
+};
+/* ============ Activity: Weather Quiz ============ */
+// Rounds of 8 from the questions below; a star only on the first try. makeQuiz builds a quiz activity for any topic.
+const WQUIZ = [
+  { id: 'w1', name: 'Evaporation', q: 'The sun warms a puddle, and the water rises into the air. This is called…', a: ['Evaporation', 'Condensation', 'Precipitation'], hint: 'The water seems to disappear into the air.', why: 'Evaporation turns liquid water into water vapor.' },
+  { id: 'w2', name: 'Condensation', q: 'Water vapor cools and turns into tiny drops that make a cloud. This is called…', a: ['Condensation', 'Evaporation', 'Collection'], hint: 'Think of the drops on a cold glass of lemonade.', why: 'Condensation is water vapor turning back into drops of water.' },
+  { id: 'w3', name: 'Precipitation', q: 'Rain, snow and hail are all kinds of…', a: ['Precipitation', 'Evaporation', 'Wind'], hint: 'They all fall from clouds.', why: 'Precipitation is water falling from clouds.' },
+  { id: 'w4', name: 'Collection', q: 'Rain runs into rivers, lakes and oceans. This part of the water cycle is…', a: ['Collection', 'Condensation', 'Evaporation'], hint: 'The water gathers together in one place.', why: 'Collection is water gathering in rivers, lakes and oceans.' },
+  { id: 'w5', name: 'The sun', q: 'What gives the water cycle its energy?', a: ['The sun', 'The moon', 'The wind'], hint: 'It warms the water so it can rise.', why: 'The sun\'s heat makes water evaporate.' },
+  { id: 'w6', name: 'Water vapor', q: 'Water that is a gas is called…', a: ['Water vapor', 'Ice', 'Snow'], hint: 'You can\'t see it, but it\'s in the air all around you.', why: 'Water vapor is water as a gas.' },
+  { id: 'w7', name: 'Cumulus', pic: 'cumulus', q: 'What kind of cloud is this?', a: ['Cumulus', 'Cirrus', 'Stratus'], hint: 'It\'s big and puffy, like cotton balls.', why: 'Cumulus clouds are big and puffy.' },
+  { id: 'w8', name: 'Cirrus', pic: 'cirrus', q: 'These thin, wispy clouds are high up in the sky. What are they?', a: ['Cirrus', 'Cumulus', 'Stratus'], hint: 'Their name means a curl of hair, like a wisp.', why: 'Cirrus clouds are high, thin and made of ice.' },
+  { id: 'w9', name: 'Stratus', pic: 'stratus', q: 'A low, flat, grey cloud like this one is called…', a: ['Stratus', 'Cirrus', 'Cumulus'], hint: 'It spreads out like a blanket.', why: 'Stratus clouds are low, flat blankets of cloud.' },
+  { id: 'w10', name: 'Storm clouds', q: 'Which tall cloud brings thunderstorms?', a: ['Cumulonimbus', 'Cirrus', 'Stratus'], hint: 'Look for the longest name. Nimbus means rain cloud.', why: 'Cumulonimbus clouds grow very tall and bring storms.' },
+  { id: 'w11', name: 'Fog', q: 'Fog is really a…', a: ['Cloud on the ground', 'Kind of smoke', 'Kind of snow'], hint: 'It\'s made of tiny water drops floating in the air.', why: 'Fog is a cloud that sits on the ground.' },
+  { id: 'w12', name: 'Thermometer', q: 'Which tool measures temperature?', a: ['Thermometer', 'Rain gauge', 'Wind vane'], hint: 'It tells you how hot or cold it is.', why: 'A thermometer measures how hot or cold the air is.' },
+  { id: 'w13', name: 'Rain gauge', q: 'Which tool measures how much rain fell?', a: ['Rain gauge', 'Thermometer', 'Anemometer'], hint: 'It catches the rain in a tube.', why: 'A rain gauge catches rain so we can measure it.' },
+  { id: 'w14', name: 'Wind vane', q: 'A wind vane shows…', a: ['Where the wind comes from', 'How hot it is', 'How much it rained'], hint: 'Its arrow turns to point into the wind.', why: 'A wind vane points to where the wind is coming from.' },
+  { id: 'w15', name: 'Anemometer', q: 'An anemometer measures…', a: ['How fast the wind blows', 'How much rain fell', 'How cold it is'], hint: 'Its little cups spin around.', why: 'The faster its cups spin, the faster the wind.' },
+  { id: 'w16', name: 'Barometer', q: 'A barometer measures…', a: ['Air pressure', 'How much rain fell', 'How sunny it is'], hint: 'It feels the push of the air.', why: 'A barometer measures air pressure. Falling pressure often means rain.' },
+  { id: 'w17', name: 'Snow', q: 'When the air is below freezing, water falls as…', a: ['Snow', 'Rain', 'Fog'], hint: 'Brrr! It\'s cold and white.', why: 'In freezing air, water falls as snow.' },
+  { id: 'w18', name: 'Climate', q: 'The usual weather of a place over many years is its…', a: ['Climate', 'Weather', 'Forecast'], hint: 'Weather is just today. This is the long, big picture.', why: 'Climate is the usual weather over many years. Weather is just today.' },
+  { id: 'w19', name: 'Terrarium', q: 'Drops form on the lid of a closed jar with a plant inside. Where did the water come from?', a: ['The soil and the plant', 'Outside the jar', 'The lid'], hint: 'The jar is closed, so nothing can get in.', why: 'Water from the soil and the plant rose up and condensed on the lid.' },
+  { id: 'w20', name: 'Transpiration', q: 'Plants give off water vapor from their leaves. This is called…', a: ['Transpiration', 'Precipitation', 'Pollination'], hint: 'Precipitation falls from clouds, and pollination is for flowers.', why: 'Transpiration is plants giving off water vapor.' },
+  { id: 'w21', name: 'Wind', q: 'What is wind?', a: ['Moving air', 'Falling rain', 'Floating clouds'], hint: 'You can\'t see it, but you can feel it push.', why: 'Wind is air on the move.' },
+  { id: 'w22', name: 'Oceans', q: 'Where is most of Earth\'s water?', a: ['In the oceans', 'In the clouds', 'In rivers'], hint: 'It\'s salty!', why: 'Most of Earth\'s water is in the salty oceans.' }
+];
+function drawWeatherPic(cv, pic) {
+  const c = cv.getContext('2d'), k = cv.width / 400; c.setTransform(k, 0, 0, k, 0, 0); c.clearRect(0, 0, 400, 400);
+  sky(c, pic === 'stratus' ? '#A9B6C4' : '#5DAEE0', WC.sky2, 400); c.fillStyle = C.grass; c.fillRect(0, 330, 400, 70); c.strokeStyle = C.ink; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 330); c.lineTo(400, 330); c.stroke();
+  if (pic === 'cumulus') { puffCloud(c, 200, 180, 1.4); puffCloud(c, 80, 90, .6); }
+  if (pic === 'cirrus') { cirrusCloud(c, 200, 110, 1.2); cirrusCloud(c, 110, 190, .7); }
+  if (pic === 'stratus') stratusCloud(c, 200, 230, 1.35);
+}
+// a quiz activity: `prefix` starts its star ids, `expert` is what Pip says after a great round (recorded)
+function makeQuiz({ id, name, icon, badge, badgeNeed = 10, questions, prefix, intro, expert, drawPic }) {
+  const A = {
+    id, name, icon, html: true, badgeNeed, badge, intro,
+    stars: questions.map(q => ({ id: prefix + q.id, name: q.name })),
+    mount(host, ui) {
+      const box = document.createElement('div'); box.className = 'quiz-box'; host.appendChild(box);
+      let round, idx, results, tries;
+      const got = q => !!Store.data.stars[prefix + q.id];
+      function newRound(lead) {
+        round = shuffle(shuffle(questions.filter(q => !got(q))).concat(shuffle(questions.filter(got))).slice(0, 8)); idx = 0; results = []; show(lead);
+      }
+      function show(lead) {
+        const q = round[idx]; tries = 0; box.innerHTML = '';
+        const meta = document.createElement('div'); meta.className = 'q-meta';
+        meta.innerHTML = `<span>Question ${idx + 1} of ${round.length}</span><span class="q-dots">${round.map((_, i) => `<i class="${results[i] === 1 ? 'ok' : results[i] === 0 ? 'meh' : ''} ${i === idx ? 'now' : ''}"></i>`).join('')}</span>`;
+        const body = document.createElement('div'); body.className = 'q-body';
+        if (q.pic && drawPic) { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'A picture of the sky'); body.appendChild(cv); requestAnimationFrame(() => drawPic(cv, q.pic)); }
+        const h = document.createElement('p'); h.className = 'q-text'; h.textContent = q.q; body.appendChild(h);
+        const ch = document.createElement('div'); ch.className = 'choices';
+        shuffle(q.a).forEach((txt, i) => { const b = document.createElement('button'); b.className = 'choice'; b.textContent = txt; b.onclick = () => answer(b, txt === q.a[0], q); b.onmouseenter = () => Sound.tap(i + 2); ch.appendChild(b); });
+        const foot = document.createElement('div'); foot.className = 'q-foot';
+        box.append(meta, body, ch, foot); ui.say((lead ? lead + ' ' : '') + q.q, { lock: true });
+      }
+      function answer(btn, right, q) {
+        if (btn.disabled) return;
+        if (inputLocked()) { const r = btn.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); }
+        tries++; const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (right) {
+          btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
+          results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
+          // a new star celebrates once Pip has explained; the sparkle answers the tap right away
+          if (tries === 1) { if (ui.award(prefix + q.id, cx, cy)) Sound.sparkle(); else Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+          else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
+          const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
+          nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
+        } else { btn.classList.add('wrong'); btn.disabled = true; Sound.oops(); ui.say(`Not quite. Hint: ${q.hint}`, { lock: true }); }
+      }
+      function end() {
+        const n = results.filter(x => x === 1).length, great = n >= 6; box.innerHTML = '';
+        const e = document.createElement('div'); e.className = 'q-end';
+        e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : great ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
+        const b = document.createElement('button'); b.className = 'btn go'; b.textContent = 'Play again'; b.onclick = () => { Sound.pop(); newRound(); }; e.appendChild(b);
+        box.appendChild(e); Sound.badge(); const r = box.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + 80, 70);
+        ui.say(great ? expert : 'Every scientist learns by trying. Play again and see how many you can get!');
+      }
+      ui.button('New round', () => { Sound.pop(); App.sayQ.length = 0; newRound(); });
+      ui.hint('Stars only count on the first try, so take your time and think!');
+      newRound(ui.intro);
+      return { destroy() { box.remove(); } };
+    }
+  };
+  return A;
+}
+const A_wquiz = makeQuiz({
+  id: 'weather.quiz', name: 'Weather Quiz', icon: 'wquiz', prefix: 'weather.quiz.', questions: WQUIZ, drawPic: drawWeatherPic,
+  badge: { id: 'weather.b.quiz', name: 'Weather Whiz', desc: 'You earned ten weather quiz stars. You really know your weather!', how: 'Not yet! Earn ten stars in the <b>Weather Quiz</b>. You get a star when you answer right on the first try.', reward: 'snowman' },
+  intro: 'Ready for a weather challenge? Get it right on the <b>first try</b> to earn a star. Collect ten quiz stars for the Weather Whiz badge!',
+  expert: 'Wow, you\'re a weather expert! Play again to collect more stars.'
+});
+
+/* ============ Weather & Water icons (100x100) ============ */
+Object.assign(ICONS, {
+  // sun, cloud and rain with a loop of arrows: the water cycle
+  wcycle(c, t = 0) {
+    c.save(); c.translate(26, 30); sun(c, 0, 0, 13, t, { face: false }); c.restore(); puffCloud(c, 62, 40, .34);
+    c.strokeStyle = C.water; c.lineWidth = 4; c.lineCap = 'round'; for (const x of [52, 64, 76]) { c.beginPath(); c.moveTo(x, 62); c.lineTo(x - 3, 72); c.stroke(); }
+    c.fillStyle = C.water; c.strokeStyle = C.ink; c.lineWidth = 3; const lake = ellipse(46, 88, 34, 9); c.fill(lake); c.stroke(lake);
+    arrow(c, 18, 74, 20, 52, C.sun);
+  },
+  // a jar with a little plant and drops on the glass
+  jar(c) {
+    const j = rrect(22, 26, 56, 68, 12); c.fillStyle = 'rgba(221,243,247,.85)'; c.fill(j); c.save(); c.clip(j); c.fillStyle = C.soil; c.fillRect(22, 74, 56, 20); c.fillStyle = '#9AA3AE'; c.fillRect(22, 86, 56, 8); c.restore();
+    c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(50, 76); c.lineTo(50, 52); c.stroke(); drawLeaf(c, 50, 54, -150, .2); drawLeaf(c, 50, 54, -30, .2);
+    c.strokeStyle = C.ink; c.lineWidth = 3.5; c.stroke(j); c.fillStyle = '#C8CDD2'; const lid = rrect(18, 16, 64, 12, 5); c.fill(lid); c.stroke(lid);
+    c.fillStyle = '#fff'; c.strokeStyle = 'rgba(47,134,194,.7)'; c.lineWidth = 1.5; for (const [x, y] of [[32, 38], [66, 44], [36, 56], [62, 34]]) { c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fill(); c.stroke(); }
+  },
+  // a puffy cloud in front of a wispy one
+  clouds(c, t = 0) { cirrusCloud(c, 56, 30, .38, t); puffCloud(c, 50, 62, .5, WC.cloud, { face: { t } }); },
+  // a wind vane and wind cups
+  station(c, t = 0) {
+    c.strokeStyle = C.ink; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(30, 94); c.lineTo(30, 40); c.moveTo(72, 94); c.lineTo(72, 34); c.stroke();
+    c.fillStyle = C.carrot; c.lineWidth = 3; c.beginPath(); c.moveTo(6, 40); c.lineTo(18, 32); c.lineTo(18, 48); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(18, 40); c.lineTo(46, 40); c.stroke();
+    c.fillStyle = WC.accent; c.beginPath(); c.moveTo(46, 40); c.lineTo(54, 30); c.lineTo(56, 40); c.lineTo(54, 50); c.closePath(); c.fill(); c.stroke();
+    const sp = RM ? .5 : t * 3; for (let i = 0; i < 3; i++) { const a = sp + i * TAU / 3, x = 72 + Math.cos(a) * 18, y = 30 + Math.sin(a) * 6; c.beginPath(); c.moveTo(72, 30); c.lineTo(x, y); c.stroke(); c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill(); c.stroke(); }
+  },
+  // a cloud with a question mark
+  wquiz(c) { puffCloud(c, 50, 54, .5, C.sun); label(c, '?', 50, 58, { size: 34, weight: 700, stroke: null }); },
+  // a gold trophy with a raindrop on it
+  wtrophy(c) {
+    c.fillStyle = C.sun; c.strokeStyle = C.ink; c.lineWidth = 4; c.beginPath(); c.moveTo(26, 16); c.lineTo(74, 16); c.quadraticCurveTo(74, 62, 50, 64); c.quadraticCurveTo(26, 62, 26, 16); c.fill(); c.stroke();
+    c.beginPath(); c.arc(22, 32, 11, PI * .5, PI * 1.5); c.moveTo(78, 21); c.arc(78, 32, 11, -PI * .5, PI * .5); c.stroke(); c.fillRect(44, 64, 12, 14); c.strokeRect(44, 64, 12, 14);
+    c.fillStyle = '#5BA8D6'; c.fillRect(32, 78, 36, 12); c.strokeRect(32, 78, 36, 12); raindrop(c, 50, 40, 1.1);
+  }
+});
 /* ============ Pip's voice: recorded narration in several voices (whole messages, plus short pieces for dynamic lines) ============ */
 const VOICE_PACKS = {"cedar":{"file":"voice/cedar.9677a2c0c2.mp3","map":{"1k3irmd":[0,12936],"k1c4ze":[12936,30072],"1o0sucb":[43008,46704],"wddpfp":[89712,41664],"an195p":[131376,32760],"1pgocri":[164136,51408],"1556et1":[215544,46368],"1juot8":[261912,51912],"1yiyiu7":[313824,50568],"1c91nm0":[364392,50064],"1u3qsnr":[414456,53592],"2iq8xy":[468048,43176],"102bf9i":[511224,30240],"55q8o0":[541464,31080],"1nkbmql":[572544,23184],"1vzd3j0":[595728,30912],"1qlywke":[626640,54600],"mjyzv3":[681240,67200],"4xf2w7":[748440,52584],"j8141l":[801024,55944],"1als969":[856968,44688],"bi52ce":[901656,50064],"28g0q0":[951720,44856],"1qpso98":[996576,35280],"p43vkp":[1031856,39816],"19nnikz":[1071672,30240],"ahzgly":[1101912,47880],"qxm8tl":[1149792,41664],"8degyv":[1191456,8736],"14rl21d":[1200192,7560],"r2ufrw":[1207752,7392],"i2gmqf":[1215144,42672],"y203u4":[1257816,73752],"18gf6fv":[1331568,31584],"5wtiau":[1363152,21168],"15dduo5":[1384320,32928],"19hj72v":[1417248,55440],"1tlyplm":[1472688,40152],"qfjbas":[1512840,52752],"hzkvqy":[1565592,41832],"m8lpei":[1607424,26544],"1mmu6v0":[1633968,47376],"jyb187":[1681344,64008],"s9uka7":[1745352,91056],"vz7aaa":[1836408,43008],"3ypeq4":[1879416,39312],"1ixr7vq":[1918728,29400],"1l0pp1a":[1948128,43848],"tybvh1":[1991976,61992],"f4ipu1":[2053968,28056],"1pytr45":[2082024,73416],"oa0trz":[2155440,9912],"6f1hy":[2165352,13104],"702zql":[2178456,40824],"1kagpbp":[2219280,23688],"18c9m7f":[2242968,33096],"efi79u":[2276064,55608],"18k0o25":[2331672,57792],"1437m9":[2389464,49728],"zeg8cu":[2439192,75936],"1kuu0d3":[2515128,58296],"18v4ibi":[2573424,40992],"i1lgz2":[2614416,45192],"vnpk59":[2659608,43008],"1xcpavy":[2702616,49560],"m64jdr":[2752176,36120],"1s1wbax":[2788296,40992],"1jidg4n":[2829288,71064],"1flikej":[2900352,29736],"11p6s0e":[2930088,35280],"1tt3zkh":[2965368,7392],"in0kyk":[2972760,10248],"1il9mxe":[2983008,10248],"hq1jxn":[2993256,23352],"1vf0s4g":[3016608,34608],"1rz9s8q":[3051216,44016],"1g0d37j":[3095232,35784],"r9l0js":[3131016,33096],"17eyppj":[3164112,46032],"tu3wmt":[3210144,68040],"14lxa87":[3278184,39816],"eqw9vv":[3318000,42504],"1t53ynh":[3360504,8904],"1upxd1z":[3369408,6384],"14ra355":[3375792,7392],"1tt3zr6":[3383184,7560],"9af8ii":[3390744,48216],"bzvuj0":[3438960,42672],"1seurik":[3481632,25368],"mjxsve":[3507000,36120],"1ocpcot":[3543120,38640],"1j5y9c1":[3581760,53256],"1dbx6ua":[3635016,45864],"fa1ryt":[3680880,32928],"1q0r0v2":[3713808,34104],"18jaijh":[3747912,36288],"rtp66s":[3784200,46872],"iocji7":[3831072,22008],"7z93v7":[3853080,30240],"gfvjdl":[3883320,65184],"1ywre4h":[3948504,28728],"110uftb":[3977232,23856],"1vmwd3j":[4001088,15792],"f83vnw":[4016880,18816],"1ylbiv6":[4035696,32928],"1ebxjrr":[4068624,23688],"2wa3sq":[4092312,24024],"1ugilvr":[4116336,11256],"1y0619b":[4127592,10584],"1r497pz":[4138176,56616],"139oxl5":[4194792,17304],"kqlern":[4212096,26208],"1f1zigf":[4238304,68040],"q1t6ee":[4306344,51744],"1bp7i88":[4358088,31584],"2i1bta":[4389672,23688],"1x17oy5":[4413360,26880],"nivc0h":[4440240,55440],"1xtt4bf":[4495680,42840],"1upw0ml":[4538520,19488],"ucr4kx":[4558008,74592],"392ua9":[4632600,42000],"cys62t":[4674600,58128],"6fpmrz":[4732728,52920],"1esvcw4":[4785648,23856],"7qedqq":[4809504,27216],"hngknf":[4836720,41328],"xcvyh3":[4878048,34104],"rilj98":[4912152,69552],"a2lomy":[4981704,15288],"1200cil":[4996992,31248],"9lpyr4":[5028240,40320],"1ptbvh":[5068560,37632],"hmtyga":[5106192,27888],"vsgft9":[5134080,61656],"zazdij":[5195736,45192],"1r6ig2k":[5240928,35952],"1bhc95l":[5276880,41664],"1tktrr4":[5318544,44856],"tpmjv1":[5363400,45192],"1uxxrxo":[5408592,44520],"12ttdyw":[5453112,29904],"13og4sv":[5483016,30744],"wa9fd5":[5513760,40824],"6b6j8l":[5554584,64512],"y546cy":[5619096,32592],"1fbq0v5":[5651688,30744],"xxpn4n":[5682432,42336],"ijuvgk":[5724768,35112],"1mj28s1":[5759880,43176],"7zrv6v":[5803056,65016],"m18biv":[5868072,23352],"1jndziz":[5891424,23184],"1i5qvtu":[5914608,85344],"18mgc13":[5999952,32424],"grshgr":[6032376,42504],"ys7vzk":[6074880,51072],"1dltu8p":[6125952,41496],"1gibsdd":[6167448,65016],"1m9kcd1":[6232464,73752],"m6llvu":[6306216,21840],"grxq1t":[6328056,24528],"105cdw7":[6352584,87864],"1dsefvg":[6440448,41496],"1no4i4d":[6481944,39144],"1kxpys0":[6521088,13272],"1iiphqg":[6534360,26040],"1a019r6":[6560400,24192],"18t90q":[6584592,23016],"h0gkk1":[6607608,25872],"arz3d2":[6633480,18816],"zl22zw":[6652296,18984],"8kr23q":[6671280,21168],"2smzfg":[6692448,25368],"o29xcf":[6717816,27720],"1nufmyi":[6745536,15456],"1n1p4qw":[6760992,20832],"evoo7i":[6781824,14280],"u3vijz":[6796104,11088],"dlysv9":[6807192,27888],"dyx02r":[6835080,28392],"1gmk7ar":[6863472,14448],"19v7n5i":[6877920,17136],"jsg4c2":[6895056,17304],"4k8dwz":[6912360,14616],"c9ofla":[6926976,16296],"xbp2ty":[6943272,26712],"1bllry2":[6969984,17136],"2kps6x":[6987120,15960],"1cb55g5":[7003080,15960],"1fd2g8d":[7019040,17808],"14vcw02":[7036848,16800],"yal2mz":[7053648,23688],"7nemg5":[7077336,27216],"snob0y":[7104552,22848],"1ey9izw":[7127400,15288],"1opfiwq":[7142688,21504],"1dyex7s":[7164192,18144],"10lqu2t":[7182336,30240],"1efct7j":[7212576,15288],"mvc1hv":[7227864,16968],"1joaloa":[7244832,14616],"xry31u":[7259448,12600],"1umx50j":[7272048,21504],"4qh550":[7293552,14616],"13o6xla":[7308168,15792],"j0eqwv":[7323960,19656],"g3ebw6":[7343616,23184],"1u5kbbn":[7366800,14448],"t46cz6":[7381248,23352],"1jppmdp":[7404600,11088],"w55y7u":[7415688,18312],"1qvvu4v":[7434000,22008],"1ifnp7i":[7456008,22848],"128hg90":[7478856,10416],"13l40e3":[7489272,29904],"8wjqo6":[7519176,30240],"1i502zj":[7549416,11928],"1s5cvpk":[7561344,15120],"35rtmr":[7576464,20496],"3wcomo":[7596960,27048],"5qos6g":[7624008,23184],"oum2t4":[7647192,30744],"1xlqh6r":[7677936,9744],"1tj6k7x":[7687680,34776],"wpud4q":[7722456,28224],"834j6m":[7750680,47712],"rlcfof":[7798392,53928],"b5jctw":[7852320,7224],"a6ubyd":[7859544,31248],"1rn3xst":[7890792,31080],"jwtztc":[7921872,28392],"wvj76v":[7950264,20664],"1pxv54h":[7970928,29400],"h19nhr":[8000328,26376],"1dlj75n":[8026704,28560],"1fnsgnh":[8055264,10416],"1yfin3h":[8065680,13272],"1nniwlg":[8078952,23184],"1mhmzdr":[8102136,30240],"qrw6xi":[8132376,29232],"2u797p":[8161608,16800],"62ekzq":[8178408,29568],"136f33":[8207976,38640],"10dm6vx":[8246616,35112],"1krnaz3":[8281728,34944],"1igsxl6":[8316672,32088],"1jkx8ao":[8348760,30576],"1a8pmna":[8379336,31416],"qnoydd":[8410752,31248],"1vnk82v":[8442000,36960],"abeupt":[8478960,37296],"uymoij":[8516256,36792],"10na9kf":[8553048,51240],"1ip8cts":[8604288,29064],"85722r":[8633352,18312],"aybwgl":[8651664,42504],"n6ebfa":[8694168,16296],"19coepm":[8710464,22344],"12u8p6r":[8732808,29232],"dkgoil":[8762040,20664],"1b2eyge":[8782704,21000],"a5zxnd":[8803704,31752],"1dpkm9b":[8835456,28896],"1l5egcu":[8864352,30072],"1otc9uv":[8894424,37632],"1rkxzcg":[8932056,50232],"yj2ys9":[8982288,3864],"1xhj7ln":[8986152,13776],"375zxm":[8999928,4368],"3ydux3":[9004296,8568],"1vrevg":[9012864,6048],"3hmh0":[9018912,3360],"lw7tp2":[9022272,13272],"1bnf4v9":[9035544,7728],"1f8pous":[9043272,6216],"jsi8jk":[9049488,9072],"1kvbb0c":[9058560,18480],"11iqsz":[9077040,24360],"1g8wtm":[9101400,33264],"4q7659":[9134664,24024],"ol9d1d":[9158688,18312],"1yb6mk4":[9177000,13776],"11jdm14":[9190776,22176],"azxiaw":[9212952,21504],"pe5t7l":[9234456,24192],"z8h5x2":[9258648,24864],"1igmtum":[9283512,30072],"2g6tsx":[9313584,25704],"1z0m6hw":[9339288,19656],"u7xjs9":[9358944,18984],"1i4ig2d":[9377928,22848],"18hy9d4":[9400776,17808],"fxepc1":[9418584,25704],"u9eijj":[9444288,15624],"hxzww4":[9459912,19488],"uutkp7":[9479400,28728],"44uw9k":[9508128,17808],"1f3h86x":[9525936,17640],"1nznhy4":[9543576,14784],"ocdvnf":[9558360,17976],"5384m6":[9576336,15120],"1m5zhjy":[9591456,19320],"8rdru5":[9610776,17808],"1he2irn":[9628584,15120],"3ncetq":[9643704,17136],"1w25ohe":[9660840,19992],"1l5nl1a":[9680832,15120],"cnlpab":[9695952,20496],"7cilvs":[9716448,13944],"1j8gpsr":[9730392,16296],"gp1p2l":[9746688,25704],"lj8kbt":[9772392,23352],"lu0d5f":[9795744,26880],"1r1p407":[9822624,27216],"surzxm":[9849840,29904],"6i7c3d":[9879744,23520],"1blv8ip":[9903264,23352],"3kr3p2":[9926616,21672],"tnb3n1":[9948288,20496],"1kezd7h":[9968784,28896],"k05thj":[9997680,26712],"8jzeqk":[10024392,21840],"4xusvg":[10046232,25872],"15865cg":[10072104,25872],"2bgpx9":[10097976,31920],"omlb7k":[10129896,29232],"1284xuc":[10159128,31920],"1d4s3vr":[10191048,18312],"1v44p0n":[10209360,30912],"11msmia":[10240272,45024],"g00otc":[10285296,27216],"2jpx8k":[10312512,25872],"no23by":[10338384,25032],"v5i1ca":[10363416,31920],"107k6cn":[10395336,29904],"lf75h0":[10425240,23856],"19ypey4":[10449096,27552],"lv0juj":[10476648,27888],"19c2v9c":[10504536,25032],"1339234":[10529568,29400],"gz578q":[10558968,26040],"iiu7ip":[10585008,27048],"cgbu75":[10612056,27384],"162vi7x":[10639440,23520],"5nkj74":[10662960,24528],"1bvlbrh":[10687488,24696],"18yqto9":[10712184,30072],"1bhcimi":[10742256,18480],"xoe5re":[10760736,32592],"f4jvdr":[10793328,49056],"1182d16":[10842384,31920],"1cfecf7":[10874304,32088],"1l79p78":[10906392,32088],"1cbvl8o":[10938480,26712],"obh319":[10965192,19320],"j58vgh":[10984512,26376],"s7jz5t":[11010888,32088],"se4kco":[11042976,27720],"1lkt31b":[11070696,31080],"dt9oyf":[11101776,34440],"16h26g":[11136216,31920],"h1kqp9":[11168136,22848],"17ysmrk":[11190984,26208],"1dib2m4":[11217192,28728],"1cauext":[11245920,23352],"10x50aw":[11269272,31080],"19yqmpi":[11300352,24192],"1h50lt9":[11324544,19320],"quuide":[11343864,35112],"18muhrl":[11378976,27384],"1mb6o6h":[11406360,28728],"1ozdr38":[11435088,42672],"1xwmmhk":[11477760,36120],"12v9lzi":[11513880,32928],"14ao2nk":[11546808,36624],"k5nqmv":[11583432,47544],"evb11r":[11630976,33264],"12y3y1b":[11664240,37800],"3swbcf":[11702040,45360],"vq4ln0":[11747400,33264],"1yya6m4":[11780664,44520],"qpfuz2":[11825184,30408],"1vov2m1":[11855592,50064],"14dykqj":[11905656,47376]}},"coral":{"file":"voice/coral.4e378cc038.mp3","map":{"1k3irmd":[0,16632],"k1c4ze":[16632,36960],"1o0sucb":[53592,56280],"wddpfp":[109872,50568],"an195p":[160440,41160],"1pgocri":[201600,60144],"1556et1":[261744,49896],"1juot8":[311640,69384],"1yiyiu7":[381024,52752],"1c91nm0":[433776,59472],"1u3qsnr":[493248,53256],"2iq8xy":[546504,50736],"102bf9i":[597240,30576],"55q8o0":[627816,36960],"1nkbmql":[664776,28056],"1vzd3j0":[692832,36456],"1qlywke":[729288,70224],"mjyzv3":[799512,82656],"4xf2w7":[882168,62160],"j8141l":[944328,64344],"1als969":[1008672,52920],"bi52ce":[1061592,57120],"28g0q0":[1118712,60312],"1qpso98":[1179024,46704],"p43vkp":[1225728,37632],"19nnikz":[1263360,33432],"ahzgly":[1296792,56952],"qxm8tl":[1353744,45696],"8degyv":[1399440,10920],"14rl21d":[1410360,9744],"r2ufrw":[1420104,15456],"i2gmqf":[1435560,52248],"y203u4":[1487808,85176],"18gf6fv":[1572984,34272],"5wtiau":[1607256,27216],"15dduo5":[1634472,32928],"19hj72v":[1667400,55608],"1tlyplm":[1723008,48216],"qfjbas":[1771224,64176],"hzkvqy":[1835400,46200],"m8lpei":[1881600,27552],"1mmu6v0":[1909152,63168],"jyb187":[1972320,63504],"s9uka7":[2035824,94416],"vz7aaa":[2130240,50400],"3ypeq4":[2180640,57120],"1ixr7vq":[2237760,35784],"1l0pp1a":[2273544,46704],"tybvh1":[2320248,60480],"f4ipu1":[2380728,32424],"1pytr45":[2413152,80976],"oa0trz":[2494128,10584],"6f1hy":[2504712,13440],"702zql":[2518152,44520],"1kagpbp":[2562672,30744],"18c9m7f":[2593416,33432],"efi79u":[2626848,54096],"18k0o25":[2680944,79464],"1437m9":[2760408,61992],"zeg8cu":[2822400,82656],"1kuu0d3":[2905056,77616],"18v4ibi":[2982672,42000],"i1lgz2":[3024672,58800],"vnpk59":[3083472,50736],"1xcpavy":[3134208,58464],"m64jdr":[3192672,45192],"1s1wbax":[3237864,43680],"1jidg4n":[3281544,82656],"1flikej":[3364200,45696],"11p6s0e":[3409896,50232],"1tt3zkh":[3460128,9072],"in0kyk":[3469200,13608],"1il9mxe":[3482808,10920],"hq1jxn":[3493728,28224],"1vf0s4g":[3521952,38304],"1rz9s8q":[3560256,67032],"1g0d37j":[3627288,44016],"r9l0js":[3671304,40992],"17eyppj":[3712296,52584],"tu3wmt":[3764880,78960],"14lxa87":[3843840,50736],"eqw9vv":[3894576,47376],"1t53ynh":[3941952,8736],"1upxd1z":[3950688,9408],"14ra355":[3960096,8064],"1tt3zr6":[3968160,8400],"9af8ii":[3976560,49896],"bzvuj0":[4026456,47880],"1seurik":[4074336,42336],"mjxsve":[4116672,41496],"1ocpcot":[4158168,48216],"1j5y9c1":[4206384,59808],"1dbx6ua":[4266192,46704],"fa1ryt":[4312896,42504],"1q0r0v2":[4355400,30576],"18jaijh":[4385976,34104],"rtp66s":[4420080,53592],"iocji7":[4473672,25704],"7z93v7":[4499376,33432],"gfvjdl":[4532808,72744],"1ywre4h":[4605552,37632],"110uftb":[4643184,28728],"1vmwd3j":[4671912,18816],"f83vnw":[4690728,21000],"1ylbiv6":[4711728,41832],"1ebxjrr":[4753560,26712],"2wa3sq":[4780272,34608],"1ugilvr":[4814880,12432],"1y0619b":[4827312,12936],"1r497pz":[4840248,61656],"139oxl5":[4901904,23688],"kqlern":[4925592,31584],"1f1zigf":[4957176,75768],"q1t6ee":[5032944,57792],"1bp7i88":[5090736,35448],"2i1bta":[5126184,22512],"1x17oy5":[5148696,35280],"nivc0h":[5183976,70224],"1xtt4bf":[5254200,52416],"1upw0ml":[5306616,23016],"ucr4kx":[5329632,98448],"392ua9":[5428080,47040],"cys62t":[5475120,67032],"6fpmrz":[5542152,49560],"1esvcw4":[5591712,31248],"7qedqq":[5622960,31248],"hngknf":[5654208,49224],"xcvyh3":[5703432,42336],"rilj98":[5745768,68208],"a2lomy":[5813976,12768],"1200cil":[5826744,38136],"9lpyr4":[5864880,41496],"1ptbvh":[5906376,49056],"hmtyga":[5955432,30744],"vsgft9":[5986176,71904],"zazdij":[6058080,58464],"1r6ig2k":[6116544,34104],"1bhc95l":[6150648,48048],"1tktrr4":[6198696,47880],"tpmjv1":[6246576,48552],"1uxxrxo":[6295128,50568],"12ttdyw":[6345696,35448],"13og4sv":[6381144,35280],"wa9fd5":[6416424,37800],"6b6j8l":[6454224,80472],"y546cy":[6534696,43680],"1fbq0v5":[6578376,34272],"xxpn4n":[6612648,51744],"ijuvgk":[6664392,40152],"1mj28s1":[6704544,49896],"7zrv6v":[6754440,70224],"m18biv":[6824664,26712],"1jndziz":[6851376,26040],"1i5qvtu":[6877416,87192],"18mgc13":[6964608,31920],"grshgr":[6996528,48888],"ys7vzk":[7045416,45528],"1dltu8p":[7090944,41664],"1gibsdd":[7132608,78288],"1m9kcd1":[7210896,91224],"m6llvu":[7302120,27048],"grxq1t":[7329168,31752],"105cdw7":[7360920,107352],"1dsefvg":[7468272,34272],"1no4i4d":[7502544,35784],"1kxpys0":[7538328,14112],"1iiphqg":[7552440,25200],"1a019r6":[7577640,25872],"18t90q":[7603512,29568],"h0gkk1":[7633080,27384],"arz3d2":[7660464,18312],"zl22zw":[7678776,23016],"8kr23q":[7701792,22512],"2smzfg":[7724304,26376],"o29xcf":[7750680,32592],"1nufmyi":[7783272,17640],"1n1p4qw":[7800912,27888],"evoo7i":[7828800,13440],"u3vijz":[7842240,6720],"dlysv9":[7848960,24864],"dyx02r":[7873824,34944],"1gmk7ar":[7908768,19656],"19v7n5i":[7928424,19824],"jsg4c2":[7948248,17976],"4k8dwz":[7966224,17136],"c9ofla":[7983360,22680],"xbp2ty":[8006040,25032],"1bllry2":[8031072,27048],"2kps6x":[8058120,17136],"1cb55g5":[8075256,15456],"1fd2g8d":[8090712,22176],"14vcw02":[8112888,19824],"yal2mz":[8132712,29064],"7nemg5":[8161776,28392],"snob0y":[8190168,27384],"1ey9izw":[8217552,17976],"1opfiwq":[8235528,23520],"1dyex7s":[8259048,18144],"10lqu2t":[8277192,44016],"1efct7j":[8321208,17136],"mvc1hv":[8338344,23184],"1joaloa":[8361528,18480],"xry31u":[8380008,13776],"1umx50j":[8393784,26544],"4qh550":[8420328,13272],"13o6xla":[8433600,22512],"j0eqwv":[8456112,22176],"g3ebw6":[8478288,29904],"1u5kbbn":[8508192,16800],"t46cz6":[8524992,31080],"1jppmdp":[8556072,15288],"w55y7u":[8571360,21168],"1qvvu4v":[8592528,30576],"1ifnp7i":[8623104,27888],"128hg90":[8650992,12600],"13l40e3":[8663592,29064],"8wjqo6":[8692656,36960],"1i502zj":[8729616,16296],"1s5cvpk":[8745912,17808],"35rtmr":[8763720,26208],"3wcomo":[8789928,28560],"5qos6g":[8818488,26208],"oum2t4":[8844696,43848],"1xlqh6r":[8888544,14952],"1tj6k7x":[8903496,37632],"wpud4q":[8941128,28560],"834j6m":[8969688,58464],"rlcfof":[9028152,63672],"b5jctw":[9091824,9240],"a6ubyd":[9101064,35280],"1rn3xst":[9136344,47040],"jwtztc":[9183384,34776],"wvj76v":[9218160,22344],"1pxv54h":[9240504,38808],"h19nhr":[9279312,26544],"1dlj75n":[9305856,34608],"1fnsgnh":[9340464,15456],"1yfin3h":[9355920,15624],"1nniwlg":[9371544,24192],"1mhmzdr":[9395736,29400],"qrw6xi":[9425136,30408],"2u797p":[9455544,25704],"62ekzq":[9481248,35280],"136f33":[9516528,45024],"10dm6vx":[9561552,38472],"1krnaz3":[9600024,41664],"1igsxl6":[9641688,37632],"1jkx8ao":[9679320,31584],"1a8pmna":[9710904,43680],"qnoydd":[9754584,33600],"1vnk82v":[9788184,45528],"abeupt":[9833712,38136],"uymoij":[9871848,34608],"10na9kf":[9906456,61992],"1ip8cts":[9968448,35112],"85722r":[10003560,21168],"aybwgl":[10024728,48552],"n6ebfa":[10073280,20496],"19coepm":[10093776,29232],"12u8p6r":[10123008,29904],"dkgoil":[10152912,22680],"1b2eyge":[10175592,25872],"a5zxnd":[10201464,34104],"1dpkm9b":[10235568,33936],"1l5egcu":[10269504,32760],"1otc9uv":[10302264,37800],"1rkxzcg":[10340064,62328],"yj2ys9":[10402392,4032],"1xhj7ln":[10406424,19320],"375zxm":[10425744,4872],"3ydux3":[10430616,8400],"1vrevg":[10439016,8064],"3hmh0":[10447080,3864],"lw7tp2":[10450944,15456],"1bnf4v9":[10466400,10584],"1f8pous":[10476984,8904],"jsi8jk":[10485888,15456],"1kvbb0c":[10501344,21504],"11iqsz":[10522848,31248],"1g8wtm":[10554096,35280],"4q7659":[10589376,30408],"ol9d1d":[10619784,26040],"1yb6mk4":[10645824,15792],"11jdm14":[10661616,22008],"azxiaw":[10683624,23184],"pe5t7l":[10706808,26712],"z8h5x2":[10733520,27552],"1igmtum":[10761072,27384],"2g6tsx":[10788456,28224],"1z0m6hw":[10816680,23688],"u7xjs9":[10840368,19824],"1i4ig2d":[10860192,29568],"18hy9d4":[10889760,19152],"fxepc1":[10908912,27552],"u9eijj":[10936464,18144],"hxzww4":[10954608,21504],"uutkp7":[10976112,31080],"44uw9k":[11007192,18312],"1f3h86x":[11025504,18480],"1nznhy4":[11043984,22848],"ocdvnf":[11066832,20832],"5384m6":[11087664,20328],"1m5zhjy":[11107992,22512],"8rdru5":[11130504,15624],"1he2irn":[11146128,16632],"3ncetq":[11162760,16800],"1w25ohe":[11179560,17136],"1l5nl1a":[11196696,18984],"cnlpab":[11215680,20664],"7cilvs":[11236344,18648],"1j8gpsr":[11254992,17640],"gp1p2l":[11272632,30576],"lj8kbt":[11303208,24864],"lu0d5f":[11328072,30240],"1r1p407":[11358312,31920],"surzxm":[11390232,30744],"6i7c3d":[11420976,27384],"1blv8ip":[11448360,28392],"3kr3p2":[11476752,24192],"tnb3n1":[11500944,26544],"1kezd7h":[11527488,34440],"k05thj":[11561928,27888],"8jzeqk":[11589816,23016],"4xusvg":[11612832,28560],"15865cg":[11641392,26880],"2bgpx9":[11668272,28728],"omlb7k":[11697000,34104],"1284xuc":[11731104,37128],"1d4s3vr":[11768232,22848],"1v44p0n":[11791080,36456],"11msmia":[11827536,48048],"g00otc":[11875584,32424],"2jpx8k":[11908008,25536],"no23by":[11933544,31584],"v5i1ca":[11965128,33936],"107k6cn":[11999064,38976],"lf75h0":[12038040,27384],"19ypey4":[12065424,25872],"lv0juj":[12091296,24360],"19c2v9c":[12115656,30912],"1339234":[12146568,30240],"gz578q":[12176808,32088],"iiu7ip":[12208896,32256],"cgbu75":[12241152,31920],"162vi7x":[12273072,31416],"5nkj74":[12304488,30912],"1bvlbrh":[12335400,28056],"18yqto9":[12363456,40152],"1bhcimi":[12403608,23520],"xoe5re":[12427128,36288],"f4jvdr":[12463416,46704],"1182d16":[12510120,34608],"1cfecf7":[12544728,39816],"1l79p78":[12584544,34104],"1cbvl8o":[12618648,34440],"obh319":[12653088,24192],"j58vgh":[12677280,33264],"s7jz5t":[12710544,32424],"se4kco":[12742968,35448],"1lkt31b":[12778416,34272],"dt9oyf":[12812688,34944],"16h26g":[12847632,38136],"h1kqp9":[12885768,30240],"17ysmrk":[12916008,26208],"1dib2m4":[12942216,35280],"1cauext":[12977496,28728],"10x50aw":[13006224,35952],"19yqmpi":[13042176,26712],"1h50lt9":[13068888,24528],"quuide":[13093416,38808],"18muhrl":[13132224,27888],"1mb6o6h":[13160112,36624],"1ozdr38":[13196736,48048],"1xwmmhk":[13244784,44520],"12v9lzi":[13289304,34608],"14ao2nk":[13323912,37464],"k5nqmv":[13361376,51912],"evb11r":[13413288,43008],"12y3y1b":[13456296,48216],"3swbcf":[13504512,51240],"vq4ln0":[13555752,44688],"1yya6m4":[13600440,45696],"qpfuz2":[13646136,38472],"1vov2m1":[13684608,54096],"14dykqj":[13738704,54096]}},"marin":{"file":"voice/marin.4368e49dad.mp3","map":{"1k3irmd":[0,17136],"k1c4ze":[17136,29400],"1o0sucb":[46536,49896],"wddpfp":[96432,43512],"an195p":[139944,34776],"1pgocri":[174720,49056],"1556et1":[223776,45192],"1juot8":[268968,54600],"1yiyiu7":[323568,49896],"1c91nm0":[373464,57120],"1u3qsnr":[430584,41832],"2iq8xy":[472416,49728],"102bf9i":[522144,27552],"55q8o0":[549696,30408],"1nkbmql":[580104,28728],"1vzd3j0":[608832,30744],"1qlywke":[639576,57792],"mjyzv3":[697368,61488],"4xf2w7":[758856,54768],"j8141l":[813624,56280],"1als969":[869904,47712],"bi52ce":[917616,59136],"28g0q0":[976752,51912],"1qpso98":[1028664,40152],"p43vkp":[1068816,35112],"19nnikz":[1103928,31752],"ahzgly":[1135680,47712],"qxm8tl":[1183392,45696],"8degyv":[1229088,8232],"14rl21d":[1237320,9576],"r2ufrw":[1246896,13608],"i2gmqf":[1260504,52416],"y203u4":[1312920,86352],"18gf6fv":[1399272,31584],"5wtiau":[1430856,26544],"15dduo5":[1457400,31584],"19hj72v":[1488984,58128],"1tlyplm":[1547112,36960],"qfjbas":[1584072,57456],"hzkvqy":[1641528,51240],"m8lpei":[1692768,23352],"1mmu6v0":[1716120,48384],"jyb187":[1764504,63000],"s9uka7":[1827504,93240],"vz7aaa":[1920744,43512],"3ypeq4":[1964256,45192],"1ixr7vq":[2009448,33936],"1l0pp1a":[2043384,42504],"tybvh1":[2085888,55104],"f4ipu1":[2140992,30240],"1pytr45":[2171232,69048],"oa0trz":[2240280,8400],"6f1hy":[2248680,10920],"702zql":[2259600,39816],"1kagpbp":[2299416,20664],"18c9m7f":[2320080,32256],"efi79u":[2352336,55608],"18k0o25":[2407944,74592],"1437m9":[2482536,57624],"zeg8cu":[2540160,76440],"1kuu0d3":[2616600,64176],"18v4ibi":[2680776,40152],"i1lgz2":[2720928,43680],"vnpk59":[2764608,40152],"1xcpavy":[2804760,52584],"m64jdr":[2857344,45024],"1s1wbax":[2902368,44016],"1jidg4n":[2946384,83328],"1flikej":[3029712,30072],"11p6s0e":[3059784,38976],"1tt3zkh":[3098760,8232],"in0kyk":[3106992,17136],"1il9mxe":[3124128,9072],"hq1jxn":[3133200,26376],"1vf0s4g":[3159576,37632],"1rz9s8q":[3197208,50232],"1g0d37j":[3247440,42000],"r9l0js":[3289440,39312],"17eyppj":[3328752,51912],"tu3wmt":[3380664,76608],"14lxa87":[3457272,44856],"eqw9vv":[3502128,42336],"1t53ynh":[3544464,8736],"1upxd1z":[3553200,9408],"14ra355":[3562608,8904],"1tt3zr6":[3571512,7728],"9af8ii":[3579240,55944],"bzvuj0":[3635184,44016],"1seurik":[3679200,25368],"mjxsve":[3704568,36288],"1ocpcot":[3740856,44856],"1j5y9c1":[3785712,48048],"1dbx6ua":[3833760,43176],"fa1ryt":[3876936,36456],"1q0r0v2":[3913392,33432],"18jaijh":[3946824,29232],"rtp66s":[3976056,49056],"iocji7":[4025112,28224],"7z93v7":[4053336,29904],"gfvjdl":[4083240,59808],"1ywre4h":[4143048,29736],"110uftb":[4172784,23856],"1vmwd3j":[4196640,17472],"f83vnw":[4214112,20328],"1ylbiv6":[4234440,38304],"1ebxjrr":[4272744,28560],"2wa3sq":[4301304,29904],"1ugilvr":[4331208,10920],"1y0619b":[4342128,9576],"1r497pz":[4351704,58128],"139oxl5":[4409832,25368],"kqlern":[4435200,24864],"1f1zigf":[4460064,63840],"q1t6ee":[4523904,51912],"1bp7i88":[4575816,31920],"2i1bta":[4607736,26208],"1x17oy5":[4633944,29904],"nivc0h":[4663848,66528],"1xtt4bf":[4730376,41832],"1upw0ml":[4772208,25032],"ucr4kx":[4797240,78120],"392ua9":[4875360,46032],"cys62t":[4921392,64008],"6fpmrz":[4985400,51744],"1esvcw4":[5037144,25536],"7qedqq":[5062680,27888],"hngknf":[5090568,50232],"xcvyh3":[5140800,40320],"rilj98":[5181120,61656],"a2lomy":[5242776,18648],"1200cil":[5261424,33936],"9lpyr4":[5295360,38976],"1ptbvh":[5334336,43848],"hmtyga":[5378184,29400],"vsgft9":[5407584,63840],"zazdij":[5471424,51744],"1r6ig2k":[5523168,33432],"1bhc95l":[5556600,41496],"1tktrr4":[5598096,42840],"tpmjv1":[5640936,46032],"1uxxrxo":[5686968,51408],"12ttdyw":[5738376,39984],"13og4sv":[5778360,26544],"wa9fd5":[5804904,34608],"6b6j8l":[5839512,69888],"y546cy":[5909400,33264],"1fbq0v5":[5942664,34440],"xxpn4n":[5977104,43176],"ijuvgk":[6020280,37464],"1mj28s1":[6057744,44016],"7zrv6v":[6101760,55104],"m18biv":[6156864,25200],"1jndziz":[6182064,23520],"1i5qvtu":[6205584,95592],"18mgc13":[6301176,31080],"grshgr":[6332256,44856],"ys7vzk":[6377112,42000],"1dltu8p":[6419112,35616],"1gibsdd":[6454728,73080],"1m9kcd1":[6527808,85176],"m6llvu":[6612984,25032],"grxq1t":[6638016,24528],"105cdw7":[6662544,92400],"1dsefvg":[6754944,43848],"1no4i4d":[6798792,33600],"1kxpys0":[6832392,14280],"1iiphqg":[6846672,21000],"1a019r6":[6867672,24360],"18t90q":[6892032,19320],"h0gkk1":[6911352,28056],"arz3d2":[6939408,17136],"zl22zw":[6956544,18648],"8kr23q":[6975192,20496],"2smzfg":[6995688,27720],"o29xcf":[7023408,32928],"1nufmyi":[7056336,14448],"1n1p4qw":[7070784,22512],"evoo7i":[7093296,13440],"u3vijz":[7106736,9072],"dlysv9":[7115808,24696],"dyx02r":[7140504,28896],"1gmk7ar":[7169400,14784],"19v7n5i":[7184184,19824],"jsg4c2":[7204008,18648],"4k8dwz":[7222656,14112],"c9ofla":[7236768,18816],"xbp2ty":[7255584,25200],"1bllry2":[7280784,28560],"2kps6x":[7309344,17136],"1cb55g5":[7326480,14280],"1fd2g8d":[7340760,20496],"14vcw02":[7361256,17472],"yal2mz":[7378728,29568],"7nemg5":[7408296,22680],"snob0y":[7430976,21168],"1ey9izw":[7452144,16296],"1opfiwq":[7468440,21336],"1dyex7s":[7489776,20160],"10lqu2t":[7509936,25032],"1efct7j":[7534968,17304],"mvc1hv":[7552272,16800],"1joaloa":[7569072,17976],"xry31u":[7587048,12936],"1umx50j":[7599984,19320],"4qh550":[7619304,14112],"13o6xla":[7633416,16296],"j0eqwv":[7649712,19320],"g3ebw6":[7669032,27048],"1u5kbbn":[7696080,12600],"t46cz6":[7708680,28392],"1jppmdp":[7737072,11424],"w55y7u":[7748496,18816],"1qvvu4v":[7767312,24696],"1ifnp7i":[7792008,25032],"128hg90":[7817040,12936],"13l40e3":[7829976,31584],"8wjqo6":[7861560,38304],"1i502zj":[7899864,14952],"1s5cvpk":[7914816,14448],"35rtmr":[7929264,22512],"3wcomo":[7951776,27048],"5qos6g":[7978824,25872],"oum2t4":[8004696,30576],"1xlqh6r":[8035272,11424],"1tj6k7x":[8046696,40320],"wpud4q":[8087016,29904],"834j6m":[8116920,41832],"rlcfof":[8158752,53088],"b5jctw":[8211840,10080],"a6ubyd":[8221920,30408],"1rn3xst":[8252328,33600],"jwtztc":[8285928,31584],"wvj76v":[8317512,17472],"1pxv54h":[8334984,29400],"h19nhr":[8364384,25872],"1dlj75n":[8390256,28728],"1fnsgnh":[8418984,12600],"1yfin3h":[8431584,12600],"1nniwlg":[8444184,20664],"1mhmzdr":[8464848,26040],"qrw6xi":[8490888,30408],"2u797p":[8521296,22344],"62ekzq":[8543640,26376],"136f33":[8570016,41832],"10dm6vx":[8611848,37632],"1krnaz3":[8649480,39312],"1igsxl6":[8688792,34608],"1jkx8ao":[8723400,27888],"1a8pmna":[8751288,30912],"qnoydd":[8782200,33936],"1vnk82v":[8816136,39816],"abeupt":[8855952,36960],"uymoij":[8892912,33432],"10na9kf":[8926344,62496],"1ip8cts":[8988840,31752],"85722r":[9020592,18480],"aybwgl":[9039072,44688],"n6ebfa":[9083760,15456],"19coepm":[9099216,23184],"12u8p6r":[9122400,27048],"dkgoil":[9149448,19992],"1b2eyge":[9169440,22848],"a5zxnd":[9192288,33600],"1dpkm9b":[9225888,32928],"1l5egcu":[9258816,27048],"1otc9uv":[9285864,35280],"1rkxzcg":[9321144,60312],"yj2ys9":[9381456,4536],"1xhj7ln":[9385992,18480],"375zxm":[9404472,5376],"3ydux3":[9409848,7896],"1vrevg":[9417744,9576],"3hmh0":[9427320,5040],"lw7tp2":[9432360,11760],"1bnf4v9":[9444120,10248],"1f8pous":[9454368,8064],"jsi8jk":[9462432,13272],"1kvbb0c":[9475704,18144],"11iqsz":[9493848,26376],"1g8wtm":[9520224,29904],"4q7659":[9550128,26712],"ol9d1d":[9576840,19488],"1yb6mk4":[9596328,13440],"11jdm14":[9609768,19824],"azxiaw":[9629592,17136],"pe5t7l":[9646728,24864],"z8h5x2":[9671592,23688],"1igmtum":[9695280,29568],"2g6tsx":[9724848,24192],"1z0m6hw":[9749040,19656],"u7xjs9":[9768696,16464],"1i4ig2d":[9785160,23352],"18hy9d4":[9808512,19824],"fxepc1":[9828336,24192],"u9eijj":[9852528,18312],"hxzww4":[9870840,13104],"uutkp7":[9883944,28392],"44uw9k":[9912336,17472],"1f3h86x":[9929808,15288],"1nznhy4":[9945096,17640],"ocdvnf":[9962736,17640],"5384m6":[9980376,14784],"1m5zhjy":[9995160,19488],"8rdru5":[10014648,14112],"1he2irn":[10028760,18984],"3ncetq":[10047744,14952],"1w25ohe":[10062696,19152],"1l5nl1a":[10081848,17976],"cnlpab":[10099824,18816],"7cilvs":[10118640,16464],"1j8gpsr":[10135104,15960],"gp1p2l":[10151064,29400],"lj8kbt":[10180464,25872],"lu0d5f":[10206336,26544],"1r1p407":[10232880,26544],"surzxm":[10259424,25200],"6i7c3d":[10284624,25032],"1blv8ip":[10309656,25032],"3kr3p2":[10334688,23856],"tnb3n1":[10358544,24360],"1kezd7h":[10382904,27888],"k05thj":[10410792,27216],"8jzeqk":[10438008,22512],"4xusvg":[10460520,22176],"15865cg":[10482696,20832],"2bgpx9":[10503528,26544],"omlb7k":[10530072,26544],"1284xuc":[10556616,39144],"1d4s3vr":[10595760,18984],"1v44p0n":[10614744,33768],"11msmia":[10648512,47208],"g00otc":[10695720,28392],"2jpx8k":[10724112,24864],"no23by":[10748976,26880],"v5i1ca":[10775856,36456],"107k6cn":[10812312,28056],"lf75h0":[10840368,27216],"19ypey4":[10867584,26208],"lv0juj":[10893792,20160],"19c2v9c":[10913952,27384],"1339234":[10941336,25368],"gz578q":[10966704,25704],"iiu7ip":[10992408,27720],"cgbu75":[11020128,28392],"162vi7x":[11048520,30240],"5nkj74":[11078760,28056],"1bvlbrh":[11106816,33936],"18yqto9":[11140752,29736],"1bhcimi":[11170488,21168],"xoe5re":[11191656,37128],"f4jvdr":[11228784,39480],"1182d16":[11268264,36120],"1cfecf7":[11304384,34608],"1l79p78":[11338992,33936],"1cbvl8o":[11372928,30408],"obh319":[11403336,22176],"j58vgh":[11425512,22008],"s7jz5t":[11447520,28392],"se4kco":[11475912,29568],"1lkt31b":[11505480,32760],"dt9oyf":[11538240,31752],"16h26g":[11569992,29904],"h1kqp9":[11599896,26376],"17ysmrk":[11626272,24360],"1dib2m4":[11650632,33600],"1cauext":[11684232,27384],"10x50aw":[11711616,33432],"19yqmpi":[11745048,22176],"1h50lt9":[11767224,28560],"quuide":[11795784,34104],"18muhrl":[11829888,29568],"1mb6o6h":[11859456,30072],"1ozdr38":[11889528,40320],"1xwmmhk":[11929848,42672],"12v9lzi":[11972520,39816],"14ao2nk":[12012336,42840],"k5nqmv":[12055176,40320],"evb11r":[12095496,40656],"12y3y1b":[12136152,40152],"3swbcf":[12176304,45360],"vq4ln0":[12221664,34776],"1yya6m4":[12256440,39312],"qpfuz2":[12295752,31248],"1vov2m1":[12327000,51912],"14dykqj":[12378912,55608]}},"nova":{"file":"voice/nova.b4a20dd95c.mp3","map":{"1k3irmd":[0,16128],"k1c4ze":[16128,32592],"1o0sucb":[48720,50400],"wddpfp":[99120,42000],"an195p":[141120,36792],"1pgocri":[177912,45864],"1556et1":[223776,45696],"1juot8":[269472,52920],"1yiyiu7":[322392,42336],"1c91nm0":[364728,58968],"1u3qsnr":[423696,41160],"2iq8xy":[464856,44688],"102bf9i":[509544,25872],"55q8o0":[535416,32592],"1nkbmql":[568008,25872],"1vzd3j0":[593880,30240],"1qlywke":[624120,57288],"mjyzv3":[681408,56448],"4xf2w7":[737856,53928],"j8141l":[791784,55440],"1als969":[847224,46872],"bi52ce":[894096,53592],"28g0q0":[947688,49560],"1qpso98":[997248,42168],"p43vkp":[1039416,40656],"19nnikz":[1080072,29568],"ahzgly":[1109640,50736],"qxm8tl":[1160376,43512],"8degyv":[1203888,11760],"14rl21d":[1215648,8904],"r2ufrw":[1224552,9744],"i2gmqf":[1234296,48720],"y203u4":[1283016,74928],"18gf6fv":[1357944,30408],"5wtiau":[1388352,28392],"15dduo5":[1416744,29400],"19hj72v":[1446144,59808],"1tlyplm":[1505952,40824],"qfjbas":[1546776,47880],"hzkvqy":[1594656,43512],"m8lpei":[1638168,26040],"1mmu6v0":[1664208,47712],"jyb187":[1711920,60984],"s9uka7":[1772904,76608],"vz7aaa":[1849512,38640],"3ypeq4":[1888152,46368],"1ixr7vq":[1934520,36120],"1l0pp1a":[1970640,45528],"tybvh1":[2016168,52248],"f4ipu1":[2068416,23184],"1pytr45":[2091600,68208],"oa0trz":[2159808,9912],"6f1hy":[2169720,12096],"702zql":[2181816,43344],"1kagpbp":[2225160,23688],"18c9m7f":[2248848,31248],"efi79u":[2280096,51408],"18k0o25":[2331504,72576],"1437m9":[2404080,56616],"zeg8cu":[2460696,77952],"1kuu0d3":[2538648,62328],"18v4ibi":[2600976,45696],"i1lgz2":[2646672,46704],"vnpk59":[2693376,39648],"1xcpavy":[2733024,49896],"m64jdr":[2782920,36120],"1s1wbax":[2819040,42672],"1jidg4n":[2861712,68880],"1flikej":[2930592,37968],"11p6s0e":[2968560,38136],"1tt3zkh":[3006696,6720],"in0kyk":[3013416,14448],"1il9mxe":[3027864,8232],"hq1jxn":[3036096,27048],"1vf0s4g":[3063144,31920],"1rz9s8q":[3095064,44688],"1g0d37j":[3139752,41160],"r9l0js":[3180912,34608],"17eyppj":[3215520,43680],"tu3wmt":[3259200,67872],"14lxa87":[3327072,53256],"eqw9vv":[3380328,45696],"1t53ynh":[3426024,9576],"1upxd1z":[3435600,8568],"14ra355":[3444168,8232],"1tt3zr6":[3452400,6888],"9af8ii":[3459288,44352],"bzvuj0":[3503640,43344],"1seurik":[3546984,28224],"mjxsve":[3575208,35784],"1ocpcot":[3610992,36288],"1j5y9c1":[3647280,47544],"1dbx6ua":[3694824,43680],"fa1ryt":[3738504,39648],"1q0r0v2":[3778152,30408],"18jaijh":[3808560,30576],"rtp66s":[3839136,43344],"iocji7":[3882480,24696],"7z93v7":[3907176,27720],"gfvjdl":[3934896,59472],"1ywre4h":[3994368,29568],"110uftb":[4023936,30744],"1vmwd3j":[4054680,14952],"f83vnw":[4069632,20160],"1ylbiv6":[4089792,38136],"1ebxjrr":[4127928,23352],"2wa3sq":[4151280,27048],"1ugilvr":[4178328,10584],"1y0619b":[4188912,11088],"1r497pz":[4200000,58800],"139oxl5":[4258800,20160],"kqlern":[4278960,26376],"1f1zigf":[4305336,66528],"q1t6ee":[4371864,55776],"1bp7i88":[4427640,31248],"2i1bta":[4458888,23856],"1x17oy5":[4482744,28896],"nivc0h":[4511640,56784],"1xtt4bf":[4568424,45024],"1upw0ml":[4613448,21840],"ucr4kx":[4635288,74424],"392ua9":[4709712,47712],"cys62t":[4757424,64008],"6fpmrz":[4821432,48888],"1esvcw4":[4870320,27384],"7qedqq":[4897704,30744],"hngknf":[4928448,42504],"xcvyh3":[4970952,40824],"rilj98":[5011776,61992],"a2lomy":[5073768,13104],"1200cil":[5086872,30912],"9lpyr4":[5117784,41496],"1ptbvh":[5159280,41160],"hmtyga":[5200440,24696],"vsgft9":[5225136,60648],"zazdij":[5285784,52584],"1r6ig2k":[5338368,32256],"1bhc95l":[5370624,40992],"1tktrr4":[5411616,44856],"tpmjv1":[5456472,47712],"1uxxrxo":[5504184,38472],"12ttdyw":[5542656,35112],"13og4sv":[5577768,26880],"wa9fd5":[5604648,35952],"6b6j8l":[5640600,72744],"y546cy":[5713344,34608],"1fbq0v5":[5747952,32088],"xxpn4n":[5780040,36120],"ijuvgk":[5816160,38136],"1mj28s1":[5854296,69216],"7zrv6v":[5923512,55776],"m18biv":[5979288,19152],"1jndziz":[5998440,24528],"1i5qvtu":[6022968,87024],"18mgc13":[6109992,29400],"grshgr":[6139392,45528],"ys7vzk":[6184920,42504],"1dltu8p":[6227424,37632],"1gibsdd":[6265056,72744],"1m9kcd1":[6337800,83832],"m6llvu":[6421632,25872],"grxq1t":[6447504,25032],"105cdw7":[6472536,80808],"1dsefvg":[6553344,40488],"1no4i4d":[6593832,38976],"1kxpys0":[6632808,14616],"1iiphqg":[6647424,21840],"1a019r6":[6669264,23520],"18t90q":[6692784,20664],"h0gkk1":[6713448,31248],"arz3d2":[6744696,16464],"zl22zw":[6761160,16800],"8kr23q":[6777960,19824],"2smzfg":[6797784,22176],"o29xcf":[6819960,28392],"1nufmyi":[6848352,18144],"1n1p4qw":[6866496,28224],"evoo7i":[6894720,14784],"u3vijz":[6909504,8904],"dlysv9":[6918408,25200],"dyx02r":[6943608,25536],"1gmk7ar":[6969144,17136],"19v7n5i":[6986280,19824],"jsg4c2":[7006104,15960],"4k8dwz":[7022064,18816],"c9ofla":[7040880,18648],"xbp2ty":[7059528,24192],"1bllry2":[7083720,19152],"2kps6x":[7102872,18984],"1cb55g5":[7121856,13272],"1fd2g8d":[7135128,17976],"14vcw02":[7153104,18816],"yal2mz":[7171920,25368],"7nemg5":[7197288,22176],"snob0y":[7219464,25032],"1ey9izw":[7244496,19824],"1opfiwq":[7264320,16968],"1dyex7s":[7281288,15456],"10lqu2t":[7296744,25368],"1efct7j":[7322112,13608],"mvc1hv":[7335720,17136],"1joaloa":[7352856,17808],"xry31u":[7370664,13272],"1umx50j":[7383936,22848],"4qh550":[7406784,20328],"13o6xla":[7427112,18144],"j0eqwv":[7445256,18648],"g3ebw6":[7463904,24192],"1u5kbbn":[7488096,13440],"t46cz6":[7501536,22848],"1jppmdp":[7524384,17808],"w55y7u":[7542192,19992],"1qvvu4v":[7562184,18984],"1ifnp7i":[7581168,23520],"128hg90":[7604688,11760],"13l40e3":[7616448,32592],"8wjqo6":[7649040,32928],"1i502zj":[7681968,12936],"1s5cvpk":[7694904,12096],"35rtmr":[7707000,21000],"3wcomo":[7728000,25704],"5qos6g":[7753704,26376],"oum2t4":[7780080,36624],"1xlqh6r":[7816704,11088],"1tj6k7x":[7827792,35112],"wpud4q":[7862904,28896],"834j6m":[7891800,47544],"rlcfof":[7939344,48552],"b5jctw":[7987896,11088],"a6ubyd":[7998984,30744],"1rn3xst":[8029728,33600],"jwtztc":[8063328,32928],"wvj76v":[8096256,18648],"1pxv54h":[8114904,30912],"h19nhr":[8145816,24360],"1dlj75n":[8170176,28392],"1fnsgnh":[8198568,15120],"1yfin3h":[8213688,13608],"1nniwlg":[8227296,22680],"1mhmzdr":[8249976,25704],"qrw6xi":[8275680,27216],"2u797p":[8302896,21672],"62ekzq":[8324568,30072],"136f33":[8354640,35448],"10dm6vx":[8390088,33936],"1krnaz3":[8424024,39144],"1igsxl6":[8463168,34440],"1jkx8ao":[8497608,25032],"1a8pmna":[8522640,32088],"qnoydd":[8554728,29736],"1vnk82v":[8584464,39984],"abeupt":[8624448,37464],"uymoij":[8661912,34608],"10na9kf":[8696520,46536],"1ip8cts":[8743056,29400],"85722r":[8772456,21168],"aybwgl":[8793624,38304],"n6ebfa":[8831928,16128],"19coepm":[8848056,34944],"12u8p6r":[8883000,27216],"dkgoil":[8910216,19656],"1b2eyge":[8929872,26712],"a5zxnd":[8956584,27216],"1dpkm9b":[8983800,30744],"1l5egcu":[9014544,32088],"1otc9uv":[9046632,40824],"1rkxzcg":[9087456,58464],"yj2ys9":[9145920,3864],"1xhj7ln":[9149784,14952],"375zxm":[9164736,4536],"3ydux3":[9169272,6216],"1vrevg":[9175488,6720],"3hmh0":[9182208,4704],"lw7tp2":[9186912,14280],"1bnf4v9":[9201192,9744],"1f8pous":[9210936,8568],"jsi8jk":[9219504,10920],"1kvbb0c":[9230424,21504],"11iqsz":[9251928,35616],"1g8wtm":[9287544,31080],"4q7659":[9318624,25536],"ol9d1d":[9344160,20328],"1yb6mk4":[9364488,14952],"11jdm14":[9379440,20832],"azxiaw":[9400272,22008],"pe5t7l":[9422280,24528],"z8h5x2":[9446808,23520],"1igmtum":[9470328,26208],"2g6tsx":[9496536,25704],"1z0m6hw":[9522240,18648],"u7xjs9":[9540888,15960],"1i4ig2d":[9556848,27216],"18hy9d4":[9584064,15288],"fxepc1":[9599352,23016],"u9eijj":[9622368,16968],"hxzww4":[9639336,13440],"uutkp7":[9652776,31920],"44uw9k":[9684696,16128],"1f3h86x":[9700824,14448],"1nznhy4":[9715272,20160],"ocdvnf":[9735432,22680],"5384m6":[9758112,19824],"1m5zhjy":[9777936,19320],"8rdru5":[9797256,15792],"1he2irn":[9813048,13608],"3ncetq":[9826656,15624],"1w25ohe":[9842280,15792],"1l5nl1a":[9858072,18312],"cnlpab":[9876384,22008],"7cilvs":[9898392,16968],"1j8gpsr":[9915360,15288],"gp1p2l":[9930648,26712],"lj8kbt":[9957360,23856],"lu0d5f":[9981216,25032],"1r1p407":[10006248,28392],"surzxm":[10034640,32760],"6i7c3d":[10067400,21672],"1blv8ip":[10089072,22176],"3kr3p2":[10111248,23016],"tnb3n1":[10134264,22848],"1kezd7h":[10157112,27552],"k05thj":[10184664,23688],"8jzeqk":[10208352,26544],"4xusvg":[10234896,24192],"15865cg":[10259088,25368],"2bgpx9":[10284456,27720],"omlb7k":[10312176,26376],"1284xuc":[10338552,35448],"1d4s3vr":[10374000,18816],"1v44p0n":[10392816,32928],"11msmia":[10425744,44016],"g00otc":[10469760,27888],"2jpx8k":[10497648,21168],"no23by":[10518816,26544],"v5i1ca":[10545360,27384],"107k6cn":[10572744,29232],"lf75h0":[10601976,29064],"19ypey4":[10631040,23688],"lv0juj":[10654728,23856],"19c2v9c":[10678584,29904],"1339234":[10708488,32592],"gz578q":[10741080,22512],"iiu7ip":[10763592,23184],"cgbu75":[10786776,23184],"162vi7x":[10809960,25704],"5nkj74":[10835664,31080],"1bvlbrh":[10866744,31080],"18yqto9":[10897824,39648],"1bhcimi":[10937472,20160],"xoe5re":[10957632,31080],"f4jvdr":[10988712,51240],"1182d16":[11039952,30576],"1cfecf7":[11070528,34104],"1l79p78":[11104632,32928],"1cbvl8o":[11137560,29232],"obh319":[11166792,20328],"j58vgh":[11187120,28392],"s7jz5t":[11215512,26544],"se4kco":[11242056,30744],"1lkt31b":[11272800,30240],"dt9oyf":[11303040,33768],"16h26g":[11336808,33264],"h1kqp9":[11370072,23520],"17ysmrk":[11393592,25032],"1dib2m4":[11418624,29064],"1cauext":[11447688,23352],"10x50aw":[11471040,30408],"19yqmpi":[11501448,22512],"1h50lt9":[11523960,21504],"quuide":[11545464,34272],"18muhrl":[11579736,24192],"1mb6o6h":[11603928,28056],"1ozdr38":[11631984,40152],"1xwmmhk":[11672136,39312],"12v9lzi":[11711448,33264],"14ao2nk":[11744712,39984],"k5nqmv":[11784696,38976],"evb11r":[11823672,37296],"12y3y1b":[11860968,40488],"3swbcf":[11901456,49224],"vq4ln0":[11950680,37968],"1yya6m4":[11988648,40824],"qpfuz2":[12029472,33264],"1vov2m1":[12062736,48888],"14dykqj":[12111624,51408]}}}; // filled in by build.py: { name: { file, map: { clipKey: [byteOffset, byteLength] } } }
 // the voices offered in Settings (recorded with voice/synth_openai.py); only packs that exist are shown
@@ -3562,6 +4379,55 @@ const GARDEN = {
     c.fillStyle = '#5A3920'; for (let i = 0; i < 24; i++) { const a = i * 2.4, r = Math.sqrt(i) * 5.4; c.beginPath(); c.arc(Math.cos(a) * r, Math.sin(a) * r, 2.2, 0, TAU); c.fill(); }
     c.restore();
     if (k) for (let j = 0; j < 4; j++) { const f = 1 - k, x = -20 + j * 14, y = -190 + f * f * 200; if (y < 0) { c.fillStyle = '#3A2A1A'; c.beginPath(); c.ellipse(x, y, 3, 5, 0, 0, TAU); c.fill(); } }
+  } },
+  // ---- Weather & Water ----
+  umbrella: { sound() { Sound.drip(); Sound.tap(5); }, draw(c, t, e) {   // a striped umbrella; tapped, it spins and shakes off drops
+    const k = poked(e, 1.4); c.save(); c.translate(0, -60); c.rotate(-.15 + Math.sin(e * 12) * .12 * k);
+    c.strokeStyle = C.ink; c.lineWidth = 5; c.beginPath(); c.moveTo(0, -40); c.lineTo(0, 54); c.arc(-9, 54, 9, 0, PI); c.stroke(); c.lineWidth = 4;
+    const canopy = new Path2D('M-58 -30 Q0 -96 58 -30 Q44 -38 29 -30 Q14 -38 0 -30 Q-14 -38 -29 -30 Q-44 -38 -58 -30 Z');
+    c.fillStyle = '#E04B4B'; c.fill(canopy); c.save(); c.clip(canopy); c.fillStyle = '#FFFDF5'; for (const x of [-36, 8]) { c.beginPath(); c.moveTo(0, -90); c.lineTo(x, -20); c.lineTo(x + 22, -20); c.closePath(); c.fill(); } c.restore(); c.stroke(canopy); c.restore();
+    if (k) for (let j = 0; j < 5; j++) { const a = j * 1.3 + e * 4, r = 40 + (1 - k) * 50; c.fillStyle = C.water; c.beginPath(); c.arc(Math.cos(a) * r, -90 + Math.sin(a) * r * .4, 4, 0, TAU); c.fill(); }
+  } },
+  birdbath: { sound() { Sound.splash(); Sound.chirp(.2); }, draw(c, t, e) {   // a stone bath; tapped, a bird splashes in it
+    const k = poked(e, 1.8); c.fillStyle = '#B7BEC6'; c.fillRect(-12, -70, 24, 70); c.strokeRect(-12, -70, 24, 70); c.fillRect(-30, -8, 60, 8); c.strokeRect(-30, -8, 60, 8);
+    const bowl = new Path2D('M-52 -84 L52 -84 Q46 -62 0 -62 Q-46 -62 -52 -84 Z'); c.fillStyle = '#B7BEC6'; c.fill(bowl); c.stroke(bowl);
+    const w = ellipse(0, -84, 50, 8); c.fillStyle = C.water; c.fill(w); c.stroke(w);
+    if (k) { drawBird(c, 8, -96, t, 1); c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2.5; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 30, -96, 8 + (1 - k) * 10, PI * 1.1, PI * 1.9); c.stroke(); } c.lineWidth = 4; c.strokeStyle = C.ink; }
+  } },
+  kite: { sound() { Sound.whoosh(); }, draw(c, t, e) {   // a diamond kite on a stick; tapped, it swoops up high and back
+    const k = poked(e, 2.2), up = Math.sin(PI * (1 - k)) * 70 * (k ? 1 : 0), sw = RM ? 0 : Math.sin(t * 1.8) * 6;
+    const kx = 20 + sw, ky = -118 - up;
+    c.strokeStyle = C.ink; c.lineWidth = 2; c.beginPath(); c.moveTo(-26, -20); c.quadraticCurveTo(-10, -60 - up * .5, kx, ky + 30); c.stroke(); c.lineWidth = 4;
+    c.fillStyle = '#A87445'; c.fillRect(-30, -40, 8, 40); c.strokeRect(-30, -40, 8, 40);
+    c.save(); c.translate(kx, ky); c.rotate(.2 + sw * .02); const d = new Path2D('M0 -32 L24 0 L0 30 L-24 0 Z'); c.fillStyle = C.sun; c.fill(d); c.save(); c.clip(d); c.fillStyle = WC.accent; c.fillRect(-24, -32, 24, 32); c.fillRect(0, 0, 24, 30); c.restore(); c.stroke(d);
+    c.lineWidth = 2; c.beginPath(); c.moveTo(0, 30); c.quadraticCurveTo(10, 44, 0, 58); c.quadraticCurveTo(-10, 70, 2, 84); c.stroke(); for (const y of [46, 66]) { c.fillStyle = C.petal; c.beginPath(); c.moveTo(-6, y); c.lineTo(6, y - 5); c.lineTo(6, y + 5); c.closePath(); c.fill(); } c.restore();
+  } },
+  windsock: { sound() { Sound.whoosh(); Sound.tap(7); }, draw(c, t, e) {   // an orange wind sock; tapped, a gust fills it out straight
+    const k = poked(e, 2), flap = (RM ? 0 : Math.sin(t * 4) * .1) * (1 - k), droop = .6 * (1 - k);
+    c.fillStyle = '#C8CDD2'; c.fillRect(-5, -130, 10, 130); c.strokeRect(-5, -130, 10, 130);
+    c.save(); c.translate(5, -118); c.rotate(droop + flap); const sock = new Path2D('M0 -16 L74 -8 L74 8 L0 16 Z'); c.fillStyle = '#FFFDF5'; c.fill(sock);
+    c.save(); c.clip(sock); c.fillStyle = C.carrot; for (const x of [0, 30, 60]) c.fillRect(x, -18, 15, 36); c.restore(); c.stroke(sock); c.restore();
+    if (k && !RM) { c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 3; for (const y of [-150, -96]) { const x = -60 + (1 - k) * 120; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 30, y); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
+  } },
+  snowman: { sound() { Sound.boing(); Sound.snowfall(); }, draw(c, t, e) {   // a snowman; tapped, his hat hops and a little snow falls
+    const k = poked(e, 1.2), hop = Math.sin(PI * (1 - k)) * 22 * (k ? 1 : 0);
+    for (const [y, r] of [[-30, 32], [-82, 24], [-120, 17]]) { c.fillStyle = '#F4FAFF'; c.beginPath(); c.arc(0, y, r, 0, TAU); c.fill(); c.stroke(); }
+    c.fillStyle = C.ink; for (const ex of [-6, 6]) { c.beginPath(); c.arc(ex, -124, 2.6, 0, TAU); c.fill(); } for (const y of [-90, -76]) { c.beginPath(); c.arc(0, y, 3, 0, TAU); c.fill(); }
+    c.fillStyle = C.carrot; c.beginPath(); c.moveTo(0, -118); c.lineTo(18, -114); c.lineTo(0, -112); c.closePath(); c.fill(); c.lineWidth = 2; c.stroke(); c.lineWidth = 4;
+    c.strokeStyle = '#8A6B3E'; c.beginPath(); c.moveTo(-22, -86); c.lineTo(-48, -104); c.moveTo(22, -86); c.lineTo(48, -100); c.stroke(); c.strokeStyle = C.ink;
+    c.fillStyle = WC.accent; c.fillRect(-20, -82 - 22, 40, 8); c.strokeRect(-20, -82 - 22, 40, 8);
+    c.save(); c.translate(0, -134 - hop); c.fillStyle = C.ink; c.fillRect(-20, 0, 40, 6); c.fillRect(-12, -22, 24, 22); c.restore();
+    if (k) { c.fillStyle = '#F4FAFF'; c.strokeStyle = 'rgba(36,54,40,.5)'; c.lineWidth = 1.5; for (let j = 0; j < 6; j++) { const x = -40 + j * 16, y = -160 + (1 - k) * 140 + (j % 2) * 12; c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fill(); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
+  } },
+  windmill: { tall: true, sound() { Sound.whoosh(); Sound.grow(3); }, draw(c, t, e) {   // the Weather & Water landmark: a windmill whose sails turn in the breeze
+    const k = poked(e, 2.4), spin = (RM ? 0 : t * .8) + (k ? (1 - k) * 10 : 0);
+    const tower = new Path2D('M-30 0 L-18 -170 L18 -170 L30 0 Z'); c.fillStyle = '#FFFDF5'; c.fill(tower); c.stroke(tower);
+    c.strokeStyle = 'rgba(36,54,40,.35)'; c.lineWidth = 2.5; for (let y = -30; y > -170; y -= 30) { c.beginPath(); c.moveTo(-30 + (-y / 170) * 12, y); c.lineTo(30 - (-y / 170) * 12, y); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4;
+    const door = rrect(-10, -34, 20, 34, 9); c.fillStyle = '#A87445'; c.fill(door); c.stroke(door);
+    const cap = new Path2D('M-26 -168 Q0 -204 26 -168 Z'); c.fillStyle = '#5BA8D6'; c.fill(cap); c.stroke(cap);
+    c.save(); c.translate(0, -178); c.rotate(spin);
+    for (let i = 0; i < 4; i++) { c.save(); c.rotate(i * PI / 2); const sail = rrect(6, -12, 78, 24, 4); c.fillStyle = i % 2 ? C.carrot : C.sun; c.fill(sail); c.stroke(sail); c.lineWidth = 2; c.beginPath(); c.moveTo(6, 0); c.lineTo(84, 0); c.moveTo(32, -12); c.lineTo(32, 12); c.moveTo(58, -12); c.lineTo(58, 12); c.stroke(); c.lineWidth = 4; c.restore(); }
+    c.fillStyle = C.ink; c.beginPath(); c.arc(0, 0, 8, 0, TAU); c.fill(); c.restore();
   } },
 };
 function kidneyAt(x, y) { const p = new Path2D(); p.ellipse(x, y, 9, 6, -.2, 0, TAU); return p; }
@@ -4564,7 +5430,12 @@ const TOPICS = [
     accent: { ground: '#E8F3E1', dot: '#D3E8CB', tab: '#FFC93C', stage: '#BFE6F4', bold: '#2A7340', plate: '#2A7340' },
     activities: [A_parts, A_seed, A_flower, A_produce, A_grow, A_travel, A_leaf, A_celery, A_light, A_needs, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
-      how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } }
+      how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } },
+  { id: 'weather', name: 'Weather & Water', building: drawWeatherStation, landmark: 'windmill', pip: 'rainhat',
+    accent: { ground: '#E3F2F9', dot: '#CBE5F1', tab: '#8FD0EE', stage: '#BFE6F4', bold: '#1D6E99', plate: '#1D6E99' },
+    activities: [A_wcycle, A_jar, A_clouds, A_station, A_wquiz],
+    master: { id: 'weather.b.master', name: 'Meteorologist', icon: 'wtrophy', desc: 'You earned every weather badge! A meteorologist is a scientist who studies weather.',
+      how: 'Not yet! Earn all the Weather and Water badges to win the <b>Meteorologist</b> trophy. A meteorologist is a scientist who studies weather.' } }
 ];
 const App = { view: '', topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath

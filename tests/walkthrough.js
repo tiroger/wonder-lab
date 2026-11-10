@@ -276,9 +276,114 @@ function scriptCoverage() {
       await page.click('.q-foot .btn'); await sleep(300);
     }
   }
-  report.totals = await page.evaluate(() => ({ stars: TOPICS.flatMap(t => t.activities.flatMap(a => a.stars)).length, activities: TOPICS.flatMap(t => t.activities).length, badges: TOPICS.reduce((n, t) => n + t.activities.length + 1, 0), quiz: QUIZ.length }));
+  report.totals = await page.evaluate(() => ({ topics: TOPICS.length, plantStars: TOPICS[0].activities.flatMap(a => a.stars).length, stars: TOPICS.flatMap(t => t.activities.flatMap(a => a.stars)).length, activities: TOPICS.flatMap(t => t.activities).length, badges: TOPICS.reduce((n, t) => n + t.activities.length + 1, 0), quiz: QUIZ.length }));
   report.quiz = (await stars('quiz.')).length + ' of ' + report.totals.quiz;
+
+  {   // the weather topic, in its own block so its names don't clash with the plant activities'
+  // ---------- Weather & Water: The Water Cycle ----------
+  await sleep(1300); await closeToasts(); await page.evaluate(() => go('#/weather/weather.cycle')); await sleep(900);
+  const wst = () => page.evaluate(() => { const s = App.inst.state(); return { puff: s.puff && { x: s.puff.x, y: s.puff.y }, drops: s.drops, cloudX: s.cloudX, flow: !!s.flow, rainT: s.rainT }; });
+  const wgeo = await page.evaluate(() => App.inst.geo);
+  const wcycle = { theme: await page.evaluate(() => ({ crumb: document.querySelector('#crumbTopic').textContent, bold: getComputedStyle(document.documentElement).getPropertyValue('--bold').trim(), costume: App.topic.pip })) };
+  const makePuff = async () => {   // tap the sun, then drag the vapor up into the cold air
+    await tap(...wgeo.sun); await sleep(400); const p = (await wst()).puff; if (!p) return false;
+    await drag([[p.x, p.y], [p.x + 40, 200], [p.x + 60, 110]], 6); await sleep(900); return true;
+  };
+  await makePuff();
+  wcycle.evapCondense = (await stars('weather.cycle.')).join();
+  await tap(...wgeo.sun); await sleep(300); const onePuff = (await wst()).puff;
+  await tap(...wgeo.sun); await sleep(300);
+  wcycle.onePuffAtATime = !!onePuff && (await wst()).puff && (await wst()).drops === 1;
+  { const p = (await wst()).puff; await drag([[p.x, p.y], [p.x + 60, 110]], 6); await sleep(900); }
+  await tap((await wst()).cloudX, wgeo.cy); await sleep(300);
+  wcycle.notYet = (await page.evaluate(() => App.current)).includes('more water') && !(await stars('weather.cycle.')).includes('weather.cycle.precip');
+  await makePuff();
+  wcycle.full = (await wst()).drops === 3 && (await page.evaluate(() => App.current)).includes('full and heavy');
+  await tap(...wgeo.sun); await sleep(300); wcycle.noPuffWhenFull = !(await wst()).puff;
+  await tap((await wst()).cloudX, wgeo.cy); await sleep(500);
+  wcycle.rained = (await stars('weather.cycle.')).includes('weather.cycle.precip') && (await wst()).flow;
+  await sleep(4500);
+  wcycle.collected = (await stars('weather.cycle.')).includes('weather.cycle.collect') && !(await wst()).flow;
+  for (let i = 0; i < 3; i++) await makePuff();
+  { const x = (await wst()).cloudX; await drag([[x, wgeo.cy], [x + 120, wgeo.cy], [680, wgeo.cy]], 8); await sleep(300); await tap(680, wgeo.cy); await sleep(500); }
+  wcycle.snow = (await stars('weather.cycle.')).includes('weather.cycle.snow');
+  await sleep(5000);
+  wcycle.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('Around and around it goes')), null, { timeout: 45000 }).then(() => true, () => false);
+  wcycle.stars = await stars('weather.cycle.');
+  report.wcycle = wcycle;
+
+  // ---------- Weather & Water: Terrarium ----------
+  await tab('weather.jar');
+  const jg = await page.evaluate(() => App.inst.geo), jst = () => page.evaluate(() => { const s = App.inst.state(); return { step: s.step, day: s.day, fog: s.fog, bigDrops: s.bigDrops }; });
+  const jar = {}, intoJar = [jg.mid, 300];
+  await drag([jg.home.soil, [300, 300], intoJar], 6);
+  jar.orderKept = (await jst()).step === 0 && (await page.evaluate(() => App.current)).includes('First, the rocks');
+  for (const k of ['gravel', 'soil', 'plant']) await drag([jg.home[k], [300, 300], intoJar], 6);
+  jar.layers = (await jst()).step === 3 && (await stars('weather.jar.')).includes('weather.jar.layers');
+  await tap(...jg.sun); jar.sunWaits = (await jst()).day === 0;
+  await drag([jg.home.water, [600, 250], intoJar], 6); await sleep(1800);
+  await drag([jg.home.lid, [600, 250], intoJar], 6);
+  jar.closed = (await jst()).step === 5 && (await stars('weather.jar.')).includes('weather.jar.closed');
+  await tap(...jg.sun); await sleep(2800);
+  jar.fog = (await jst()).fog === 1;
+  await tap(jg.jar.x + 22, jg.jar.y + 110); await sleep(300);
+  const jleaf = (await page.evaluate(() => App.inst.geo.leaves()))[0]; await tap(...jleaf);
+  await tap(...jg.sun); await sleep(2800);
+  jar.bigDrops = (await jst()).bigDrops === 3;
+  await tap(jg.drops[0][0], jg.drops[0][1] + 10); await sleep(1300);
+  jar.stars = await stars('weather.jar.');
+  jar.wrapUp = await page.waitForFunction(() => window.__said.some(h => h.includes('tiny water cycle')), null, { timeout: 20000 }).then(() => true, () => false);
+  report.jar = jar;
+
+  // ---------- Weather & Water: Cloud Maker ----------
+  await tab('weather.clouds');
+  const cg = await page.evaluate(() => App.inst.geo), cst = () => page.evaluate(() => { const s = App.inst.state(); return { v: s.v, x: s.x, y: s.y, temp: s.temp, storm: !!s.storm }; });
+  const clouds = {};
+  await tap(300, cg.sea + 50); await sleep(2200);
+  clouds.cumulus = (await stars('weather.clouds.')).includes('weather.clouds.cumulus');
+  { const c = await cst(); await drag([[c.x, c.y], [c.x, 180], [c.x, 130]], 6); await sleep(1500); }
+  { const c = await cst(); await drag([[c.x, c.y], [c.x, 300], [c.x, 400]], 6); await sleep(1500); }
+  { const c = await cst(); await drag([[c.x, c.y], [c.x, 260]], 6); await sleep(300); }
+  clouds.highLow = (await stars('weather.clouds.')).filter(k => /cirrus|stratus/.test(k)).length === 2;
+  for (let i = 0; i < 5; i++) { await tap(200 + i * 60, cg.sea + 50); }
+  await sleep(2600);
+  clouds.storm = (await cst()).storm && (await stars('weather.clouds.')).includes('weather.clouds.storm');
+  { const c = await cst(), y = cg.th.bot - c.temp * (cg.th.bot - cg.th.top); await drag([[cg.th.x, y], [cg.th.x, cg.th.bot - 10]], 6); await sleep(600); }
+  clouds.stars = await stars('weather.clouds.');
+  report.clouds = clouds;
+
+  // ---------- Weather & Water: Weather Station ----------
+  await tab('weather.station');
+  const sg = await page.evaluate(() => App.inst.geo), T = sg.tools;
+  const station = {};
+  await tap(...T.thermo); station.hintFirst = (await page.evaluate(() => App.current)).includes('Drag the sun') && !(await stars('weather.station.')).length;
+  await drag([await page.evaluate(() => App.inst.geo.sun()), [180, 160], [210, 78]], 8); await sleep(3200);
+  await tap(...T.thermo);
+  await drag([[260, 150], [420, 150], [620, 150]], 6); await sleep(300);
+  await tap(...T.vane); await tap(...T.anemo);
+  await drag([[720, 104], [600, 104], [510, 104]], 8); await sleep(2500);
+  await tap(...T.baro); await tap(560, 104); await sleep(2500); await tap(...T.gauge);
+  station.stars = await stars('weather.station.');
+  report.station = station;
+
+  // ---------- Weather & Water: Weather Quiz ----------
+  await tab('weather.quiz');
+  for (let round = 0; round < 4; round++) {
+    if (round && (await stars('weather.quiz.')).length === (await page.evaluate(() => WQUIZ.length))) break;
+    if (round) { await page.click('.q-end .btn'); await sleep(300); }
+    for (let q = 0; q < 8; q++) {
+      const text = await page.textContent('.q-text');
+      const answer = await page.evaluate(t => WQUIZ.find(x => x.q === t).a[0], text);
+      if (round === 0 && q === 0) { const wrong = await page.$$('.choice'); for (const w of wrong) if ((await w.textContent()) !== answer) { await w.click(); break; } await sleep(200); }
+      await page.click(`.choice:text-is("${answer}")`); await sleep(300);
+      await page.click('.q-foot .btn'); await sleep(300);
+    }
+  }
+  report.wquiz = (await stars('weather.quiz.')).length + ' of ' + (await page.evaluate(() => WQUIZ.length));
+  }
   await sleep(8000); // let badge pop-ups finish
+  await closeToasts(); await sleep(1500); await closeToasts();
+  report.weatherBadges = await page.evaluate(() => Object.keys(Store.data.badges).filter(k => k.startsWith('weather.')).sort());
 
   // ---------- Routing: every place has its own link (fresh sessions, so the main run's recorders stay clean) ----------
   const extraSaid = []; // lines said in the fresh sessions, checked for recordings with the rest
@@ -674,6 +779,17 @@ function scriptCoverage() {
     'Plant Needs: the week line plays before the plant facts, not after': report.needs.inOrder,
     'Plant Needs: Pip tells how the guess did only after the plants are revealed': report.needs.notToldYet && report.needs.resultAfterReveal,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
+    'Water Cycle: 5 stars, in the Weather & Water colors with Pip in his rain hat': report.wcycle.stars.length === 5 && report.wcycle.theme.crumb === 'Weather & Water' && report.wcycle.theme.bold === '#1D6E99' && report.wcycle.theme.costume === 'rainhat',
+    'Water Cycle: the sun makes vapor, and the vapor dragged up becomes a cloud': report.wcycle.evapCondense === 'weather.cycle.condense,weather.cycle.evap',
+    'Water Cycle: one puff at a time, and a cloud needs three puffs before it rains': report.wcycle.onePuffAtATime && report.wcycle.notYet && report.wcycle.full && report.wcycle.noPuffWhenFull,
+    'Water Cycle: rain runs down the river to the lake; over the mountain it snows': report.wcycle.rained && report.wcycle.collected && report.wcycle.snow && report.wcycle.wrapUp,
+    'Terrarium: 5 stars': report.jar.stars.length === 5,
+    'Terrarium: rocks, soil, plant, water, lid, in that order, before any sunny days': report.jar.orderKept && report.jar.layers && report.jar.sunWaits && report.jar.closed,
+    'Terrarium: the glass fogs, big drops form on the lid and fall like rain': report.jar.fog && report.jar.bigDrops && report.jar.wrapUp,
+    'Cloud Maker: 5 stars (cumulus, stratus, cirrus, a storm, snow)': report.clouds.stars.length === 5 && report.clouds.cumulus && report.clouds.highLow && report.clouds.storm,
+    'Weather Station: 5 stars, and a tool explains how to test it first': report.station.stars.length === 5 && report.station.hintFirst,
+    'Weather Quiz: every question earns a star': /^(\d+) of \1$/.test(report.wquiz),
+    'Weather & Water: every badge and the Meteorologist trophy': report.weatherBadges.length === 6 && report.weatherBadges.includes('weather.b.master'),
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
     'Routing: back returns to the previous activity': report.routing.back.hash === '#/plants/seed' && report.routing.back.act === 'seed' && report.routing.back.tab === 'seed',
@@ -682,7 +798,7 @@ function scriptCoverage() {
     'Last place saved as topic + activity': report.routing.saved && report.routing.saved.topic === 'plants' && report.routing.saved.activity === 'grow',
     'Old saves still open the last activity': report.routing.oldSave.act === 'flower' && report.routing.oldSave.hash === '#/plants/flower',
     'Home: a first visit opens on the map': report.home.first.hash === '#/' && report.home.first.view === 'home' && report.home.first.atHome && report.home.first.hidden && report.home.first.wide && !report.home.first.keepGoing,
-    'Home: one building per topic, plus coming soon': report.home.first.lots.filter(l => l.topic).length === 1 && report.home.first.lots.some(l => !l.topic && /Coming soon/.test(l.text)) && report.home.first.lots.every(l => l.h >= 44),
+    'Home: one building per topic, plus coming soon': report.home.first.lots.filter(l => l.topic).length === report.totals.topics && report.home.first.lots.some(l => !l.topic && /Coming soon/.test(l.text)) && report.home.first.lots.every(l => l.h >= 44),
     'Home: stars pill counts every topic': report.home.first.total === report.totals.stars,
     'Home: first visit greeting': report.home.first.line.startsWith("Hi! I'm Pip") && report.home.first.line.includes('Tap a building'),
     'Pacing: the home greeting plays to the end': report.home.greetingDone && report.home.greeting.clips === report.home.greeting.pieces && !report.home.greeting.holds,
@@ -707,15 +823,15 @@ function scriptCoverage() {
     'Grounds: every flower blooms and a bee comes to visit': report.home.grounds.bloom,
     'Grounds: Pip strolls the trail, and a building tapped mid-stroll still opens': report.home.grounds.stroll.walking && report.home.grounds.stroll.hash === '#/' && report.home.grounds.entered && report.home.grounds.buzzOff,
     'Home: Settings works on the map': report.home.settings.open && report.home.settings.rows === report.totals.activities,
-    'Home: a returning visitor is welcomed back': report.home.returning.line.startsWith('Welcome back') && report.home.returning.keep.includes('Grow a Bean') && report.home.returning.pill.includes(`1/${report.totals.stars}`) && report.home.returning.pipAtDoor,
+    'Home: a returning visitor is welcomed back': report.home.returning.line.startsWith('Welcome back') && report.home.returning.keep.includes('Grow a Bean') && report.home.returning.pill.includes(`1/${report.totals.plantStars}`) && report.home.returning.pipAtDoor,
     'Home: phone map is one column, no sideways scrolling': report.home.phone.tall && report.home.phone.cols === 1 && !report.home.phone.sideways && report.home.phone.minLot >= 44 && report.home.phone.entered === '#/plants/parts',
     'Home: reduced motion skips the walk': report.home.rm.hash === '#/plants/parts' && !report.home.rm.walking,
     'First tap on a link into an activity reads its intro and holds taps': report.home.deepLink && report.home.deepLinkHold,
     'Trophy Hall: at the end of the trail, with a badge count and a sparkle for new badges': report.hall.map.last && /Trophy Hall\s*1 badge\b/.test(report.hall.map.pill) && report.hall.map.sparkle,
-    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === 2 && report.hall.page.badges === report.totals.badges + 1 && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
+    'Trophy Hall: opens from the map, one case per topic, every badge shown': report.hall.page.view === 'hall' && report.hall.page.atHall && report.hall.page.cases === report.totals.topics + 1 && report.hall.page.badges === report.totals.badges + 1 && report.hall.page.soon && report.hall.page.crumb === 'Trophy Hall',
     'Trophy Hall: earned and locked badges shown right; new ones glow once': JSON.stringify(report.hall.page.earned) === '["b.parts"]' && JSON.stringify(report.hall.page.fresh) === '["b.parts"]' && report.hall.page.seen.includes('b.parts') && !report.hall.page.sparkle,
     'Trophy Hall: greeting': report.hall.page.line.startsWith('Welcome to the Trophy Hall'),
-    'Trophy Hall: totals': report.hall.page.totals.includes(`5 of ${report.totals.stars} stars`) && report.hall.page.totals.includes(`1 of ${report.totals.activities + 1} badges`) && /0 of 1 trophies/.test(report.hall.page.totals),
+    'Trophy Hall: totals': report.hall.page.totals.includes(`5 of ${report.totals.stars} stars`) && report.hall.page.totals.includes(`1 of ${report.totals.activities + 1} badges`) && report.hall.page.totals.includes(`0 of ${report.totals.topics} trophies`),
     'Trophy Hall: a locked badge says how to earn it, an earned one how you earned it': report.hall.locked.line === 'Not yet! Take the flower apart and help the bee in Flower Lab.' && report.hall.earnedLine.startsWith('You earned the Plant Pal badge!') && report.hall.trophyLine.includes('win the Botanist trophy'),
     'Trophy Hall: listen first holds badge taps while Pip explains': report.hall.locked.holds && report.hall.held.still && report.hall.held.nudge,
     'Pacing: no line talks over another in the Trophy Hall': report.hall.talkover.length === 0,

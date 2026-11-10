@@ -7,7 +7,12 @@ const TOPICS = [
     accent: { ground: '#E8F3E1', dot: '#D3E8CB', tab: '#FFC93C', stage: '#BFE6F4', bold: '#2A7340', plate: '#2A7340' },
     activities: [A_parts, A_seed, A_flower, A_produce, A_grow, A_travel, A_leaf, A_celery, A_light, A_needs, A_quiz],
     master: { id: 'b.botanist', name: 'Botanist', icon: 'trophy', desc: 'You earned every plant badge! A botanist is a scientist who studies plants.',
-      how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } }
+      how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } },
+  { id: 'weather', name: 'Weather & Water', building: drawWeatherStation, landmark: 'windmill', pip: 'rainhat',
+    accent: { ground: '#E3F2F9', dot: '#CBE5F1', tab: '#8FD0EE', stage: '#BFE6F4', bold: '#1D6E99', plate: '#1D6E99' },
+    activities: [A_wcycle, A_jar, A_clouds, A_station, A_wquiz],
+    master: { id: 'weather.b.master', name: 'Meteorologist', icon: 'wtrophy', desc: 'You earned every weather badge! A meteorologist is a scientist who studies weather.',
+      how: 'Not yet! Earn all the Weather and Water badges to win the <b>Meteorologist</b> trophy. A meteorologist is a scientist who studies weather.' } }
 ];
 const App = { view: '', topic: null, act: null, inst: null, greeted: false, toastQ: [], toastOn: false, current: '', sayQ: [] };
 // queued lines start only after Pip has finished and taken a breath
