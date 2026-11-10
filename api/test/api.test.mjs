@@ -5,7 +5,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { routes, inviteCheck } from '../lib/routes.mjs';
 import { memoryStore } from '../lib/memory.mjs';
 import { verifier } from '../lib/auth.mjs';
-import { mergeProgress, cleanProgress, normalCode, validCode, newCode } from '../lib/rules.mjs';
+import { mergeProgress, cleanProgress, normalCode, validCode, newCode, rateKey } from '../lib/rules.mjs';
 
 // a pretend Cognito: our own key pair, served as the pool's JWKS
 const POOL = 'us-east-1_TEST', CLIENT = 'client123', ISS = `https://cognito-idp.us-east-1.amazonaws.com/${POOL}`;
@@ -226,4 +226,33 @@ test('contention is bounded and returns a retryable conflict without claiming a 
   t.store.compareAndPut = async () => false;
   const res = await t.call('PUT', '/play/progress', { auth: `Device ${token}`, body: { progress: { stars: { a: 10 } } } });
   assert.equal(res.status, 409); assert.equal(await t.store.get(`KID#${sam.id}`, 'PROGRESS'), null);
+});
+
+test('IPv6 guesses count per /64, so rotating addresses inside one network does not reset the limit', async () => {
+  assert.equal(rateKey('2001:db8:1:2:aaaa::1'), '2001:db8:1:2::/64');
+  assert.equal(rateKey('2001:0DB8:0001:0002:ffff:ffff:ffff:ffff'), '2001:db8:1:2::/64');
+  assert.equal(rateKey('2001:db8::5'), '2001:db8:0:0::/64');
+  assert.equal(rateKey('::ffff:1.2.3.4'), '1.2.3.4');
+  assert.equal(rateKey('1.2.3.4'), '1.2.3.4');
+  const t = setup(), { g } = await family(t);
+  for (let i = 0; i < 20; i++) assert.equal((await t.call('GET', `/join/${newCode()}`, { ip: `2001:db8:7:7:${i.toString(16)}::1` })).status, 404);
+  assert.equal((await t.call('GET', `/join/${g.code}`, { ip: '2001:db8:7:7:ffff::9' })).status, 429, 'another address in the same /64');
+  assert.equal((await t.call('GET', `/join/${g.code}`, { ip: '2001:db8:7:8::1' })).status, 200, 'a different /64 is fine');
+});
+
+test('a device clock far in the future cannot hide stars earned on other devices', async () => {
+  const now = Date.UTC(2026, 10, 9), later = now + 30 * 86_400_000;
+  const p = cleanProgress({ stars: { 'parts.roots': later, 'parts.stem': now - 1000 }, resets: { '*': later } }, now);
+  assert.equal(p.stars['parts.roots'], now, 'a month ahead becomes now');
+  assert.equal(p.stars['parts.stem'], now - 1000, 'normal times are kept');
+  assert.equal(p.resets['*'], now, 'resets too');
+  assert.equal(cleanProgress({ stars: { a: now + 3_600_000 } }, now).stars.a, now + 3_600_000, 'a clock a little ahead is fine');
+  // a star earned on another device after the (clamped) reset still counts
+  const merged = mergeProgress(p, { stars: { 'parts.leaves': now + 60_000 } });
+  assert.ok(merged.stars['parts.leaves']);
+});
+
+test('a broken %-escape in the path is a 400, not a 500', async () => {
+  const t = setup();
+  assert.equal((await t.call('GET', '/join/%E0%A4%A')).status, 400);
 });

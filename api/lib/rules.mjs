@@ -43,8 +43,18 @@ export function mergeProgress(a = {}, b = {}) {
   out.resets = resets; return out;
 }
 const earliest = (x, y) => (x > 1 && y > 1 ? Math.min(x, y) : Math.max(x, y));
-// a progress upload: known keys only, sensible ids, numbers only, not too big
-export function cleanProgress(p) {
+// who a rate limit counts: an IPv4 address, or an IPv6 address's /64 (one home or phone gets a whole /64 to rotate through)
+export function rateKey(ip) {
+  const a = String(ip || '').trim().toLowerCase(); if (!a.includes(':')) return a;
+  if (a.includes('.')) return a.slice(a.lastIndexOf(':') + 1);   // an IPv4 address written as IPv6 (::ffff:1.2.3.4)
+  const [head, tail = ''] = a.split('::'), h = head ? head.split(':') : [], t = a.includes('::') && tail ? tail.split(':') : [];
+  const groups = a.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map(g => (g.replace(/^0+(?=.)/, '') || '0')).join(':') + '::/64';
+}
+// a progress upload: known keys only, sensible ids, numbers only, not too big. Times from a device whose clock runs
+// more than a day ahead become "now", so a wrong clock can't make a reset hide stars earned on other devices.
+const FUTURE_SLACK = 86_400_000;
+export function cleanProgress(p, now = Date.now()) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
   const out = {};
   for (const k of PROGRESS_KEYS) {
@@ -55,7 +65,7 @@ export function cleanProgress(p) {
     for (const [id, v] of entries) {
       if (!(k === 'resets' && id === '*') && !/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(id)) return null;
       const n = v === true ? 1 : Number(v); if (!Number.isFinite(n) || n < 0) return null;
-      out[k][id] = Math.round(n);
+      out[k][id] = n > now + FUTURE_SLACK ? now : Math.round(n);
     }
   }
   return out;

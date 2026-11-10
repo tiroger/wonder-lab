@@ -27,8 +27,8 @@ const A_needs = {
     function letWeekPass() {
       if (s.week) { Sound.tap(3); return; }
       if (s.guess < 0) { Sound.boing(); return ui.say('First, tap the plant you think will grow the healthiest!'); }
-      s.week = 1; s.weekT = st.t; Sound.whoosh(); for (let i = 0; i < 7; i++) setTimeout(() => Sound.tone(PENTA[i + 2], .1, 'triangle', .06), i * 380);
-      ui.say(s.guess === 0 ? 'One week later! Your guess was right. Tap each plant to see what happened.' : 'One week later! Let\'s see how your guess did. Tap each plant to see what happened.');
+      s.week = 1; s.weekT = st.t; Sound.whoosh(); for (let i = 0; i < 7; i++) ui.later(() => Sound.tone(PENTA[i + 2], .1, 'triangle', .06), i * 380);
+      // Pip tells how the guess did once the week is over and the boxes are off (see st.draw), not before
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
@@ -36,7 +36,7 @@ const A_needs = {
       const i = potAt(x, y);
       if (i >= 0) {
         if (!s.week) { s.guess = i; Sound.pop(); Sound.tap(i + 2); if (!found('predict')) earn('predict', POTS[i].x, 300); return ui.say('Good guess! Now tap the <b>calendar</b> to let a week go by.'); }
-        if (grown() < 1) return;
+        if (grown() < 1) { Sound.tap(1); return; }
         Sound.tap(i + 3); s.seen[i] = true;
         const k = ['best', 'water', 'light', null][i]; if (k) earn(k, POTS[i].x, 280);
         ui.say(FACTS[i]);
@@ -60,7 +60,8 @@ const A_needs = {
       if (h > 120) { const m = qpt(base, [x - 6, base[1] - h * .6], top, .55); drawLeaf(c, ...m, -160 + droop * 60, ls * .85, green); drawLeaf(c, ...m, -20 + droop * 60, ls * .85, green); }
     }
     st.draw = (c, t, dt) => {
-      const g = grown(), night = s.week && g < 1 ? Math.abs(Math.sin(g * PI * 7)) : 0;
+      const g = grown(), night = s.week && g < 1 && !RM ? Math.abs(Math.sin(g * PI * 7)) : 0;   // days and nights flash by (not with reduced motion)
+      if (s.week && st.t - s.weekT > 3.6 && !s.told.week) { s.told.week = true; ui.say(s.guess === 0 ? 'One week later! Your guess was right. Tap each plant to see what happened.' : 'One week later! Let\'s see how your guess did. Tap each plant to see what happened.', { queue: true }); }
       // a window behind the sill, cycling through the days while the week goes by
       const wg = c.createLinearGradient(0, 0, 0, SILL); wg.addColorStop(0, mix('#86CFEA', '#1D2B5A', night)); wg.addColorStop(1, mix('#E2F6FC', '#3B4C86', night)); c.fillStyle = wg; c.fillRect(0, 0, W, SILL);
       if (night < .5) sun(c, 90, 80, 30, t, { face: true }); else { c.fillStyle = '#FFF8D2'; c.beginPath(); c.arc(90, 80, 22, 0, TAU); c.fill(); }
@@ -99,7 +100,7 @@ const A_needs = {
       else if (g >= 1 && !s.seen.every(Boolean) && idle) label(c, "Tap each plant!", 400, 190 - bob, { size: 22, color: C.carrot });
     };
     ui.button('Let a week go by', () => letWeekPass());
-    ui.button('Start over', () => { reset(); Sound.pop(); ui.say(A_needs.intro); });
+    ui.button('Start over', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_needs.intro); });
     ui.hint("Try a fair test at home! Grow two bean sprouts the same way. Put one in a sunny window and one in a dark closet. Give them the same water. Check them every day!");
     reset();
     return { stage: st, state: () => s, geo: { pots: POTS.map(p => [p.x, 330]), calendar: CAL }, destroy() { st.destroy(); } };

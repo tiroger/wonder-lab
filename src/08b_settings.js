@@ -16,6 +16,8 @@ const Settings = {
     $('#setAuto').checked = Voice.auto; $('#setWait').checked = waitForPip(); $('#setSound').checked = Sound.on; $('#setMusic').checked = Music.on;
     $('#setVoiceVol').value = Math.round(Voice.volume * 100); $('#setSoundVol').value = Math.round(Sound.vol * 100); $('#setMusicVol').value = Math.round(Music.vol * 100);
     document.querySelectorAll('.voice').forEach(b => b.setAttribute('aria-checked', b.dataset.id === Voice.name ? 'true' : 'false'));
+    // the name belongs to whoever is playing now (players switch on this device), unless it's being typed
+    const nm = $('#explorer'); if (nm && document.activeElement !== nm) nm.value = Store.data.name || '';
   },
   save(k, v) { Store.data[k] = v; Store.save(); },
   setAuto(on) { Voice.auto = on; this.save('voiceAuto', on); this.sync(); if (on) Voice.speak('Okay! I\'ll read everything out loud for you.'); else Voice.stop(); },
@@ -34,8 +36,9 @@ const Settings = {
   },
 
   // ----- progress -----
-  confirmBtn(btn, label, armedLabel, action) { // two taps: the first one arms the button for 4 seconds
+  confirmBtn(btn, label, armedLabel, action) { // two taps: the first one arms the button for 4 seconds (closing Settings disarms it)
     let armed = 0;
+    btn.disarm = () => { armed = 0; btn.textContent = label; btn.classList.remove('warn'); };
     btn.onclick = () => {
       if (Date.now() - armed < 4000) { armed = 0; btn.textContent = label; btn.classList.remove('warn'); action(); return; }
       armed = Date.now(); btn.textContent = armedLabel; btn.classList.add('warn'); Sound.oops();
@@ -99,6 +102,6 @@ const Settings = {
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     // the grown-up page opens behind the dialog, so close Settings to show it
     $('#setGrownups').addEventListener('click', () => { Sound.pop(); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
-    dlg.addEventListener('close', () => Sound.pop());
+    dlg.addEventListener('close', () => { Sound.pop(); dlg.querySelectorAll('button').forEach(b => b.disarm && b.disarm()); });
   }
 };

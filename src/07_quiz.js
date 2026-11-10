@@ -69,7 +69,7 @@ const A_quiz = {
       if (right) {
         btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
         results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
-        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); else Sound.tap(7); ui.say(`Yes! ${q.why}`, { lock: true }); }
         else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
         const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
         nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
@@ -78,12 +78,12 @@ const A_quiz = {
     function end() {
       const n = results.filter(x => x === 1).length; box.innerHTML = '';
       const e = document.createElement('div'); e.className = 'q-end';
-      e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : n >= 5 ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
+      e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : n >= 6 ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
       const b = document.createElement('button'); b.className = 'btn go'; b.textContent = 'Play again'; b.onclick = () => { Sound.pop(); newRound(); }; e.appendChild(b);
       box.appendChild(e); Sound.badge(); const r = box.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + 80, 70);
       ui.say(n >= 6 ? 'Wow, you\'re a plant expert! Play again to collect more stars.' : 'Every scientist learns by trying. Play again and see how many you can get!');
     }
-    ui.button('New round', () => { Sound.pop(); newRound(); });
+    ui.button('New round', () => { ui.fresh(); Sound.pop(); newRound(); });
     ui.hint('Stars only count on the first try, so take your time and think!');
     newRound(ui.intro);
     return { destroy() { box.remove(); } };

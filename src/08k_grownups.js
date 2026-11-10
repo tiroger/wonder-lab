@@ -1,7 +1,7 @@
 /* ============ The grown-up page (#/grownups) ============ */
 // For parents and teachers: sign in with an emailed code, make a family or a class, add kids, hand out the group code or
 // print login cards. Plain, calm HTML for adults: no Pip narration here. "Try the demo" runs it all in this browser.
-const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {}, invites: null, invited: '' };
+const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {}, invites: null, invited: '', email: '' };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const joinLink = code => `${location.origin}/#/join/${code}`;
 const KIND_LABEL = { family: 'Family', class: 'Class' };
@@ -42,7 +42,7 @@ function renderGrownups() {
       <p>Set up a profile for each child, or for a whole class. Their stars then follow them to any device, even an incognito window.</p>
       <p class="gu-fine">Wonder Lab is invite-only for now. If you've been invited, sign in with that email.</p>
       ${!f ? `<form id="guEmail" class="gu-form"><label for="guEmailIn">Your email</label>
-        <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
+        <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com" value="${esc(GU.email)}"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
         <small>No password. We email you a 6-digit code each time you sign in.</small></form>`
       : `<form id="guCode" class="gu-form"><label for="guCodeIn">We emailed a 6-digit code to <b>${esc(f.email)}</b></label>
         <div class="gu-row"><input id="guCodeIn" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" maxlength="8" required placeholder="123456"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Sign in</button></div>
@@ -52,7 +52,7 @@ function renderGrownups() {
       <p class="gu-fine">We keep your email only to send sign-in codes. Kids' profiles hold a nickname, a Pip color and their progress, nothing else. <a href="#/privacy">Privacy</a></p>
     </div>`;
     const ef = $('#guEmail'), cf = $('#guCode');
-    if (ef) ef.onsubmit = e => { e.preventDefault(); const email = $('#guEmailIn').value.trim(); guDo(async () => { GU.flow = await Grownup.start(email); }); };
+    if (ef) ef.onsubmit = e => { e.preventDefault(); const email = GU.email = $('#guEmailIn').value.trim(); guDo(async () => { GU.flow = await Grownup.start(email); }); };
     if (cf) { cf.onsubmit = e => { e.preventDefault(); const code = $('#guCodeIn').value.trim(); guDo(async () => { try { await Grownup.finish(GU.flow, code); GU.flow = null; await loadGroups(); } catch (x) { throw new Error(codeTrouble(x)); } }); }; setTimeout(() => $('#guCodeIn') && $('#guCodeIn').focus(), 0); }
     const again = $('#guAgain'); if (again) again.onclick = () => { GU.flow = null; GU.msg = ''; renderGrownups(); };
     $('#guDemo').onclick = () => { Grownup.startDemo(); loadGroups(); };
@@ -92,9 +92,14 @@ function invitesCard() {
 }
 function wireInvites() {
   $('#guInvite').onsubmit = e => { e.preventDefault(); const email = $('#guInviteIn').value.trim().toLowerCase(); guDo(async () => { await Api.call('POST', '/invites', { email }); GU.invited = email; await loadGroups(); }); };
-  if ($('#guCopyNote')) $('#guCopyNote').onclick = e => { navigator.clipboard && navigator.clipboard.writeText($('#guNote').textContent); e.target.textContent = 'Copied!'; };
+  if ($('#guCopyNote')) $('#guCopyNote').onclick = e => copyText($('#guNote').textContent, e.target, 'Copy message');
   document.querySelectorAll('[data-uninvite]').forEach(b => { b.onclick = () => guAsk({ title: `Remove the invite for ${b.dataset.uninvite}?`, ok: 'Remove', danger: true })
     .then(yes => yes && guDo(async () => { await Api.call('DELETE', `/invites/${encodeURIComponent(b.dataset.uninvite)}`); GU.invited = ''; await loadGroups(); })); });
+}
+// "Copied!" only when the copy worked; otherwise say so, so the grown-up can select the text by hand
+async function copyText(text, btn, label) {
+  let done = false; try { if (navigator.clipboard) { await navigator.clipboard.writeText(text); done = true; } } catch (e) {}
+  btn.textContent = done ? 'Copied!' : 'Couldn\u2019t copy'; setTimeout(() => { if (btn.isConnected) btn.textContent = label; }, 1500);
 }
 function codeTrouble(e) {
   if (e.code === 'CodeMismatchException') return "That code didn’t match. Check the email and try again.";
@@ -124,7 +129,7 @@ function groupCard(g) {
 function wireGroup(g) {
   const el = document.querySelector(`.gu-group[data-group="${g.id}"]`), q = s => el.querySelector(s);
   q('[data-rename]').onclick = () => guAsk({ title: `Rename ${g.name}`, input: g.name, ok: 'Save' }).then(v => v && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { name: v }); await loadGroups(); }));
-  q('[data-copy]').onclick = e => { navigator.clipboard && navigator.clipboard.writeText(g.code); e.target.textContent = 'Copied!'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1500); };
+  q('[data-copy]').onclick = e => copyText(g.code, e.target, 'Copy');
   q('[data-newcode]').onclick = () => guAsk({ title: "Make a new group code?", text: "The old code stops working. Kids already signed in stay signed in.", ok: 'New code' })
     .then(yes => yes && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { newCode: true }); await loadGroups(); }));
   q('[data-pictures]').onchange = e => guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { pictures: e.target.checked }); await loadGroups(); });
@@ -155,7 +160,10 @@ function guAsk({ title, text = '', input = null, looks = null, extra = '', ok = 
       ${extra ? `<label class="gu-toggle"><input type="checkbox" name="extra"> ${esc(extra)}</label>` : ''}
       <div class="gu-dbtns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn ${danger ? 'danger' : 'go'}" value="ok">${esc(ok)}</button></div></form>`;
     document.body.appendChild(d);
+    // going somewhere else (Back, a link) cancels the question, so its action never runs from another page
+    const leave = () => d.close('cancel'); addEventListener('hashchange', leave);
     d.addEventListener('close', () => {
+      removeEventListener('hashchange', leave);
       const f = new FormData(d.querySelector('form')), yes = d.returnValue === 'ok', t = f.get('text');
       d.remove(); if (!yes) return resolve(null);
       if (looks) return resolve({ text: String(t || '').trim(), look: f.get('look'), extra: !!f.get('extra') });

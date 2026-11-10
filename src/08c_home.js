@@ -55,18 +55,20 @@ function homeLots(cols) {
 }
 function topicStars(tp) { const st = Store.data.stars, all = tp.activities.flatMap(a => a.stars); return [all.filter(s => st[s.id]).length, all.length]; }
 
-function renderHome() {
+// fresh: arriving home (Pip stands at the last topic's door, the sky starts over). Otherwise (a sync, a critter found,
+// a resize) the map is rebuilt but keeps its weather, Pip's spot and keyboard focus while the layout is the same shape.
+function renderHome({ fresh = false } = {}) {
   const box = $('#campus'), cssW = box.clientWidth; if (!cssW) return;
-  const cols = cssW < 600 ? 1 : 3;
-  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L); skyLayout(L);
+  const cols = cssW < 600 ? 1 : 3, lots = homeLots(cols), same = !fresh && Home.L && Home.cols === cols && Home.lots.length === lots.length;
+  Home.lots = lots; Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L); skyLayout(L, same);
   Home.samples = trailSamples(L.trail);
   Home.doors = L.lots.map(p => { let best = 0, bd = 1e9; Home.samples.forEach((s, i) => { const d = dist(s.x, s.y, p.x, p.y + 45); if (d < bd) { bd = d; best = i; } }); return best; });
   const last = lastPlace(), li = Home.lots.findIndex(l => l.tp && l.tp.id === last.topic);
-  if (!Home.walk) Home.pipIdx = li >= 0 ? Home.doors[li] : 0;
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  Home.cv.style.aspectRatio = `${L.w} / ${L.h}`; Home.cv.width = Math.round(cssW * dpr); Home.cv.height = Math.round(cssW * dpr * L.h / L.w);
-  // the links, one per lot: the whole building plus its name pill
-  const lotsEl = $('#lots'); lotsEl.innerHTML = '';
+  if (!same) { Home.walk = null; Home.pipIdx = li >= 0 ? Home.doors[li] : 0; }
+  const dpr = Math.min(2, devicePixelRatio || 1), cw = Math.round(cssW * dpr), ch = Math.round(cssW * dpr * L.h / L.w);
+  Home.cv.style.aspectRatio = `${L.w} / ${L.h}`; if (Home.cv.width !== cw || Home.cv.height !== ch) { Home.cv.width = cw; Home.cv.height = ch; }
+  // the links, one per lot: the whole building plus its name pill (a rebuild keeps the focused one focused)
+  const lotsEl = $('#lots'), focused = [...lotsEl.children].indexOf(document.activeElement); lotsEl.innerHTML = ''; Home.hover = same && focused >= 0 ? focused : -1;
   Home.lots.forEach((lot, i) => {
     const p = L.lots[i], bw = 230 * L.scale, top = p.y - 180 * L.scale, bottom = p.y + (cols === 1 ? 118 : 130);
     const el = document.createElement(lot.soon ? 'button' : 'a'); el.className = 'lot' + (lot.soon ? ' soon' : lot.hall ? ' trophy-lot' : '');
@@ -88,6 +90,7 @@ function renderHome() {
     el.onpointerleave = el.onblur = () => { if (Home.hover === i) Home.hover = -1; };
     lotsEl.appendChild(el);
   });
+  if (same && lotsEl.children[focused]) lotsEl.children[focused].focus({ preventScroll: true });
   renderKeepGoing();
 }
 function renderKeepGoing() {
@@ -191,7 +194,7 @@ function homeInit() {
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
   document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall', 'at-grownups', 'at-privacy', 'at-players');
-  renderHome(); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
+  Home.walk = null; renderHome({ fresh: true }); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};

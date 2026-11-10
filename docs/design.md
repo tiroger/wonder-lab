@@ -350,8 +350,8 @@ The mockup's other boards (A topic cards, B lab shelf) were not chosen.
    - **Name pills:** each building has a pill under it with the topic name and progress (a star and "12/37"), or "NEW!" for a topic not started.
    - **Coming soon:** an empty lot with a fence, a crane and a "?" sign, its pill dashed and soft.
    - **The Trophy Hall:** a platform building (not a topic) at the end of the trail, after the topics and coming-soon lots. It has columns, a gold trophy on the roof and a door in the bold platform color. Its pill reads "Trophy Hall" with the badge count, and it sparkles when a badge was earned since the last visit. It opens the Trophy Hall page (below).
-   - **The entrance gate** with a "Wonder Lab" sign at the bottom of the trail.
-   - **Small Pip** stands by the last building visited, under a "Last stop" flag.
+   - **The entrance gate** with a "Wonder Lab" sign at the start of the trail (top left; at the top on a phone).
+   - **Small Pip** stands on the trail by the door of the last topic visited.
    - **Decoration:** trees, a pond and flowers, never on the trail or a building.
 4. **Keep going.** A strip under the map: the last activity, its building and stars, and a big "Jump back in" button.
 5. **Footer** note that progress is saved on this device.
@@ -372,8 +372,8 @@ A fixed list of **lots** (positions along the trail), defined once in the home p
 ### Growing past the first screen
 The map is a wide landscape (16:9) that fits about six lots. When there are more topics, it gets taller: new rows of lots continue the trail downward (the trail winds back and forth like a board game). The page scrolls vertically, never sideways.
 
-### Phone (below 720 px)
-The landscape map doesn't fit a phone. Below 720 px the same buildings are drawn smaller, stacked along a winding vertical trail, one building per row, alternating left and right, with the pill beside each. Same canvas and same links, just a different lot list.
+### Phone (map narrower than 600 px)
+The landscape map doesn't fit a phone. When the map is narrower than 600 CSS px, the same buildings are drawn smaller, stacked along a winding vertical trail, one building per row, alternating left and right, with the pill under each. Same canvas and same links, just a different lot list.
 
 ### A building's art (what a topic must supply)
 - `building(c, t)`, drawn in a 220×170 box with its base on the bottom edge and a soft ground shadow.
@@ -440,12 +440,12 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 - **The building fills in:** `building(c, t, p)` gets `p`, the share of the topic's stars earned. The greenhouse adds a seedling pot (15%), a tomato plant (35%), a hanging basket (60%) and a bean pole (85%).
 - **The Badge Garden:** a row under the grounds (9 across, 3 on a phone, more rows as it fills) that starts with a "Badge Garden" sign. Each earned badge plants its `reward`, oldest first. The pieces live in `GARDEN`, a shared library any topic can pick from: birdhouse, wheelbarrow, beehive, pumpkins, scarecrow, dandelions, appleTree, sprinkler, beanTeepee, gnome, starFlag. Each one is drawn in a 100×130 box and does something when tapped (a bird peeks out, the dandelions blow away and grow back, the sprinkler sprays), with a sound and no speech. Tapping the sign: Pip says `GARDEN_SIGN`.
 - **Landmarks:** a topic's `landmark` (a `GARDEN` piece flagged `tall`) rises beside its building when its trophy is won, taking the place of the tree there. Plants & Seeds: the giant `sunflower`.
-- **News:** pieces that weren't there on the last visit sparkle until they're tapped, and Pip says `GARDEN_NEW` once, in place of "Where should we explore…" (`Store.data.gardenSeen`).
+- **News:** pieces that weren't there on the last visit sparkle during this visit, until they're tapped, and Pip says `GARDEN_NEW` once, in place of "Where should we explore…" (`Store.data.gardenSeen`).
 - `checkIds()` checks that every `reward` and `landmark` names a real piece.
 
 ### A living sky (as built, src/08g_sky.js)
 - **The clock:** a warm wash at dawn (around 6:30) and a sunset glow (around 19:00), and a navy tint from 19:00 that is full from 21:00 to 5:30. At night fireflies drift over the grounds, clouds dim, and little Pip is drawn above the tint so he stays bright. `Sky.night()` gives 0 to 1. Tests set `Sky.fake` to a `Date`.
-- **Clouds** (three wide, two on a phone) drift across with soft shadows on the lawn. Tapping one makes it rain for 5 s: it turns grey, with a soft rain sound. A daytime shower leaves two puddles on the nearest open lawn (`openGrass`: never on a building, the trail, the pond, the bed or a garden piece) that splash when tapped, and a rainbow over the garden that fades after 14 s. In winter the cloud snows instead, with no puddles. On about one home visit in five, a cloud rains by itself after 6–14 s.
+- **Clouds** (three, on a wide screen and on a phone) drift across with soft shadows on the lawn. Tapping one makes it rain for 5 s: it turns grey, with a soft rain sound. A daytime shower leaves two puddles on the nearest open lawn (`openGrass`: never on a building, the trail, the pond, the bed or a garden piece) that splash when tapped, and a rainbow over the garden that fades after 14 s. In winter the cloud snows instead, with no puddles. On about one home visit in five, a cloud rains by itself after 6–14 s.
 - **Seasons** by month: spring trees have pink blossoms, autumn trees turn orange, red and gold and drop a leaf every few seconds, winter trees are dark green with snow caps.
 - **Layers:** the rainbow and puddles sit on the lawn, under everything; the light tint, cloud shadows and fireflies go over the buildings and under Pip; rain and clouds are on top. Cloud taps come first; puddle taps come last.
 - No speech, so nothing to record. With `RM` on, clouds stay still, rain and snow aren't drawn (the cloud still greys), and fireflies don't move.
@@ -481,7 +481,7 @@ The map is a place to explore, not just a menu. Everything here is decoration: t
 
 ### The grown-up page (as built, src/08j_api.js, src/08k_grownups.js)
 For parents and teachers, at `#/grownups` (links in the footer and in Settings), with a plain privacy note at `#/privacy`.
-- **Look:** calm and plain, for adults. Same cards, buttons and fonts, but no Pip, no narration and no sounds. The page ground is the platform cream (`:root.at-grownups`).
+- **Look:** calm and plain, for adults. Same cards, buttons and fonts, but Pip's bubble is hidden and the page itself makes no sounds (the header toggles and Settings still work). The page ground is the platform cream (`:root.at-grownups`). Primary actions use `.btn.go` (white on leaf, the known 3.5:1 exception in section 3).
 - **Signed out:** one card with an email field ("Send me a code"), then a 6-digit code field. A "Try the demo" strip and a one-line privacy note sit underneath.
 - **Signed in:** a card per group:
   - the name and a Family or Class chip

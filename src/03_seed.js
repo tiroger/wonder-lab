@@ -94,7 +94,8 @@ const A_seed = {
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
-      if (s.step === 0) { if (dist(x, y, BX, BY) < 150) { s.step = .5; s.soakT = st.t; Sound.plunk(); setTimeout(() => Sound.splash(), 500); ui.say('Into the water it goes! Soaking all night makes the bean soft...'); } else Sound.tap(1); return; }
+      if (s.step === 0) { if (dist(x, y, BX, BY) < 150) { s.step = .5; s.soakT = st.t; Sound.plunk(); ui.later(() => Sound.splash(), 500); ui.say('Into the water it goes! Soaking all night makes the bean soft...'); } else Sound.tap(1); return; }
+      if (s.step === .5) { Sound.drip(); return; }   // still soaking
       if (s.step === 1) { peelAt(x, y); return; }
       if (s.step === 2) { s.drag = { x0: x, p0: s.split }; return; }
       if (s.step >= 3) { const p = part(x, y); if (p) explore(p, x, y); else Sound.tap(Math.floor(x / 90)); }
@@ -116,7 +117,7 @@ const A_seed = {
       c.save(); c.translate(560, 26); const wg = c.createLinearGradient(0, 0, 0, 130); wg.addColorStop(0, mix('#8FD3EE', '#1D2B5A', night)); wg.addColorStop(1, mix('#DDF4FB', '#3B4C86', night));
       c.fillStyle = wg; c.fillRect(0, 0, 170, 130);
       if (night > .2) { c.fillStyle = `rgba(255,248,210,${night})`; c.beginPath(); c.arc(120, 40, 20, 0, TAU); c.fill(); c.fillStyle = mix('#8FD3EE', '#1D2B5A', night); c.beginPath(); c.arc(130, 34, 18, 0, TAU); c.fill(); for (let i = 0; i < 6; i++) sparkle(c, 20 + i * 25, 20 + (i % 3) * 30, 4, `rgba(255,255,255,${night})`); }
-      else { cloud(c, 30 + (t * 8) % 140, 50, .6); }
+      else { cloud(c, 30 + (RM ? 40 : (t * 8) % 140), 50, .6); }
       c.strokeStyle = '#FFFDF5'; c.lineWidth = 10; c.strokeRect(0, 0, 170, 130); c.beginPath(); c.moveTo(85, 0); c.lineTo(85, 130); c.moveTo(0, 65); c.lineTo(170, 65); c.stroke(); c.restore();
       // table
       const tg = c.createLinearGradient(0, 200, 0, H); tg.addColorStop(0, '#E7BE84'); tg.addColorStop(1, '#D3A566'); c.fillStyle = tg; c.fillRect(0, 200, W, H - 200);
@@ -178,7 +179,7 @@ const A_seed = {
       c.strokeStyle = C.rootDeep; c.lineWidth = 9; c.stroke(rp); c.strokeStyle = C.root; c.lineWidth = 5; c.stroke(rp);
       c.strokeStyle = C.rootDeep; c.lineWidth = 1.6; for (let i = 1; i < 7; i++) { const yy = 70 + i * 26 * g; c.beginPath(); c.moveTo(-50, yy); c.lineTo(-64, yy + 6); c.moveTo(-50, yy); c.lineTo(-36, yy + 6); c.stroke(); }
       // shoot grows up
-      const top = [10 + Math.sin(t * 1.4) * 4 * g, 20 - 210 * g];
+      const top = [10 + (RM ? 0 : Math.sin(t * 1.4) * 4 * g), 20 - 210 * g];
       c.strokeStyle = C.leafDeep; c.lineWidth = 10; c.beginPath(); c.moveTo(2, 20); c.quadraticCurveTo(-12, 20 - 100 * g, top[0], top[1]); c.stroke();
       c.strokeStyle = C.stem; c.lineWidth = 5; c.stroke();
       if (g > .3) { const ls = (g - .3) / .7 * .55; drawLeaf(c, top[0], top[1], -155, ls); drawLeaf(c, top[0], top[1], -25, ls); }
@@ -189,7 +190,7 @@ const A_seed = {
       // glass of water
       c.save(); c.translate(...GLASS); c.fillStyle = 'rgba(79,179,232,.35)'; c.beginPath(); c.moveTo(-48, 0); c.lineTo(48, 0); c.lineTo(40, 110); c.lineTo(-40, 110); c.closePath(); c.fill();
       c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(-42, -40, 84, 40); c.strokeStyle = 'rgba(36,54,40,.6)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-52, -45); c.lineTo(-40, 110); c.lineTo(40, 110); c.lineTo(52, -45); c.stroke();
-      if (s.step === .5) for (let i = 0; i < 4; i++) { const by = 100 - ((t * 40 + i * 25) % 100); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.beginPath(); c.arc(-20 + i * 13, by, 3 + i % 2, 0, TAU); c.stroke(); }
+      if (s.step === .5) for (let i = 0; i < 4; i++) { const by = 100 - (((RM ? 0 : t * 40) + i * 25) % 100); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.beginPath(); c.arc(-20 + i * 13, by, 3 + i % 2, 0, TAU); c.stroke(); }
       c.restore();
       // leftover seed-coat scraps
       if (s.step >= 2) { for (const [fx, fy, rr] of [[640, 470, .4], [680, 452, -.6], [662, 492, 1.2], [610, 488, 2]]) { c.save(); c.translate(fx, fy); c.rotate(rr); c.fillStyle = C.beanCoat; c.strokeStyle = C.beanCoatDeep; c.lineWidth = 2; c.beginPath(); c.moveTo(-14, 0); c.quadraticCurveTo(0, -12, 14, -2); c.quadraticCurveTo(2, 6, -14, 0); c.fill(); c.stroke(); c.restore(); } }
@@ -206,10 +207,10 @@ const A_seed = {
       if (s.step === 1) {
         const bar = rrect(300, 505, 200, 20, 10); c.fillStyle = '#fff'; c.fill(bar); c.save(); c.clip(bar); c.fillStyle = C.leaf; c.fillRect(300, 505, 200 * s.peel / .8, 20); c.restore(); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(bar);
         label(c, 'Seed coat peeled', 400, 488, { size: 17 });
-        if (s.peel < .05) { const hx = BX - 90 + Math.sin(t * 3) * 90; c.save(); c.fillStyle = 'rgba(255,138,61,.85)'; c.beginPath(); c.arc(hx, BY + 20, 16, 0, TAU); c.fill(); c.restore(); label(c, 'Rub to peel!', BX, BY - 125, { size: 24, color: C.carrot }); }
+        if (s.peel < .05) { const hx = BX - 90 + (RM ? 0 : Math.sin(t * 3)) * 90; c.save(); c.fillStyle = 'rgba(255,138,61,.85)'; c.beginPath(); c.arc(hx, BY + 20, 16, 0, TAU); c.fill(); c.restore(); label(c, 'Rub to peel!', BX, BY - 125, { size: 24, color: C.carrot }); }
       }
       if (s.step === 0) label(c, 'Tap the bean!', BX, BY - 110, { size: 26, color: C.carrot });
-      if (s.step === 2 && s.split < .1) { const o = Math.sin(t * 4) * 8; arrow(c, BX - 40 - o, BY + 125, BX - 150 - o, BY + 125); arrow(c, BX + 40 + o, BY + 125, BX + 150 + o, BY + 125); label(c, 'Drag to split!', BX, BY - 120, { size: 26, color: C.carrot }); }
+      if (s.step === 2 && s.split < .1) { const o = RM ? 0 : Math.sin(t * 4) * 8; arrow(c, BX - 40 - o, BY + 125, BX - 150 - o, BY + 125); arrow(c, BX + 40 + o, BY + 125, BX + 150 + o, BY + 125); label(c, 'Drag to split!', BX, BY - 120, { size: 26, color: C.carrot }); }
       if (s.step >= 2) { const F = k => found(k) || ui.showAll; if (F('coat')) tag(c, 'Seed coat', 700, 530, 662, 480); }
       if (s.step >= 3) {
         const F = k => found(k) || ui.showAll;
@@ -230,8 +231,8 @@ const A_seed = {
     };
     let magTold = false; // explain the magnifier the first time only
     magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag && !magTold) magTold = ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
-    sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); setTimeout(() => Sound.grow(3), 1800); setTimeout(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
-    ui.button('Get a new bean', () => { reset(); Sound.pop(); ui.say(A_seed.intro); });
+    sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); ui.later(() => Sound.grow(3), 1800); ui.later(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
+    ui.button('Get a new bean', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_seed.intro); });
     reset(); magBtn.setAttribute('aria-pressed', 'false');
     if (A_seed.stars.every(q => Store.data.stars[q.id])) ui.hint('You already found every part. Open the bean again to try the sprout!');
     ui.showAll = false;

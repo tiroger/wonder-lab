@@ -10,10 +10,11 @@ const glowAround = (h, at, w) => clamp(1 - Math.abs(h - at) / w, 0, 1);
 Sky.season = () => ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'autumn', 'autumn', 'autumn', 'winter'][Sky.now().getMonth()];
 const AUTUMN = ['#E8933A', '#D9574A', '#E8B84A', '#C9702E'];
 
-function skyLayout(L) {
-  const wide = L.cols !== 1, r = seeded(11);
-  Sky.clouds = (wide ? [[150, 80], [900, 40], [1300, L.h * .68]] : [[80, 60], [380, L.h * .45], [200, L.h * .8]]).map(([x, y]) => ({ x, y, s: wide ? 1.3 : 1.1, v: 6 + r() * 5, rainT: -99, snow: false }));
-  Sky.puddles = []; Sky.fireflies = Array.from({ length: wide ? 16 : 10 }, () => ({ x: r() * L.w, y: L.h * (.35 + r() * .6), p: r() * TAU }));
+// keep: the map was only rebuilt (same shape), so the clouds, their rain and the puddles stay as they are
+function skyLayout(L, keep = false) {
+  const wide = L.cols !== 1, r = seeded(11), clouds = (wide ? [[150, 80], [900, 40], [1300, L.h * .68]] : [[80, 60], [380, L.h * .45], [200, L.h * .8]]).map(([x, y]) => ({ x, y, s: wide ? 1.3 : 1.1, v: 6 + r() * 5, rainT: -99, snow: false }));
+  if (!keep || Sky.clouds.length !== clouds.length) { Sky.clouds = clouds; Sky.puddles = []; }
+  Sky.fireflies = Array.from({ length: wide ? 16 : 10 }, () => ({ x: r() * L.w, y: L.h * (.35 + r() * .6), p: r() * TAU }));
 }
 const cloudX = (k, t) => { const span = Home.L.w + 260; return ((k.x + (RM ? 0 : t * k.v)) % span + span) % span - 130; };
 const raining = (k, t) => t - k.rainT < 5;

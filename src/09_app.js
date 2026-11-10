@@ -235,6 +235,11 @@ function makeUI(intro) {
     showAll: false,
     intro, // what Pip says as the tab opens; an html activity says it itself (the quiz adds it to its first question)
     say, award,
+    // a sound or effect a moment from now; cleared when the activity resets or closes, so it never plays in the next one
+    timers: new Set(),
+    later(fn, ms) { const h = setTimeout(() => { ui.timers.delete(h); fn(); }, ms); ui.timers.add(h); return h; },
+    // an in-activity reset ("Start over", "Get a new bean"...): drop pending effects and the lines Pip had queued for the old one
+    fresh() { for (const h of ui.timers) clearTimeout(h); ui.timers.clear(); App.sayQ.length = 0; },
     button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = e => { Sound.ensure(); if (inputLocked()) return nudge(e.clientX || b.getBoundingClientRect().left + 30, e.clientY || b.getBoundingClientRect().top + 10); fn(); }; $('#actions').appendChild(b); return b; },
     hint(text) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = text; $('#extra').appendChild(p); return p; },
     extraEl(tagName, cls) { const e = document.createElement(tagName); e.className = cls; $('#extra').appendChild(e); return e; }
@@ -248,6 +253,7 @@ function applyAccent(tp) { const st = document.documentElement.style; for (const
 // stop whatever is running: the activity, Pip mid-sentence, queued lines, the listen hold, sound loops
 function leaveActivity() {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
+  if (App.ui) { App.ui.fresh(); App.ui = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
 }
 function mount(a, lead = '') {
@@ -258,7 +264,7 @@ function mount(a, lead = '') {
   refresh();
   let intro = (lead ? lead + ' ' : '') + a.intro;
   if (!App.greeted) { App.greeted = true; const n = explorerName(); intro = `Hi${n ? ' ' + n : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
-  App.inst = a.mount(host, makeUI(intro)) || {};
+  App.ui = makeUI(intro); App.inst = a.mount(host, App.ui) || {};
   if (!a.html) say(intro);
 }
 // The page opens before the first tap allows sound, so Pip's opening line is shown but not heard.

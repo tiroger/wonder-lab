@@ -13,7 +13,7 @@
 :root{
   color-scheme: light;
   --ground:#E8F3E1; --dot:#D3E8CB; --card:#FFFDF5; --card-2:#FFF4D6;
-  --ink:#243628; --ink-soft:#56705B;
+  --ink:#243628; --ink-soft:#56705B; --ink-muted:#4A6350;
   --leaf:#3E9B4F; --leaf-deep:#2A7340; --sun:#FFC93C; --sun-soft:#FFE7A3;
   --petal:#F2668B; --sky:#A9DDF1; --carrot:#FF8A3D;
   --r-lg:22px; --r-md:16px;
@@ -171,7 +171,7 @@ dialog#settings::backdrop{background:rgba(36,54,40,.45)}
 .progress li canvas{width:34px;height:34px;flex:none}
 .progress li span{flex:1;min-width:0}
 .progress li small{color:var(--ink-soft);font-size:14px;font-variant-numeric:tabular-nums}
-.progress .btn{min-height:38px;padding:4px 12px;font-size:15px}
+.progress .btn{min-height:44px;padding:4px 12px;font-size:15px}
 .danger{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .btn.warn{background:#F7B9B9}
 /* listen first */
@@ -230,7 +230,7 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .gu-row input,.gu-dialog input[name=text],.gu-addkid input[name=nick]{flex:1 1 220px;min-height:48px;font:inherit;font-size:17px;border:3px solid var(--ink);border-radius:14px;padding:6px 12px;background:#fff;box-sizing:border-box}
 .gu-form small,.gu-demo small,.gu-fine{color:var(--ink-soft);font-size:14px}.gu-fine a,.privacy a{color:#1F6E3A;font-weight:600}
 .grownups input[type=checkbox],.gu-dialog input[type=checkbox]{accent-color:var(--leaf)}
-.linkish{background:none;border:0;padding:4px 2px;font:inherit;font-weight:600;color:#1F6E3A;text-decoration:underline;cursor:pointer;min-height:32px}
+.linkish{background:none;border:0;padding:4px 2px;font:inherit;font-weight:600;color:#1F6E3A;text-decoration:underline;cursor:pointer;min-height:44px}
 .gu-msg{background:#FDE2E2;border:2px solid #C24A4A;border-radius:12px;padding:8px 12px;font-weight:600}
 .gu-demo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--sun-soft);border:2px dashed var(--ink-soft);border-radius:14px;padding:10px 12px;margin:12px 0}
 .gu-ribbon{max-width:760px;width:100%;box-sizing:border-box;margin:0 auto;background:var(--sun-soft);border:3px solid var(--ink);border-radius:14px;padding:8px 14px}
@@ -252,7 +252,7 @@ body.listening .stage canvas{filter:saturate(.8) brightness(.97)}
 .gu-addkid{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;border-top:2px dashed var(--ink-soft);padding-top:12px}
 .gu-addkid>label{display:flex;flex-direction:column;gap:4px;font-weight:600;flex:1 1 200px}.gu-addkid input[name=nick]{flex:none}
 .gu-looks{display:flex;flex-wrap:wrap;gap:6px;border:0;padding:0;margin:0}.gu-looks legend{font-weight:600;padding:0;margin-bottom:4px}
-.gu-look{position:relative;cursor:pointer}.gu-look input{position:absolute;opacity:0;inset:0}
+.gu-look{position:relative;cursor:pointer;display:grid;place-items:center;width:44px;height:44px}.gu-look input{position:absolute;opacity:0;inset:0}
 .gu-look i{display:block;width:30px;height:30px;border-radius:50%;border:3px solid var(--ink);box-shadow:0 2px 0 var(--ink)}
 .gu-look input:checked+i{outline:4px solid var(--sun);outline-offset:1px}.gu-look input:focus-visible+i{outline:4px solid var(--ink)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -299,7 +299,7 @@ footer a{color:inherit;font-weight:600}
 .lot:hover .name,.lot:focus-visible .name{transform:translateY(-2px)}
 .lot:active .name{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
 .lot .name svg{width:16px;height:16px}
-.lot .name small{font-size:14px;color:var(--ink-soft)}
+.lot .name small{font-size:14px;color:var(--ink-muted)}
 .lot .new{font-size:13px;font-weight:700;color:#B4500F;letter-spacing:.04em}
 .lot.soon .name{background:#F3F1EA;border-style:dashed;border-color:var(--ink-soft);color:var(--ink-soft);box-shadow:none}
 .keepgoing{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;background:var(--card-2);border:3px solid var(--ink);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--shadow);text-decoration:none;color:var(--ink)}
@@ -343,17 +343,17 @@ footer a{color:inherit;font-weight:600}
 .nameplate{background:var(--leaf-deep);border:3px solid var(--ink);border-radius:10px;padding:2px 10px;margin:0 0 10px;text-align:center;font-family:var(--display);font-weight:600;font-size:18px;color:#fff}
 .glass{background:rgba(221,243,247,.85);border:3px solid var(--ink);border-radius:10px;padding:14px 10px 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 8px}
 .hb{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:4px 0;cursor:pointer;font-family:var(--display);color:var(--ink);min-height:44px;border-radius:12px}
-.hb .disc{width:66px;height:66px;box-sizing:border-box;border-radius:50%;border:3px solid var(--ink);background:var(--sun-soft);box-shadow:0 3px 0 var(--ink);display:grid;place-items:center;font-weight:700;font-size:26px;color:#8C9A8F}
+.hb .disc{width:66px;height:66px;box-sizing:border-box;border-radius:50%;border:3px solid var(--ink);background:var(--sun-soft);box-shadow:0 3px 0 var(--ink);display:grid;place-items:center;font-weight:700;font-size:26px;color:#5E6E62}
 .hb .disc canvas{width:44px;height:44px}
 .hb.locked .disc{background:#EEF1EA;border-style:dashed;box-shadow:none}
 .hb b{font-weight:600;font-size:13px;line-height:1.1}
-.hb.locked b{color:var(--ink-soft)}
+.hb.locked b{color:var(--ink-muted)}
 .hb.hop .disc{animation:bump .45s ease}
 .hb.fresh .disc{animation:spinin .7s ease;box-shadow:0 3px 0 var(--ink),0 0 0 5px var(--sun)}
 .hb.trophy .disc{width:96px;height:96px;border:0;background:none;box-shadow:none}
 .hb.trophy .disc canvas{width:88px;height:88px}
 .hb.trophy.locked .disc canvas{filter:grayscale(1);opacity:.45}
-.soon-case{flex:0 1 190px;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink-soft)}
+.soon-case{flex:0 1 190px;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink-muted)}
 .soon-case canvas{width:170px;height:150px}
 .hall-floor{margin-top:22px;height:46px;border-top:4px solid var(--ink);background:repeating-linear-gradient(90deg,#C9955A 0 120px,#BF8B50 120px 240px)}
 .hall-totals{display:flex;flex-wrap:wrap;gap:12px}
@@ -878,7 +878,7 @@ const A_parts = {
       flower: 'The <b>flower</b> is where seeds get started. Bright petals invite bees, and the bees bring <b>pollen</b>.',
       fruit: 'This pod is the plant\'s <b>fruit</b>! A fruit holds and protects the <b>seeds</b>. Every bean inside could grow a brand new plant.'
     };
-    const sounds = { roots: () => Sound.slurp(), stem: () => Sound.boing(), leaves: () => Sound.sparkle(), flower: () => Sound.buzz(true), fruit: () => { Sound.crack(); [0, 1, 2, 3].forEach(i => setTimeout(() => Sound.pop(), 200 + i * 110)); } };
+    const sounds = { roots: () => Sound.slurp(), stem: () => Sound.boing(), leaves: () => Sound.sparkle(), flower: () => Sound.buzz(true), fruit: () => { Sound.crack(); [0, 1, 2, 3].forEach(i => ui.later(() => Sound.pop(), 200 + i * 110)); } };
     const found = k => !!Store.data.stars['parts.' + k];
     function spawnDrops(fromStem) {
       for (let i = 0; i < 16; i++) s.drops.push(fromStem ? { mode: 'stem', u: 0, d: i * .14 } : { mode: 'root', ri: i % 5, u: 1, d: i * .12 });
@@ -887,7 +887,7 @@ const A_parts = {
       s.sel = part; s.selT = st.t; s.fx[part] = st.t; s.lastAct = st.t; ui.say(facts[part]); sounds[part]();
       if (part === 'fruit') s.podTarget = s.podTarget ? 0 : 1;
       if (part === 'roots') spawnDrops(false); if (part === 'stem') spawnDrops(true);
-      if (part === 'flower') setTimeout(() => { if (st.t - s.fx.flower > 5.5) Sound.buzz(false); }, 6000);
+      if (part === 'flower') ui.later(() => { if (st.t - s.fx.flower > 5.5) Sound.buzz(false); }, 6000);
       ui.award('parts.' + part, ...st.client(x, y));
     }
     function which(x, y) {
@@ -929,9 +929,9 @@ const A_parts = {
       // sunlight + sparkles on leaves
       const le = t - s.fx.leaves;
       if (le < 4.5) {
-        c.save(); c.globalAlpha = Math.min(1, 4.5 - le); c.setLineDash([12, 12]); c.lineDashOffset = -t * 50; c.strokeStyle = 'rgba(255,196,40,.9)'; c.lineWidth = 5; c.lineCap = 'round';
+        c.save(); c.globalAlpha = Math.min(1, 4.5 - le); c.setLineDash([12, 12]); c.lineDashOffset = RM ? 0 : -t * 50; c.strokeStyle = 'rgba(255,196,40,.9)'; c.lineWidth = 5; c.lineCap = 'round';
         for (const lc of P.leafCenters) { c.beginPath(); c.moveTo(125, 115); c.lineTo(lc[0], lc[1]); c.stroke(); }
-        c.setLineDash([]); for (const [i, lc] of P.leafCenters.entries()) sparkle(c, lc[0] + Math.sin(t * 5 + i) * 12, lc[1] - 14 + Math.cos(t * 4 + i) * 8, 7 + 4 * Math.abs(Math.sin(t * 6 + i)));
+        c.setLineDash([]); for (const [i, lc] of P.leafCenters.entries()) sparkle(c, lc[0] + (RM ? 0 : Math.sin(t * 5 + i) * 12), lc[1] - 14 + (RM ? 0 : Math.cos(t * 4 + i) * 8), RM ? 9 : 7 + 4 * Math.abs(Math.sin(t * 6 + i)));
         c.restore();
       }
       // the bee visits the flower
@@ -940,7 +940,7 @@ const A_parts = {
         bee(c, F[0] + Math.cos(a) * 115, F[1] - 10 + Math.sin(a * 2) * 40, t, k, { flip: Math.sin(a) > 0, pollen: fe > 2 });
       } else if (fe < 6.3) Sound.buzz(false);
       // butterfly
-      const bx = 620 + Math.cos(t * .37) * 140, by = 200 + Math.sin(t * .83) * 70;
+      const bx = 620 + (RM ? 1 : Math.cos(t * .37)) * 140, by = 200 + (RM ? 0 : Math.sin(t * .83)) * 70;
       butterfly(c, bx, by, t, .9, '#8D6CD9'); s.butterPath = circle(bx, by, 34); st.over(s.butterPath);
       st.over(circle(95, 88, 60));
       // labels for parts already found
@@ -955,7 +955,7 @@ const A_parts = {
       const todo = ['roots', 'stem', 'leaves', 'flower', 'fruit'].filter(k => !found(k));
       if (todo.length && t - s.lastAct > 7) {
         const pos = { roots: [400, 460], stem: sp, leaves: lc, flower: F, fruit: pc }[todo[0]];
-        c.save(); c.strokeStyle = C.carrot; c.lineWidth = 5; c.setLineDash([10, 8]); c.lineDashOffset = -t * 30; c.beginPath(); c.arc(pos[0], pos[1], 34 + Math.sin(t * 5) * 6, 0, TAU); c.stroke(); c.restore();
+        c.save(); c.strokeStyle = C.carrot; c.lineWidth = 5; c.setLineDash([10, 8]); c.lineDashOffset = RM ? 0 : -t * 30; c.beginPath(); c.arc(pos[0], pos[1], 34 + (RM ? 0 : Math.sin(t * 5) * 6), 0, TAU); c.stroke(); c.restore();
         label(c, 'Try here!', pos[0], pos[1] - 52, { size: 20, color: C.carrot });
       }
     };
@@ -1088,7 +1088,8 @@ const A_seed = {
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
-      if (s.step === 0) { if (dist(x, y, BX, BY) < 150) { s.step = .5; s.soakT = st.t; Sound.plunk(); setTimeout(() => Sound.splash(), 500); ui.say('Into the water it goes! Soaking all night makes the bean soft...'); } else Sound.tap(1); return; }
+      if (s.step === 0) { if (dist(x, y, BX, BY) < 150) { s.step = .5; s.soakT = st.t; Sound.plunk(); ui.later(() => Sound.splash(), 500); ui.say('Into the water it goes! Soaking all night makes the bean soft...'); } else Sound.tap(1); return; }
+      if (s.step === .5) { Sound.drip(); return; }   // still soaking
       if (s.step === 1) { peelAt(x, y); return; }
       if (s.step === 2) { s.drag = { x0: x, p0: s.split }; return; }
       if (s.step >= 3) { const p = part(x, y); if (p) explore(p, x, y); else Sound.tap(Math.floor(x / 90)); }
@@ -1110,7 +1111,7 @@ const A_seed = {
       c.save(); c.translate(560, 26); const wg = c.createLinearGradient(0, 0, 0, 130); wg.addColorStop(0, mix('#8FD3EE', '#1D2B5A', night)); wg.addColorStop(1, mix('#DDF4FB', '#3B4C86', night));
       c.fillStyle = wg; c.fillRect(0, 0, 170, 130);
       if (night > .2) { c.fillStyle = `rgba(255,248,210,${night})`; c.beginPath(); c.arc(120, 40, 20, 0, TAU); c.fill(); c.fillStyle = mix('#8FD3EE', '#1D2B5A', night); c.beginPath(); c.arc(130, 34, 18, 0, TAU); c.fill(); for (let i = 0; i < 6; i++) sparkle(c, 20 + i * 25, 20 + (i % 3) * 30, 4, `rgba(255,255,255,${night})`); }
-      else { cloud(c, 30 + (t * 8) % 140, 50, .6); }
+      else { cloud(c, 30 + (RM ? 40 : (t * 8) % 140), 50, .6); }
       c.strokeStyle = '#FFFDF5'; c.lineWidth = 10; c.strokeRect(0, 0, 170, 130); c.beginPath(); c.moveTo(85, 0); c.lineTo(85, 130); c.moveTo(0, 65); c.lineTo(170, 65); c.stroke(); c.restore();
       // table
       const tg = c.createLinearGradient(0, 200, 0, H); tg.addColorStop(0, '#E7BE84'); tg.addColorStop(1, '#D3A566'); c.fillStyle = tg; c.fillRect(0, 200, W, H - 200);
@@ -1172,7 +1173,7 @@ const A_seed = {
       c.strokeStyle = C.rootDeep; c.lineWidth = 9; c.stroke(rp); c.strokeStyle = C.root; c.lineWidth = 5; c.stroke(rp);
       c.strokeStyle = C.rootDeep; c.lineWidth = 1.6; for (let i = 1; i < 7; i++) { const yy = 70 + i * 26 * g; c.beginPath(); c.moveTo(-50, yy); c.lineTo(-64, yy + 6); c.moveTo(-50, yy); c.lineTo(-36, yy + 6); c.stroke(); }
       // shoot grows up
-      const top = [10 + Math.sin(t * 1.4) * 4 * g, 20 - 210 * g];
+      const top = [10 + (RM ? 0 : Math.sin(t * 1.4) * 4 * g), 20 - 210 * g];
       c.strokeStyle = C.leafDeep; c.lineWidth = 10; c.beginPath(); c.moveTo(2, 20); c.quadraticCurveTo(-12, 20 - 100 * g, top[0], top[1]); c.stroke();
       c.strokeStyle = C.stem; c.lineWidth = 5; c.stroke();
       if (g > .3) { const ls = (g - .3) / .7 * .55; drawLeaf(c, top[0], top[1], -155, ls); drawLeaf(c, top[0], top[1], -25, ls); }
@@ -1183,7 +1184,7 @@ const A_seed = {
       // glass of water
       c.save(); c.translate(...GLASS); c.fillStyle = 'rgba(79,179,232,.35)'; c.beginPath(); c.moveTo(-48, 0); c.lineTo(48, 0); c.lineTo(40, 110); c.lineTo(-40, 110); c.closePath(); c.fill();
       c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(-42, -40, 84, 40); c.strokeStyle = 'rgba(36,54,40,.6)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-52, -45); c.lineTo(-40, 110); c.lineTo(40, 110); c.lineTo(52, -45); c.stroke();
-      if (s.step === .5) for (let i = 0; i < 4; i++) { const by = 100 - ((t * 40 + i * 25) % 100); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.beginPath(); c.arc(-20 + i * 13, by, 3 + i % 2, 0, TAU); c.stroke(); }
+      if (s.step === .5) for (let i = 0; i < 4; i++) { const by = 100 - (((RM ? 0 : t * 40) + i * 25) % 100); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.beginPath(); c.arc(-20 + i * 13, by, 3 + i % 2, 0, TAU); c.stroke(); }
       c.restore();
       // leftover seed-coat scraps
       if (s.step >= 2) { for (const [fx, fy, rr] of [[640, 470, .4], [680, 452, -.6], [662, 492, 1.2], [610, 488, 2]]) { c.save(); c.translate(fx, fy); c.rotate(rr); c.fillStyle = C.beanCoat; c.strokeStyle = C.beanCoatDeep; c.lineWidth = 2; c.beginPath(); c.moveTo(-14, 0); c.quadraticCurveTo(0, -12, 14, -2); c.quadraticCurveTo(2, 6, -14, 0); c.fill(); c.stroke(); c.restore(); } }
@@ -1200,10 +1201,10 @@ const A_seed = {
       if (s.step === 1) {
         const bar = rrect(300, 505, 200, 20, 10); c.fillStyle = '#fff'; c.fill(bar); c.save(); c.clip(bar); c.fillStyle = C.leaf; c.fillRect(300, 505, 200 * s.peel / .8, 20); c.restore(); c.strokeStyle = C.ink; c.lineWidth = 3; c.stroke(bar);
         label(c, 'Seed coat peeled', 400, 488, { size: 17 });
-        if (s.peel < .05) { const hx = BX - 90 + Math.sin(t * 3) * 90; c.save(); c.fillStyle = 'rgba(255,138,61,.85)'; c.beginPath(); c.arc(hx, BY + 20, 16, 0, TAU); c.fill(); c.restore(); label(c, 'Rub to peel!', BX, BY - 125, { size: 24, color: C.carrot }); }
+        if (s.peel < .05) { const hx = BX - 90 + (RM ? 0 : Math.sin(t * 3)) * 90; c.save(); c.fillStyle = 'rgba(255,138,61,.85)'; c.beginPath(); c.arc(hx, BY + 20, 16, 0, TAU); c.fill(); c.restore(); label(c, 'Rub to peel!', BX, BY - 125, { size: 24, color: C.carrot }); }
       }
       if (s.step === 0) label(c, 'Tap the bean!', BX, BY - 110, { size: 26, color: C.carrot });
-      if (s.step === 2 && s.split < .1) { const o = Math.sin(t * 4) * 8; arrow(c, BX - 40 - o, BY + 125, BX - 150 - o, BY + 125); arrow(c, BX + 40 + o, BY + 125, BX + 150 + o, BY + 125); label(c, 'Drag to split!', BX, BY - 120, { size: 26, color: C.carrot }); }
+      if (s.step === 2 && s.split < .1) { const o = RM ? 0 : Math.sin(t * 4) * 8; arrow(c, BX - 40 - o, BY + 125, BX - 150 - o, BY + 125); arrow(c, BX + 40 + o, BY + 125, BX + 150 + o, BY + 125); label(c, 'Drag to split!', BX, BY - 120, { size: 26, color: C.carrot }); }
       if (s.step >= 2) { const F = k => found(k) || ui.showAll; if (F('coat')) tag(c, 'Seed coat', 700, 530, 662, 480); }
       if (s.step >= 3) {
         const F = k => found(k) || ui.showAll;
@@ -1224,8 +1225,8 @@ const A_seed = {
     };
     let magTold = false; // explain the magnifier the first time only
     magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); if (mag && !magTold) magTold = ui.say('Move the <b>magnifying glass</b> over the seed to look up close. Scientists use them to see tiny details!'); });
-    sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); setTimeout(() => Sound.grow(3), 1800); setTimeout(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
-    ui.button('Get a new bean', () => { reset(); Sound.pop(); ui.say(A_seed.intro); });
+    sproutBtn = ui.button('Watch it sprout', () => { s.growT = st.t; s.grow = 0; Sound.grow(0); ui.later(() => Sound.grow(3), 1800); ui.later(() => Sound.star(), 4200); ui.say('In the soil, the root grows <b>down</b> and the shoot grows <b>up</b>. This is called <b>germination</b>. The cotyledons feed the baby plant until its leaves can make food.'); }, 'go');
+    ui.button('Get a new bean', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_seed.intro); });
     reset(); magBtn.setAttribute('aria-pressed', 'false');
     if (A_seed.stars.every(q => Store.data.stars[q.id])) ui.hint('You already found every part. Open the bean again to try the sprout!');
     ui.showAll = false;
@@ -1261,7 +1262,7 @@ const A_flower = {
     function slotOf(p) { return p.kind === 'petal' ? { x: 50 + p.slot * 38, y: 540, r: -6 + p.slot * 3, s: .3 } : { x: 640 + p.slot * 70, y: 540, r: 0, s: .5 }; }
     function pose(p) {
       if (p.removed) { const e = ease(clamp(p.fly, 0, 1)), sl = slotOf(p); return { x: lerp(p.rx, sl.x, e), y: lerp(p.ry, sl.y, e) - Math.sin(e * PI) * 60, r: lerp(p.ang, sl.r, e), s: lerp(1, sl.s, e) }; }
-      return { x: B[0] + p.dx, y: B[1] + p.dy, r: p.ang + (p === s.drag?.p ? Math.sin(st.t * 20) * 3 : 0), s: 1 };
+      return { x: B[0] + p.dx, y: B[1] + p.dy, r: p.ang + (p === s.drag?.p && !RM ? Math.sin(st.t * 20) * 3 : 0), s: 1 };
     }
     const pathOf = p => { const o = pose(p); return xf(p.kind === 'petal' ? PET : SEP, o.x, o.y, o.r, o.s); };
     function drawPiece(c, p, hl) {
@@ -1360,7 +1361,7 @@ const A_flower = {
       const orx = lerp(20, 60, fr), ory = lerp(28, 64, fr), oy = O[1] - fr * 22;
       c.save(); c.globalAlpha = 1 - fr * .85; if (hvGlow === 'pistil') glowOn(c); c.lineCap = 'round'; c.strokeStyle = '#8CC063'; c.lineWidth = 9; c.stroke(STYLE); c.shadowBlur = 0; c.strokeStyle = '#B8DF8C'; c.lineWidth = 4; c.stroke(STYLE);
       c.fillStyle = '#C8E06A'; c.strokeStyle = '#7FA23A'; c.lineWidth = 2.5; for (const [dx, dy] of [[-8, 0], [8, 0], [0, -8]]) { c.beginPath(); c.arc(STIG[0] + dx, STIG[1] + dy, 9, 0, TAU); c.fill(); c.stroke(); }
-      sparkle(c, STIG[0] + 6, STIG[1] - 12, 4 + Math.abs(Math.sin(t * 4)) * 3); c.restore();
+      sparkle(c, STIG[0] + 6, STIG[1] - 12, RM ? 6 : 4 + Math.abs(Math.sin(t * 4)) * 3); c.restore();
       c.save(); if (hvGlow === 'pistil') glowOn(c); const og = c.createRadialGradient(O[0] - 8, oy - 10, 4, O[0], oy, ory); og.addColorStop(0, mix('#CFEA92', '#FFB27A', fr)); og.addColorStop(1, mix('#8CC063', '#EF6F3A', fr));
       c.fillStyle = og; c.beginPath(); c.ellipse(O[0], oy, orx, ory, 0, 0, TAU); c.fill(); c.shadowBlur = 0; c.strokeStyle = mix('#5E8F34', '#B8451E', fr); c.lineWidth = 3; c.stroke(); c.restore();
       s.cut += ((s.cutOn ? 1 : 0) - s.cut) * Math.min(1, dt * 4);
@@ -1390,14 +1391,14 @@ const A_flower = {
       // the bee
       const b = s.bee;
       if (b) {
-        if (!b.drag && !b.done) { const hx = 700, hy = 120; b.x += (hx + Math.sin(t * 2) * 14 - b.x) * Math.min(1, dt * 3); b.y += (hy + Math.sin(t * 3) * 10 - b.y) * Math.min(1, dt * 3); }
+        if (!b.drag && !b.done) { const hx = 700, hy = 120; b.x += (hx + (RM ? 0 : Math.sin(t * 2) * 14) - b.x) * Math.min(1, dt * 3); b.y += (hy + (RM ? 0 : Math.sin(t * 3) * 10) - b.y) * Math.min(1, dt * 3); }
         if (b.done) { b.gone += dt; b.x += 160 * dt * (b.gone > .8 ? 1 : 0); b.y -= 60 * dt * (b.gone > .8 ? 1 : 0); }
         if (b.x < 900) { bee(c, b.x, b.y, t, 1.4, { pollen: b.pollen, flip: !b.done }); if (dist(st.p.x, st.p.y, b.x, b.y) < 42 && !b.done) st.cursor = 'grab'; }
         if (!b.pollen && !b.drag) label(c, 'Drag me!', b.x, b.y - 46, { size: 18, color: C.carrot });
       }
       if (left('petal') === 5 && t - s.lastAct > 5) label(c, 'Drag a petal away!', 400, 60, { size: 26, color: C.carrot });
     };
-    ui.button('Get a new flower', () => { reset(); Sound.pop(); ui.say(A_flower.intro); });
+    ui.button('Get a new flower', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_flower.intro); });
     const lb = ui.button('Show all labels', () => { ui.showAll = !ui.showAll; lb.setAttribute('aria-pressed', ui.showAll); Sound.fwip(); }); lb.setAttribute('aria-pressed', 'false'); ui.showAll = false;
     ui.hint('Real flowers have the same parts. Next time you see one, look for the stamens and the pistil!');
     reset();
@@ -1428,7 +1429,7 @@ const A_grow = {
     function reset() { s = { g: 0, water: 0, sunM: 45, stage: 0, pourT: -9, sunT: -9, drops: [], seeds: [], dropped: false, thirst: 0, dryT: 0, told: {}, spokeT: -99, factQ: [], cloudX: 900, pods: [], flowers: [], done: false }; paintChips(); }
     function paintChips() { if (!chips) return; chips.innerHTML = STAGES.map((n, i) => `<span class="${i <= s.stage ? 'on' : ''}">${n}</span>`).join('<i>›</i>'); }
     const canTip = () => { const e = st.t - s.pourT; if (e > 1.6) return 0; return e < .3 ? ease(e / .3) : e < 1.25 ? 1 : 1 - ease((e - 1.25) / .35); };
-    function water(x, y) { if (st.t - s.pourT < 1.6) return; s.pourT = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
+    function water(x, y) { if (st.t - s.pourT < 1.6) { Sound.drip(); return; } s.pourT = st.t; Sound.splash(); ui.later(() => Sound.slurp(), 700); if (s.g < .1 && !s.toldWater) { s.toldWater = true; ui.say('Glug glug! The water soaks into the soil and the seed starts to drink it up...'); } }
     function shine() { s.sunT = st.t; s.sunM = 100; Sound.grow(4); Sound.sparkle(.2); if (s.g < 1.9 && !s.toldSun) { s.toldSun = true; ui.say('Warm sunshine! The seed is still under the ground, so it only needs <b>water</b> and <b>warmth</b> for now.'); } }
     function onStage(n) {
       paintChips();
@@ -1454,7 +1455,7 @@ const A_grow = {
       c.restore();
       if (k > .7 && st.t - s.pourT < 1.3) { const sx = x + Math.cos(rot) * 92 + Math.sin(rot) * 38, sy = y - Math.sin(rot) * 92 - Math.cos(rot) * 38 + 30; for (let i = 0; i < 2; i++) s.drops.push({ x: sx + rand(-8, 8), y: sy, vx: rand(50, 130), vy: rand(-20, 40) }); s.water = Math.min(100, s.water + 58 * dt); }
       // the can itself is the reminder: it bounces and asks for a tap when the soil is dry (or at the very start)
-      if (!k && (s.g < .05 || s.water < 1)) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, s.g < .05 ? 'Tap me!' : 'Water me!', CAN[0], CAN[1] - 62 - b, { size: 19, color: C.carrot }); }
+      if (!k && (s.g < .05 || s.water < 1 && s.g < 7)) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, s.g < .05 ? 'Tap me!' : 'Water me!', CAN[0], CAN[1] - 62 - b, { size: 19, color: C.carrot }); }
     }
     function drawPlantAt(c, t, g) {
       const droop = clamp(s.thirst / 2, 0, 1) * (g >= 1.9 ? 1 : 0), sw = RM ? 0 : Math.sin(t * 1.3) * 4;
@@ -1530,17 +1531,17 @@ const A_grow = {
       sky(c, mix('#86CFEA', '#7F97A6', dim), mix('#E2F6FC', '#B8C6CC', dim), GY);
       const cov = clamp((55 - s.sunM) / 40, 0, 1) * (above ? 1 : 0); s.cloudX += ((t - s.sunT < 1.5 ? 900 : lerp(880, 640, cov)) - s.cloudX) * Math.min(1, dt * 2);
       sun(c, ...SUN, 42, t, { glow: t - s.sunT < 1.5 ? 1 : 0 }); st.over(circle(...SUN, 70)); // pointer cursor over the sun
-      cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + ((t * 10) % 300), 60, .6);
+      cloud(c, s.cloudX, 95, 1.35, .97); cloud(c, 300 + (RM ? 120 : (t * 10) % 300), 60, .6);
       if (above && s.sunM < 1 && s.g < 7) { const b = RM ? 0 : Math.abs(Math.sin(t * 5)) * 6; label(c, 'Tap the sun!', SUN[0] - 10, SUN[1] + 66 - b, { size: 19, color: C.carrot }); }
       ground(c, GY, t);
       // wet soil
       if (s.water > 0) { const wg = c.createRadialGradient(SX, GY + 30, 10, SX, GY + 30, 190); wg.addColorStop(0, `rgba(45,25,12,${s.water / 100 * .5})`); wg.addColorStop(1, 'rgba(45,25,12,0)'); c.fillStyle = wg; c.fillRect(SX - 200, GY + 6, 400, 260); }
       drawPlantAt(c, t, s.g);
       // falling seeds
-      if (s.g >= 7 && !s.dropped && s.pods.length) { s.dropped = true; for (const [px, py] of s.pods) for (let i = 0; i < 2; i++) s.seeds.push({ x: px + rand(-6, 6), y: py, vx: rand(-60, 60), vy: rand(-80, -20), rest: false }); Sound.ptoo(); setTimeout(() => Sound.ptoo(), 150); }
+      if (s.g >= 7 && !s.dropped && s.pods.length) { s.dropped = true; for (const [px, py] of s.pods) for (let i = 0; i < 2; i++) s.seeds.push({ x: px + rand(-6, 6), y: py, vx: rand(-60, 60), vy: rand(-80, -20), rest: false }); Sound.ptoo(); ui.later(() => Sound.ptoo(), 150); }
       for (const q of s.seeds) { if (!q.rest) { q.vy += 700 * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > GY + 2) { q.y = GY + 2; q.vy *= -.3; q.vx *= .5; if (Math.abs(q.vy) < 30) { q.rest = true; Sound.drip(); } } } c.save(); c.translate(q.x, q.y); c.fillStyle = '#E8D29C'; c.strokeStyle = '#A88445'; c.lineWidth = 2; const K = kidney(18, 12); c.fill(K); c.stroke(K); c.restore(); }
       // bees when flowers bloom
-      if (s.flowers.length) { const f = s.flowers[Math.floor(t / 2.5) % s.flowers.length]; const a = t * 3; bee(c, f[0] + Math.cos(a) * 34, f[1] - 14 + Math.sin(a * 2) * 12, t, .7, { flip: Math.sin(a) > 0 }); }
+      if (s.flowers.length) { const f = s.flowers[Math.floor(t / 2.5) % s.flowers.length]; const a = RM ? 1 : t * 3; bee(c, f[0] + Math.cos(a) * 34, f[1] - 14 + Math.sin(a * 2) * 12, t, .7, { flip: Math.sin(a) > 0 }); }
       // water drops
       for (const d of s.drops) { d.vy += 700 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > GY) { d.dead = true; if (Math.random() < .15) Sound.drip(); } c.fillStyle = C.water; c.beginPath(); c.arc(d.x, d.y, 4, 0, TAU); c.fill(); }
       s.drops = s.drops.filter(d => !d.dead);
@@ -1558,7 +1559,7 @@ const A_grow = {
     };
     ui.button('Water', () => water(), '');
     ui.button('Sunshine', () => shine(), '');
-    ui.button('Plant a new seed', () => { reset(); Sound.pop(); ui.say(A_grow.intro); }, 'go');
+    ui.button('Plant a new seed', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_grow.intro); }, 'go');
     chips = ui.extraEl('div', 'cycle');
     reset();
     return { stage: st, state: () => s, destroy() { st.destroy(); } }; // state() is for tests
@@ -1592,7 +1593,7 @@ const A_travel = {
     st.onDown = (x, y) => {
       const k = keys[hit(x, y)], t = st.t; let go = false;
       if (k === 'wind' && s.wind.state === 'ready') { s.wind.state = 'blow'; s.wind.t0 = t; s.wind.seeds.forEach((q, i) => { q.d = i * .04 + Math.random() * .1; }); Sound.whoosh(); go = true; }
-      if (k === 'animal' && s.ani.state === 'sit') { s.ani.state = 'hop'; s.ani.t0 = t; s.ani.carried = false; s.ani.hopN = 0; go = true; }
+      if (k === 'animal' && s.ani.state === 'sit') { s.ani.state = 'hop'; s.ani.t0 = t; s.ani.carried = false; s.ani.hopN = 0; Sound.hop(); go = true; }
       if (k === 'water' && s.wat.state === 'ready') { s.wat.state = 'fall'; s.wat.t0 = t; s.wat.x = 100; s.wat.y = 86; s.wat.vy = 0; Sound.fwip(); go = true; }
       if (k === 'pop' && s.pop.state === 'ready') { s.pop.state = 'shake'; s.pop.t0 = t; Sound.wobble(400, .45, .08, 30, 80, 'triangle'); go = true; }
       if (go) { ui.say(facts[k]); ui.award('travel.' + k, ...st.client(x, y)); } else Sound.tap(Math.floor(x / 80));
@@ -1617,7 +1618,7 @@ const A_travel = {
       const W0 = s.wind, A = s.ani, Wt = s.wat, Pp = s.pop;
       // ---- wind ----
       panel(c, 0, 0, c => {
-        cloud(c, (t * 15) % 520 - 90, 50, .7); grass(c, 240);
+        cloud(c, RM ? 120 : (t * 15) % 520 - 90, 50, .7); grass(c, 240);
         if (W0.state === 'blow') { c.save(); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 4; c.lineCap = 'round'; for (let i = 0; i < 4; i++) { const x = ((t - W0.t0) * 380 + i * 90) % 520 - 60, y = 70 + i * 40; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + 40, y - 14, x + 80, y); c.stroke(); } c.restore(); }
         const sw = RM ? 0 : Math.sin(t * 1.4) * 5;
         c.save(); c.strokeStyle = C.leafDeep; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(HX, 245); c.quadraticCurveTo(HX - 8, 180, HX + sw, HY); c.stroke(); c.restore();
@@ -1662,7 +1663,7 @@ const A_travel = {
         sun(c, 330, 50, 22, t, { face: false });
         const sea = c.createLinearGradient(0, 200, 0, 280); sea.addColorStop(0, '#4FB3E8'); sea.addColorStop(1, '#2C7FB8'); c.fillStyle = sea; c.fillRect(0, 205, 400, 75);
         c.fillStyle = '#F2D48B'; c.beginPath(); c.ellipse(40, 232, 100, 40, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(372, 226, 72, 30, 0, 0, TAU); c.fill();
-        c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); for (let x = 120; x <= 310; x += 10) { const y = 222 + i * 18 + Math.sin(x * .06 + t * 2 + i) * 4; x === 120 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); }
+        c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); for (let x = 120; x <= 310; x += 10) { const y = 222 + i * 18 + Math.sin(x * .06 + (RM ? 0 : t * 2) + i) * 4; x === 120 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); }
         // palm
         c.save(); c.strokeStyle = '#8A5A36'; c.lineWidth = 12; c.lineCap = 'round'; c.beginPath(); c.moveTo(60, 215); c.quadraticCurveTo(62, 130, 95, 78); c.stroke(); c.restore();
         for (const r of [-170, -135, -60, -20, 10, 160]) drawLeaf(c, 95, 74, r + (RM ? 0 : Math.sin(t * 1.5 + r) * 4), .55, '#4E9E36');
@@ -1672,7 +1673,7 @@ const A_travel = {
         else {
           const e = t - Wt.t0;
           if (Wt.state === 'fall') { Wt.vy += 700 * dt; Wt.y += Wt.vy * dt; Wt.x += 30 * dt; if (Wt.y >= 222) { Wt.state = 'float'; Wt.t0 = t; Sound.splash(); } }
-          else if (Wt.state === 'float') { const k = clamp(e / 5, 0, 1); Wt.x = lerp(130, 318, ease(k)); Wt.y = 224 + Math.sin(t * 3) * 4; if (k >= 1) { Wt.state = 'land'; Wt.t0 = t; } }
+          else if (Wt.state === 'float') { const k = clamp(e / 5, 0, 1); Wt.x = lerp(130, 318, ease(k)); Wt.y = 224 + (RM ? 0 : Math.sin(t * 3) * 4); if (k >= 1) { Wt.state = 'land'; Wt.t0 = t; } }
           else if (Wt.state === 'land') { const k = clamp(e / .8, 0, 1); Wt.x = lerp(318, 350, k); Wt.y = lerp(224, 205, k); if (k >= 1) { Wt.state = 'grown'; Wt.t0 = t; Wt.sprout = t; Sound.grow(2); } }
           else if (Wt.state === 'grown' && e > 2.5) Wt.state = 'ready';
           if (Wt.state !== 'grown') coco(Wt.x, Wt.y);
@@ -1691,7 +1692,7 @@ const A_travel = {
           const k = Pp.state === 'regrow' ? clamp(e / 1, 0, 1) : 1, wob = Pp.state === 'shake' ? Math.sin(e * 50) * 8 : 0;
           c.save(); c.translate(112, 118); c.rotate((-100 + wob) * DEG); c.scale(1.1 * k, 1.1 * k); drawPod(c, 0, t, .6); c.restore();
           if (Pp.state === 'shake' && e > .45) {
-            Pp.state = 'burst'; Pp.t0 = t; Sound.crack(); for (let i = 0; i < 6; i++) setTimeout(() => Sound.ptoo(), i * 60);
+            Pp.state = 'burst'; Pp.t0 = t; Sound.crack(); for (let i = 0; i < 6; i++) ui.later(() => Sound.ptoo(), i * 60);
             Pp.seeds = Array.from({ length: 6 }, () => ({ x: 160, y: 112, vx: rand(60, 290) * (Math.random() < .25 ? -1 : 1), vy: rand(-340, -170), rest: false, rt: 0 }));
           }
           if (Pp.state === 'regrow' && e > 1) Pp.state = 'ready';
@@ -1924,7 +1925,7 @@ const A_produce = {
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t; const b = s.board;
-      if (b && b.fly) return;
+      if (b && b.fly) { Sound.tap(2); return; }
       if (b && b.cut) {
         const bin = binAt(x, y); if (bin) return sort(bin);
         if (onBoardItem(x - b.off[0], y - b.off[1])) { s.drag = { x0: x - b.off[0], y0: y - b.off[1] }; Sound.fwip(); return; }
@@ -2055,7 +2056,7 @@ const A_produce = {
       if (b && !b.cut && st.t - b.t0 > 1.2) { const o = RM ? 0 : (t * 60) % 40; c.save(); c.setLineDash([12, 10]); c.lineDashOffset = -o; c.strokeStyle = C.carrot; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(BOARD[0] - 120, BOARD[1] + 70); c.lineTo(BOARD[0] + 120, BOARD[1] + 70); c.stroke(); c.restore(); label(c, "Swipe to cut!", BOARD[0], BOARD[1] + 96, { size: 20, color: C.carrot }); }
       if (b && b.cut && !b.fly && idle) label(c, "Pick a bin!", 687, 250 - (RM ? 0 : Math.abs(Math.sin(t * 5)) * 6), { size: 22, color: C.carrot });
     };
-    ui.button('Get a new basket', () => { reset(); Sound.pop(); ui.say(A_produce.intro); });
+    ui.button('Get a new basket', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_produce.intro); });
     ui.hint("At home, ask a grown-up to help you cut open a pepper or an apple. Count the seeds!");
     reset();
     return { stage: st, state: () => s, geo: { board: BOARD, bins: Object.fromEntries(Object.entries(BINS).map(([k, b]) => [k, [b.x + b.w / 2, b.y + b.h / 2]])), slot: id => s.slots[id] }, destroy() { st.destroy(); } };
@@ -2098,7 +2099,7 @@ const A_leaf = {
     }
     function sunOut() { Sound.whoosh(); if (!found('sun')) { earn('sun', ...SUN); ui.say('Sunlight! It gives the leaf energy to make food.'); } }
     function water() {
-      if (st.t - s.pourT < 1.2) return; s.pourT = st.t; s.lastAct = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 600);
+      if (st.t - s.pourT < 1.2) { Sound.drip(); return; } s.pourT = st.t; s.lastAct = st.t; Sound.splash(); ui.later(() => Sound.slurp(), 600);
       s.water = Math.min(100, s.water + 45); for (let i = 0; i < 14; i++) s.drops.push({ u: 0, d: i * .12 });
       if (!found('water')) { earn('water', ...CAN); ui.say('Water goes into the roots, up the stem, and into the leaf.'); }
     }
@@ -2110,7 +2111,7 @@ const A_leaf = {
     st.onDown = (x, y) => {
       s.lastAct = st.t;
       // oxygen first (it floats over everything), then the cloud, the sun, the air, the can, the leaf
-      const o = s.o2.find(q => dist(x, y, q.x, q.y) < 26);
+      const o = s.o2.find(q => !q.pop && dist(x, y, q.x, q.y) < 26);   // a popped bubble is gone
       if (o) { o.pop = st.t; Sound.pop(); if (!found('oxygen')) { earn('oxygen', x, y); ui.say('That bubble is <b>oxygen</b>, O-two for short. The leaf lets it out into the air, and we breathe it in!'); } return; }
       if (dist(x, y, s.cloudX + 20, s.cloudY - 4) < 75) { s.drag = { dx: x - s.cloudX, dy: y - s.cloudY, x0: x, y0: y, moved: false }; Sound.fwip(); return; }
       if (dist(x, y, ...SUN) < 60) { Sound.grow(4); return; }
@@ -2143,7 +2144,7 @@ const A_leaf = {
       const stem = new Path2D(); stem.moveTo(...STEM[0]); stem.bezierCurveTo(...STEM[1], ...STEM[2], ...STEM[3]);
       c.save(); c.lineCap = 'round'; c.strokeStyle = C.leafDeep; c.lineWidth = 18; c.stroke(stem); c.strokeStyle = C.stem; c.lineWidth = 11; c.stroke(stem); c.restore();
       // the big leaf (it brightens while the factory runs)
-      c.save(); if (glow) { c.shadowColor = 'rgba(255,236,120,.9)'; c.shadowBlur = 20 + Math.sin(t * 4) * 6; }
+      c.save(); if (glow) { c.shadowColor = 'rgba(255,236,120,.9)'; c.shadowBlur = RM ? 22 : 20 + Math.sin(t * 4) * 6; }
       const g = c.createLinearGradient(...along(0), ...along(1)); g.addColorStop(0, running() ? '#5DBE55' : '#4FAE52'); g.addColorStop(1, running() ? '#9BE08A' : C.leafLight);
       c.fillStyle = g; c.fill(LEAFP); c.shadowBlur = 0; c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.stroke(LEAFP);
       c.strokeStyle = 'rgba(47,125,62,.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(...along(.02)); c.lineTo(...along(.96));
@@ -2228,7 +2229,7 @@ const A_leaf = {
     magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); });
     magBtn.setAttribute('aria-pressed', 'false');
     ui.button('Water', () => water());
-    ui.button('Start over', () => { reset(); Sound.pop(); ui.say(A_leaf.intro); });
+    ui.button('Start over', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_leaf.intro); });
     ui.hint("Try it: put a leafy plant in a sunny window and one in a dark closet for a week. Which one stays green?");
     reset();
     return { stage: st, state: () => s, geo: { sun: SUN, can: CAN, leaf: along(.5), cloud: () => [s.cloudX + 20, s.cloudY - 4] }, destroy() { st.destroy(); } };
@@ -2257,7 +2258,7 @@ const A_celery = {
     const onStalk = (x, y) => Math.abs(x - GLASS[0]) < 130 && y > TOP + 40 && y < GLASS[1] - 90; // a swipe can start beside the stalk
     function addDye(k) {
       if (s.dye) { Sound.tap(3); return ui.say(s.dye === k ? 'The color is already in!' : 'One color at a time. Tap <b>New celery</b> to try the other one!'); }
-      s.dye = k; s.dyeT = st.t; Sound.drip(); setTimeout(() => Sound.drip(), 160); setTimeout(() => Sound.splash(), 380);
+      s.dye = k; s.dyeT = st.t; Sound.drip(); ui.later(() => Sound.drip(), 160); ui.later(() => Sound.splash(), 380);
       earn('color', ...BOTTLES[k]); ui.say(k === 'blue' ? 'Drip, drip! Now the water is blue. Tap the <b>clock</b> to let the hours go by.' : 'Drip, drip! Now the water is red. Tap the <b>clock</b> to let the hours go by.');
     }
     function wait() {
@@ -2367,7 +2368,7 @@ const A_celery = {
       if (s.knife && st.p.down) { st.cursor = 'none'; c.save(); c.translate(st.p.x - 40, st.p.y); c.fillStyle = '#DCE3E8'; c.strokeStyle = C.ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, -8); c.lineTo(70, -5); c.quadraticCurveTo(82, 2, 68, 7); c.lineTo(0, 8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#8A5A36'; c.fill(rrect(-44, -7, 44, 14, 6)); c.stroke(rrect(-44, -7, 44, 14, 6)); c.restore(); }
     };
     ui.button('Wait an hour', () => wait());
-    ui.button('New celery', () => { reset(); Sound.pop(); ui.say(A_celery.intro); });
+    ui.button('New celery', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_celery.intro); });
     ui.hint("Try it for real! Ask a grown-up to cut the bottom off a celery stalk. Stand it in water with lots of food coloring. Check it after one day!");
     reset();
     return { stage: st, state: () => s, geo: { bottles: BOTTLES, clock: CLOCK, window: [WINDOW[0] + WINDOW[2] / 2, WINDOW[1] + WINDOW[3] / 2], stalk: [GLASS[0], 300] }, destroy() { st.destroy(); } };
@@ -2396,7 +2397,7 @@ const A_light = {
     const T = ([lx, ly]) => { const k = tipK(), a = k * PI / 2, cx = CUP[0], cy = lerp(CUP[1], TABLE - 58, k); return [cx + lx * Math.cos(a) - ly * Math.sin(a), cy + lx * Math.sin(a) + ly * Math.cos(a)]; };
     const base = () => { const k = tipK(); return { stem: k * PI / 2, root: PI + k * PI / 2, at: T([0, -70]), rootAt: T([0, -58]) }; };
     function tip() {
-      if (s.tipped) return; s.tipped = true; s.tipT = st.t; s.stemA = PI / 2; s.rootA = PI * 1.5; Sound.boing(); Sound.crack();
+      if (s.tipped) { Sound.tap(2); return; } s.tipped = true; s.tipT = st.t; s.stemA = PI / 2; s.rootA = PI * 1.5; Sound.boing(); Sound.crack();
       ui.say('Whoa, the cup tipped over! Watch the stem and the roots.');
     }
     st.onDown = (x, y) => {
@@ -2455,14 +2456,15 @@ const A_light = {
     st.draw = (c, t, dt) => {
       // time-lapse: a day goes by every second and a bit, and the plant leans toward the light
       if (t - s.dayT > 1.3) { s.dayT = t; s.day++; }
-      const target = s.lampA, upT = s.tipped ? clamp(target, -1.2, 1.2) : target, rate = RM ? 99 : .55;
+      // tipped over, the stem feels which way is up (gravity) and turns up wherever the lamp is, leaning a little toward its light
+      const target = s.lampA, upT = s.tipped ? clamp(target * .4, -.5, .5) : target, rate = RM ? 99 : .55;
       s.stemA += clamp(upT - s.stemA, -rate * dt, rate * dt);
       s.rootA += clamp(PI - s.rootA, -rate * .8 * dt, rate * .8 * dt); // roots turn the short way round to point down
       // what the plant just did, said once
       if (!s.tipped && Math.abs(s.stemA) > .38 && !found('bend')) { s.bentSide = Math.sign(s.stemA); earn('bend', ...lampPos()); ui.say('The plant is bending toward the lamp! Stems grow toward light so the leaves can catch more of it.'); }
       if (!s.tipped && found('bend') && !s.bentSide && Math.abs(s.stemA) > .38) s.bentSide = Math.sign(s.stemA);
       if (!s.tipped && s.bentSide && Math.sign(s.stemA) === -s.bentSide && Math.abs(s.stemA) > .3 && !found('follow')) { earn('follow', ...lampPos()); ui.say('You moved the light, and the plant turned to follow it! Plants keep reaching for the light.'); }
-      if (s.tipped && s.stemA < PI / 2 - .5 && !found('up')) { earn('up', CUP[0] + 100, CUP[1] - 120); ui.say('The stem turned to grow up again! Stems can tell which way is up, and up is toward the light.', { queue: true }); }
+      if (s.tipped && s.stemA < PI / 2 - .5 && !found('up')) { earn('up', CUP[0] + 100, CUP[1] - 120); ui.say('The stem turned to grow up again! Stems can feel which way is up, even in the dark.', { queue: true }); }
       if (s.tipped && s.rootA < PI * 1.22 && !found('roots')) { earn('roots', CUP[0] - 60, CUP[1] + 40); ui.say('And the roots turned to grow down! Roots can feel <b>gravity</b>, the pull that makes a dropped ball fall. It tells them which way is down.', { queue: true }); }
       if (s.earnedHere && A_light.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You found out that stems grow toward light, and roots follow gravity down!', { queue: true }); }
       // a dim room with a table
@@ -2478,7 +2480,7 @@ const A_light = {
       if (!found('bend') && idle) { const [lx, ly] = lampPos(); label(c, "Drag the lamp!", lx, ly - 64 - bob, { size: 20, color: C.carrot }); }
     };
     ui.button('Tip the cup', () => tip());
-    ui.button('New plant', () => { reset(); Sound.pop(); ui.say(A_light.intro); });
+    ui.button('New plant', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_light.intro); });
     ui.hint("Try it: put a plant near a window. After a few days, which way is it leaning? Turn it around and check again!");
     reset();
     return { stage: st, state: () => s, geo: { lamp: () => lampPos(), arcPoint: a => lampPos(a), cup: CUP }, destroy() { st.destroy(); } };
@@ -2513,8 +2515,8 @@ const A_needs = {
     function letWeekPass() {
       if (s.week) { Sound.tap(3); return; }
       if (s.guess < 0) { Sound.boing(); return ui.say('First, tap the plant you think will grow the healthiest!'); }
-      s.week = 1; s.weekT = st.t; Sound.whoosh(); for (let i = 0; i < 7; i++) setTimeout(() => Sound.tone(PENTA[i + 2], .1, 'triangle', .06), i * 380);
-      ui.say(s.guess === 0 ? 'One week later! Your guess was right. Tap each plant to see what happened.' : 'One week later! Let\'s see how your guess did. Tap each plant to see what happened.');
+      s.week = 1; s.weekT = st.t; Sound.whoosh(); for (let i = 0; i < 7; i++) ui.later(() => Sound.tone(PENTA[i + 2], .1, 'triangle', .06), i * 380);
+      // Pip tells how the guess did once the week is over and the boxes are off (see st.draw), not before
     }
     st.onDown = (x, y) => {
       s.lastAct = st.t;
@@ -2522,7 +2524,7 @@ const A_needs = {
       const i = potAt(x, y);
       if (i >= 0) {
         if (!s.week) { s.guess = i; Sound.pop(); Sound.tap(i + 2); if (!found('predict')) earn('predict', POTS[i].x, 300); return ui.say('Good guess! Now tap the <b>calendar</b> to let a week go by.'); }
-        if (grown() < 1) return;
+        if (grown() < 1) { Sound.tap(1); return; }
         Sound.tap(i + 3); s.seen[i] = true;
         const k = ['best', 'water', 'light', null][i]; if (k) earn(k, POTS[i].x, 280);
         ui.say(FACTS[i]);
@@ -2546,7 +2548,8 @@ const A_needs = {
       if (h > 120) { const m = qpt(base, [x - 6, base[1] - h * .6], top, .55); drawLeaf(c, ...m, -160 + droop * 60, ls * .85, green); drawLeaf(c, ...m, -20 + droop * 60, ls * .85, green); }
     }
     st.draw = (c, t, dt) => {
-      const g = grown(), night = s.week && g < 1 ? Math.abs(Math.sin(g * PI * 7)) : 0;
+      const g = grown(), night = s.week && g < 1 && !RM ? Math.abs(Math.sin(g * PI * 7)) : 0;   // days and nights flash by (not with reduced motion)
+      if (s.week && st.t - s.weekT > 3.6 && !s.told.week) { s.told.week = true; ui.say(s.guess === 0 ? 'One week later! Your guess was right. Tap each plant to see what happened.' : 'One week later! Let\'s see how your guess did. Tap each plant to see what happened.', { queue: true }); }
       // a window behind the sill, cycling through the days while the week goes by
       const wg = c.createLinearGradient(0, 0, 0, SILL); wg.addColorStop(0, mix('#86CFEA', '#1D2B5A', night)); wg.addColorStop(1, mix('#E2F6FC', '#3B4C86', night)); c.fillStyle = wg; c.fillRect(0, 0, W, SILL);
       if (night < .5) sun(c, 90, 80, 30, t, { face: true }); else { c.fillStyle = '#FFF8D2'; c.beginPath(); c.arc(90, 80, 22, 0, TAU); c.fill(); }
@@ -2585,7 +2588,7 @@ const A_needs = {
       else if (g >= 1 && !s.seen.every(Boolean) && idle) label(c, "Tap each plant!", 400, 190 - bob, { size: 22, color: C.carrot });
     };
     ui.button('Let a week go by', () => letWeekPass());
-    ui.button('Start over', () => { reset(); Sound.pop(); ui.say(A_needs.intro); });
+    ui.button('Start over', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_needs.intro); });
     ui.hint("Try a fair test at home! Grow two bean sprouts the same way. Put one in a sunny window and one in a dark closet. Give them the same water. Check them every day!");
     reset();
     return { stage: st, state: () => s, geo: { pots: POTS.map(p => [p.x, 330]), calendar: CAL }, destroy() { st.destroy(); } };
@@ -2662,7 +2665,7 @@ const A_quiz = {
       if (right) {
         btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
         results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
-        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+        if (tries === 1) { if (!ui.award('quiz.' + q.id, cx, cy)) Sound.star(); else Sound.tap(7); ui.say(`Yes! ${q.why}`, { lock: true }); }
         else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
         const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
         nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();
@@ -2671,12 +2674,12 @@ const A_quiz = {
     function end() {
       const n = results.filter(x => x === 1).length; box.innerHTML = '';
       const e = document.createElement('div'); e.className = 'q-end';
-      e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : n >= 5 ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
+      e.innerHTML = `<h3>${n === round.length ? 'Perfect round!' : n >= 6 ? 'Great job!' : 'Nice try!'}</h3><div class="stars">${round.map((_, i) => STAR_SVG(results[i] === 1)).join('')}</div><p>You got <b>${n} of ${round.length}</b> right on the first try.</p>`;
       const b = document.createElement('button'); b.className = 'btn go'; b.textContent = 'Play again'; b.onclick = () => { Sound.pop(); newRound(); }; e.appendChild(b);
       box.appendChild(e); Sound.badge(); const r = box.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + 80, 70);
       ui.say(n >= 6 ? 'Wow, you\'re a plant expert! Play again to collect more stars.' : 'Every scientist learns by trying. Play again and see how many you can get!');
     }
-    ui.button('New round', () => { Sound.pop(); newRound(); });
+    ui.button('New round', () => { ui.fresh(); Sound.pop(); newRound(); });
     ui.hint('Stars only count on the first try, so take your time and think!');
     newRound(ui.intro);
     return { destroy() { box.remove(); } };
@@ -2842,6 +2845,8 @@ const Settings = {
     $('#setAuto').checked = Voice.auto; $('#setWait').checked = waitForPip(); $('#setSound').checked = Sound.on; $('#setMusic').checked = Music.on;
     $('#setVoiceVol').value = Math.round(Voice.volume * 100); $('#setSoundVol').value = Math.round(Sound.vol * 100); $('#setMusicVol').value = Math.round(Music.vol * 100);
     document.querySelectorAll('.voice').forEach(b => b.setAttribute('aria-checked', b.dataset.id === Voice.name ? 'true' : 'false'));
+    // the name belongs to whoever is playing now (players switch on this device), unless it's being typed
+    const nm = $('#explorer'); if (nm && document.activeElement !== nm) nm.value = Store.data.name || '';
   },
   save(k, v) { Store.data[k] = v; Store.save(); },
   setAuto(on) { Voice.auto = on; this.save('voiceAuto', on); this.sync(); if (on) Voice.speak('Okay! I\'ll read everything out loud for you.'); else Voice.stop(); },
@@ -2860,8 +2865,9 @@ const Settings = {
   },
 
   // ----- progress -----
-  confirmBtn(btn, label, armedLabel, action) { // two taps: the first one arms the button for 4 seconds
+  confirmBtn(btn, label, armedLabel, action) { // two taps: the first one arms the button for 4 seconds (closing Settings disarms it)
     let armed = 0;
+    btn.disarm = () => { armed = 0; btn.textContent = label; btn.classList.remove('warn'); };
     btn.onclick = () => {
       if (Date.now() - armed < 4000) { armed = 0; btn.textContent = label; btn.classList.remove('warn'); action(); return; }
       armed = Date.now(); btn.textContent = armedLabel; btn.classList.add('warn'); Sound.oops();
@@ -2925,7 +2931,7 @@ const Settings = {
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     // the grown-up page opens behind the dialog, so close Settings to show it
     $('#setGrownups').addEventListener('click', () => { Sound.pop(); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
-    dlg.addEventListener('close', () => Sound.pop());
+    dlg.addEventListener('close', () => { Sound.pop(); dlg.querySelectorAll('button').forEach(b => b.disarm && b.disarm()); });
   }
 };
 /* ============ Home: the Lab campus map (docs/design.md, section 16) ============ */
@@ -2985,18 +2991,20 @@ function homeLots(cols) {
 }
 function topicStars(tp) { const st = Store.data.stars, all = tp.activities.flatMap(a => a.stars); return [all.filter(s => st[s.id]).length, all.length]; }
 
-function renderHome() {
+// fresh: arriving home (Pip stands at the last topic's door, the sky starts over). Otherwise (a sync, a critter found,
+// a resize) the map is rebuilt but keeps its weather, Pip's spot and keyboard focus while the layout is the same shape.
+function renderHome({ fresh = false } = {}) {
   const box = $('#campus'), cssW = box.clientWidth; if (!cssW) return;
-  const cols = cssW < 600 ? 1 : 3;
-  Home.lots = homeLots(cols); Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L); skyLayout(L);
+  const cols = cssW < 600 ? 1 : 3, lots = homeLots(cols), same = !fresh && Home.L && Home.cols === cols && Home.lots.length === lots.length;
+  Home.lots = lots; Home.cols = cols; const L = Home.L = campusLayout(cols, Home.lots.length); groundsLayout(L); gardenLayout(L); skyLayout(L, same);
   Home.samples = trailSamples(L.trail);
   Home.doors = L.lots.map(p => { let best = 0, bd = 1e9; Home.samples.forEach((s, i) => { const d = dist(s.x, s.y, p.x, p.y + 45); if (d < bd) { bd = d; best = i; } }); return best; });
   const last = lastPlace(), li = Home.lots.findIndex(l => l.tp && l.tp.id === last.topic);
-  if (!Home.walk) Home.pipIdx = li >= 0 ? Home.doors[li] : 0;
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  Home.cv.style.aspectRatio = `${L.w} / ${L.h}`; Home.cv.width = Math.round(cssW * dpr); Home.cv.height = Math.round(cssW * dpr * L.h / L.w);
-  // the links, one per lot: the whole building plus its name pill
-  const lotsEl = $('#lots'); lotsEl.innerHTML = '';
+  if (!same) { Home.walk = null; Home.pipIdx = li >= 0 ? Home.doors[li] : 0; }
+  const dpr = Math.min(2, devicePixelRatio || 1), cw = Math.round(cssW * dpr), ch = Math.round(cssW * dpr * L.h / L.w);
+  Home.cv.style.aspectRatio = `${L.w} / ${L.h}`; if (Home.cv.width !== cw || Home.cv.height !== ch) { Home.cv.width = cw; Home.cv.height = ch; }
+  // the links, one per lot: the whole building plus its name pill (a rebuild keeps the focused one focused)
+  const lotsEl = $('#lots'), focused = [...lotsEl.children].indexOf(document.activeElement); lotsEl.innerHTML = ''; Home.hover = same && focused >= 0 ? focused : -1;
   Home.lots.forEach((lot, i) => {
     const p = L.lots[i], bw = 230 * L.scale, top = p.y - 180 * L.scale, bottom = p.y + (cols === 1 ? 118 : 130);
     const el = document.createElement(lot.soon ? 'button' : 'a'); el.className = 'lot' + (lot.soon ? ' soon' : lot.hall ? ' trophy-lot' : '');
@@ -3018,6 +3026,7 @@ function renderHome() {
     el.onpointerleave = el.onblur = () => { if (Home.hover === i) Home.hover = -1; };
     lotsEl.appendChild(el);
   });
+  if (same && lotsEl.children[focused]) lotsEl.children[focused].focus({ preventScroll: true });
   renderKeepGoing();
 }
 function renderKeepGoing() {
@@ -3121,7 +3130,7 @@ function homeInit() {
 function showHome() {
   leaveActivity(); App.view = 'home'; App.topic = null; App.act = null; applyAccent(null);
   document.documentElement.classList.add('at-home'); document.documentElement.classList.remove('in-topic', 'at-hall', 'at-grownups', 'at-privacy', 'at-players');
-  renderHome(); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
+  Home.walk = null; renderHome({ fresh: true }); renderCritters(); refresh(); Sky.autoT = Math.random() < .2 ? Loop.t + rand(6, 14) : null;   // now and then, a shower
   // something new in the Badge Garden or a new landmark: it sparkles, and Pip points it out once
   if (Home.L) {
     const grown = [...Home.L.garden, ...Home.L.landmarks].map(g => g.id), seen = Store.data.gardenSeen || {};
@@ -3291,7 +3300,7 @@ function groundsTap(x, y) {
   } else if (h.kind === 'tree') {
     const tr = L.trees[h.i]; G.shake[h.i] = t; G.taps[h.i] = (G.taps[h.i] || 0) + 1; Sound.fwip(); Sound.tap(1);
     if (!RM) for (let k = 0; k < 2; k++) G.leaves.push({ x: tr.x + rand(-26, 26) * tr.s, y: tr.cy + rand(-14, 10), gy: tr.y + rand(36, 50) * tr.s, t0: t, rot: rand(0, 360), dir: Math.sign(rand(-1, 1)) || 1, color: seasonTree(tr.x).fill });
-    if (G.taps[h.i] % 3 === 0) { G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
+    if (G.taps[h.i] % 3 === 0) { if (!RM) G.birds.push({ x: tr.x, y: tr.cy - 20, t0: t, dir: tr.x > L.w / 2 ? 1 : -1 }); Sound.chirp(.1); }
   } else if (h.kind === 'water') { G.ripples.push({ x, y, t0: t }); Sound.drip(); critterWater(x, y); }
   else if (h.kind === 'trail') strollTo(h.i);
   return true;
@@ -3300,7 +3309,8 @@ function groundsTap(x, y) {
 function pokePip() { Sound.ensure(); Grounds.pokeT = Loop.t; Sound.babble(3); say(pipFact(), { lock: false }); }
 // the button follows him around the map
 function placePipBtn(x, y) {
-  const L = Home.L, b = $('#pipBtn'), w = 70, h = 76, st = { left: (x - w / 2) / L.w * 100 + '%', top: (y - h * .55) / L.h * 100 + '%', width: w / L.w * 100 + '%', height: h / L.h * 100 + '%' };
+  // at least 46 CSS px each way, however small the map is drawn (a phone)
+  const L = Home.L, b = $('#pipBtn'), k = L.w / (Home.cv.clientWidth || L.w), w = Math.max(70, 46 * k), h = Math.max(76, 46 * k), st = { left: (x - w / 2) / L.w * 100 + '%', top: (y - h * .55) / L.h * 100 + '%', width: w / L.w * 100 + '%', height: h / L.h * 100 + '%' };
   for (const k in st) if (b.style[k] !== st[k]) b.style[k] = st[k];
 }
 // Pip shares a fact from an activity you've played, a different one each time until they've all been said
@@ -3314,6 +3324,7 @@ function pipFact() {
 function pipIdxNow(t = Loop.t) { const w = Home.walk; return w ? lerp(w.from, w.to, ease(clamp((t - w.t0) / w.dur, 0, 1))) : Home.pipIdx; }
 function strollTo(i) {
   const from = pipIdxNow(); Sound.hop();
+  if (Home.walk && Home.walk.href) return;   // already on his way into a building: that tap wins
   if (RM) { Home.walk = null; Home.pipIdx = i; return; }
   Home.walk = { from, to: i, t0: Loop.t, dur: clamp(.3 + Math.abs(i - from) / 70, .3, 1.3), href: null };
 }
@@ -3469,7 +3480,7 @@ const GARDEN = {
     const top = ellipse(0, -100, 16, 10); c.fillStyle = '#F2C95E'; c.fill(top); c.stroke(top);
     c.fillStyle = C.ink; c.beginPath(); c.ellipse(0, -30, 9, 6, 0, 0, TAU); c.fill();
     const k = poked(e, 2.4), n = k ? 3 : 1;
-    for (let i = 0; i < n; i++) { const a = t * (k ? 3 : 1.2) + i * 2.1, r = k ? 60 * Math.sin(PI * (1 - k)) + 26 : 46; bee(c, Math.cos(a) * r, -70 + Math.sin(a) * r * .5, t, .45, { flip: Math.sin(a) > 0 }); }
+    for (let i = 0; i < n; i++) { const a = (RM ? 1 : t * (k ? 3 : 1.2)) + i * 2.1, r = k ? 60 * Math.sin(PI * (1 - k)) + 26 : 46; bee(c, Math.cos(a) * r, -70 + Math.sin(a) * r * .5, t, .45, { flip: Math.sin(a) > 0 }); }
   } },
   pumpkins: { sound() { [3, 5, 7].forEach((n, i) => Sound.xylo(PENTA[n] / 2, i * .12)); }, draw(c, t, e) {
     c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.beginPath(); c.moveTo(-50, -10); c.bezierCurveTo(-20, -40, 20, 0, 50, -20); c.stroke();
@@ -3622,10 +3633,11 @@ const glowAround = (h, at, w) => clamp(1 - Math.abs(h - at) / w, 0, 1);
 Sky.season = () => ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'autumn', 'autumn', 'autumn', 'winter'][Sky.now().getMonth()];
 const AUTUMN = ['#E8933A', '#D9574A', '#E8B84A', '#C9702E'];
 
-function skyLayout(L) {
-  const wide = L.cols !== 1, r = seeded(11);
-  Sky.clouds = (wide ? [[150, 80], [900, 40], [1300, L.h * .68]] : [[80, 60], [380, L.h * .45], [200, L.h * .8]]).map(([x, y]) => ({ x, y, s: wide ? 1.3 : 1.1, v: 6 + r() * 5, rainT: -99, snow: false }));
-  Sky.puddles = []; Sky.fireflies = Array.from({ length: wide ? 16 : 10 }, () => ({ x: r() * L.w, y: L.h * (.35 + r() * .6), p: r() * TAU }));
+// keep: the map was only rebuilt (same shape), so the clouds, their rain and the puddles stay as they are
+function skyLayout(L, keep = false) {
+  const wide = L.cols !== 1, r = seeded(11), clouds = (wide ? [[150, 80], [900, 40], [1300, L.h * .68]] : [[80, 60], [380, L.h * .45], [200, L.h * .8]]).map(([x, y]) => ({ x, y, s: wide ? 1.3 : 1.1, v: 6 + r() * 5, rainT: -99, snow: false }));
+  if (!keep || Sky.clouds.length !== clouds.length) { Sky.clouds = clouds; Sky.puddles = []; }
+  Sky.fireflies = Array.from({ length: wide ? 16 : 10 }, () => ({ x: r() * L.w, y: L.h * (.35 + r() * .6), p: r() * TAU }));
 }
 const cloudX = (k, t) => { const span = Home.L.w + 260; return ((k.x + (RM ? 0 : t * k.v)) % span + span) % span - 130; };
 const raining = (k, t) => t - k.rainT < 5;
@@ -3746,11 +3758,11 @@ function critterSpots(t = Loop.t) {
   const L = Home.L, G = Grounds, out = {}; if (!L || !L.pond) return out;
   if (G.bloom[2] && t - G.bloom[2] > .5) { const f = L.flowers[2]; out.ladybug = { x: f.x + 7, y: f.y - 5 }; }
   const P = L.pond, reed = { x: P.x + .82 * P.rx, y: P.y - P.ry * .2 };
-  if (t - Critters.reedT < 7) out.snail = { x: reed.x - 4 + Math.min(1, (t - Critters.reedT) / 1.2) * 26, y: reed.y + 6 };
+  if (t - Critters.reedT < 7) out.snail = { x: reed.x - 4 + (RM ? 1 : Math.min(1, (t - Critters.reedT) / 1.2)) * 26, y: reed.y + 6 };
   if (G.rock.open && rockAt(t).o > .9) out.pillbug = { x: L.rock.x, y: L.rock.y + 4 };
   const ti = owlTree(), tr = L.trees[ti]; if (tr && (t - (G.shake[ti] ?? -99) < 6 || Sky.night() > .5)) out.owl = { x: tr.x + 12 * tr.s, y: tr.cy - 4 * tr.s, s: tr.s };
   if (t - Critters.wormT < 7) out.worm = { x: Critters.wormX, y: L.bed.y + 2 };
-  if (Critters.fishAt && t - Critters.fishT < 6) { const e = Math.min(1, (t - Critters.fishT) / 1), a = Critters.fishAt; out.fish = { x: a.x + e * 50, y: a.y - Math.sin(PI * e) * 60, jump: e < 1 }; }
+  if (Critters.fishAt && t - Critters.fishT < 6) { const e = RM ? 1 : Math.min(1, (t - Critters.fishT) / 1), a = Critters.fishAt; out.fish = { x: a.x + e * 50, y: a.y - Math.sin(PI * e) * 60, jump: e < 1 }; }
   return out;
 }
 // the owl naps in the tree farthest down the map
@@ -3961,7 +3973,12 @@ const Grownup = {
   get demo() { return !!(this.s && this.s.demo); },
   save(s) { this.s = s; store2.set(GROWNUP_KEY, s); },
   // what the API says the app needs to reach Cognito
-  async config() { return this.cfg || (this.cfg = await (await fetch('/api/config')).json()); },
+  async config() {   // kept only once it's real, so one failed load doesn't break sign-in until a reload
+    if (this.cfg) return this.cfg;
+    const j = await fetch('/api/config').then(r => r.json()).catch(() => null);
+    if (!j || !j.region || !j.clientId) throw new ApiError(0, "Couldn’t reach Wonder Lab. Check the connection and try again.");
+    return (this.cfg = j);
+  },
   async cognito(target, body) {
     const cfg = await this.config();
     const r = await fetch(`https://cognito-idp.${cfg.region}.amazonaws.com/`, { method: 'POST', body: JSON.stringify({ ClientId: cfg.clientId, ...body }),
@@ -4003,8 +4020,12 @@ const Grownup = {
   async idToken() {
     if (!this.s || !this.s.refresh) return null;
     if (Date.now() < this.s.exp - 60000) return this.s.id;
+    // only Cognito saying no to the refresh token signs the grown-up out; a network blip just fails this request
     try { const r = await this.cognito('InitiateAuth', { AuthFlow: 'REFRESH_TOKEN_AUTH', AuthParameters: { REFRESH_TOKEN: this.s.refresh } }); this.keep(this.s.email, r.AuthenticationResult); return this.s.id; }
-    catch (e) { this.save(null); return null; }
+    catch (e) {
+      if (e.code === 'NotAuthorizedException' || e.code === 'UserNotFoundException') { this.save(null); return null; }
+      throw new ApiError(0, "Couldn’t reach Wonder Lab. Check the connection and try again.");
+    }
   },
   async signOut() {
     const s = this.s; this.save(null);
@@ -4030,7 +4051,9 @@ const Api = {
     else if (!anon) { const t = await Grownup.idToken(); if (!t) throw new ApiError(401, "Please sign in again."); headers['X-Wonder-Auth'] = `Bearer ${t}`; }
     if (data) headers['x-amz-content-sha256'] = await sha256Hex(data);
     const r = await fetch(`/api${path}`, { method, headers, body: data });
-    const j = await r.json().catch(() => ({}));
+    // the API always answers JSON; anything else (CloudFront serves the app page for a 403) is a failure, never a success
+    const json = /application\/json/.test(r.headers.get('content-type') || ''), j = json ? await r.json().catch(() => null) : null;
+    if (!j) throw new ApiError(r.ok ? 502 : r.status, 'Something went wrong');
     if (!r.ok) { if (r.status === 401 && !device && !anon) Grownup.save(null); throw new ApiError(r.status, j.error || 'Something went wrong'); }
     return j;
   },
@@ -4156,7 +4179,7 @@ function drawKidPip(cv, look, t = 1) {
 /* ============ The grown-up page (#/grownups) ============ */
 // For parents and teachers: sign in with an emailed code, make a family or a class, add kids, hand out the group code or
 // print login cards. Plain, calm HTML for adults: no Pip narration here. "Try the demo" runs it all in this browser.
-const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {}, invites: null, invited: '' };
+const GU = { flow: null, me: null, busy: false, msg: '', starsOf: {}, invites: null, invited: '', email: '' };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const joinLink = code => `${location.origin}/#/join/${code}`;
 const KIND_LABEL = { family: 'Family', class: 'Class' };
@@ -4197,7 +4220,7 @@ function renderGrownups() {
       <p>Set up a profile for each child, or for a whole class. Their stars then follow them to any device, even an incognito window.</p>
       <p class="gu-fine">Wonder Lab is invite-only for now. If you've been invited, sign in with that email.</p>
       ${!f ? `<form id="guEmail" class="gu-form"><label for="guEmailIn">Your email</label>
-        <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
+        <div class="gu-row"><input id="guEmailIn" type="email" autocomplete="email" required placeholder="you@example.com" value="${esc(GU.email)}"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Send me a code</button></div>
         <small>No password. We email you a 6-digit code each time you sign in.</small></form>`
       : `<form id="guCode" class="gu-form"><label for="guCodeIn">We emailed a 6-digit code to <b>${esc(f.email)}</b></label>
         <div class="gu-row"><input id="guCodeIn" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" maxlength="8" required placeholder="123456"><button class="btn go" ${GU.busy ? 'disabled' : ''}>Sign in</button></div>
@@ -4207,7 +4230,7 @@ function renderGrownups() {
       <p class="gu-fine">We keep your email only to send sign-in codes. Kids' profiles hold a nickname, a Pip color and their progress, nothing else. <a href="#/privacy">Privacy</a></p>
     </div>`;
     const ef = $('#guEmail'), cf = $('#guCode');
-    if (ef) ef.onsubmit = e => { e.preventDefault(); const email = $('#guEmailIn').value.trim(); guDo(async () => { GU.flow = await Grownup.start(email); }); };
+    if (ef) ef.onsubmit = e => { e.preventDefault(); const email = GU.email = $('#guEmailIn').value.trim(); guDo(async () => { GU.flow = await Grownup.start(email); }); };
     if (cf) { cf.onsubmit = e => { e.preventDefault(); const code = $('#guCodeIn').value.trim(); guDo(async () => { try { await Grownup.finish(GU.flow, code); GU.flow = null; await loadGroups(); } catch (x) { throw new Error(codeTrouble(x)); } }); }; setTimeout(() => $('#guCodeIn') && $('#guCodeIn').focus(), 0); }
     const again = $('#guAgain'); if (again) again.onclick = () => { GU.flow = null; GU.msg = ''; renderGrownups(); };
     $('#guDemo').onclick = () => { Grownup.startDemo(); loadGroups(); };
@@ -4247,9 +4270,14 @@ function invitesCard() {
 }
 function wireInvites() {
   $('#guInvite').onsubmit = e => { e.preventDefault(); const email = $('#guInviteIn').value.trim().toLowerCase(); guDo(async () => { await Api.call('POST', '/invites', { email }); GU.invited = email; await loadGroups(); }); };
-  if ($('#guCopyNote')) $('#guCopyNote').onclick = e => { navigator.clipboard && navigator.clipboard.writeText($('#guNote').textContent); e.target.textContent = 'Copied!'; };
+  if ($('#guCopyNote')) $('#guCopyNote').onclick = e => copyText($('#guNote').textContent, e.target, 'Copy message');
   document.querySelectorAll('[data-uninvite]').forEach(b => { b.onclick = () => guAsk({ title: `Remove the invite for ${b.dataset.uninvite}?`, ok: 'Remove', danger: true })
     .then(yes => yes && guDo(async () => { await Api.call('DELETE', `/invites/${encodeURIComponent(b.dataset.uninvite)}`); GU.invited = ''; await loadGroups(); })); });
+}
+// "Copied!" only when the copy worked; otherwise say so, so the grown-up can select the text by hand
+async function copyText(text, btn, label) {
+  let done = false; try { if (navigator.clipboard) { await navigator.clipboard.writeText(text); done = true; } } catch (e) {}
+  btn.textContent = done ? 'Copied!' : 'Couldn\u2019t copy'; setTimeout(() => { if (btn.isConnected) btn.textContent = label; }, 1500);
 }
 function codeTrouble(e) {
   if (e.code === 'CodeMismatchException') return "That code didn’t match. Check the email and try again.";
@@ -4279,7 +4307,7 @@ function groupCard(g) {
 function wireGroup(g) {
   const el = document.querySelector(`.gu-group[data-group="${g.id}"]`), q = s => el.querySelector(s);
   q('[data-rename]').onclick = () => guAsk({ title: `Rename ${g.name}`, input: g.name, ok: 'Save' }).then(v => v && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { name: v }); await loadGroups(); }));
-  q('[data-copy]').onclick = e => { navigator.clipboard && navigator.clipboard.writeText(g.code); e.target.textContent = 'Copied!'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1500); };
+  q('[data-copy]').onclick = e => copyText(g.code, e.target, 'Copy');
   q('[data-newcode]').onclick = () => guAsk({ title: "Make a new group code?", text: "The old code stops working. Kids already signed in stay signed in.", ok: 'New code' })
     .then(yes => yes && guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { newCode: true }); await loadGroups(); }));
   q('[data-pictures]').onchange = e => guDo(async () => { await Api.call('PATCH', `/groups/${g.id}`, { pictures: e.target.checked }); await loadGroups(); });
@@ -4310,7 +4338,10 @@ function guAsk({ title, text = '', input = null, looks = null, extra = '', ok = 
       ${extra ? `<label class="gu-toggle"><input type="checkbox" name="extra"> ${esc(extra)}</label>` : ''}
       <div class="gu-dbtns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn ${danger ? 'danger' : 'go'}" value="ok">${esc(ok)}</button></div></form>`;
     document.body.appendChild(d);
+    // going somewhere else (Back, a link) cancels the question, so its action never runs from another page
+    const leave = () => d.close('cancel'); addEventListener('hashchange', leave);
     d.addEventListener('close', () => {
+      removeEventListener('hashchange', leave);
       const f = new FormData(d.querySelector('form')), yes = d.returnValue === 'ok', t = f.get('text');
       d.remove(); if (!yes) return resolve(null);
       if (looks) return resolve({ text: String(t || '').trim(), look: f.get('look'), extra: !!f.get('extra') });
@@ -4768,6 +4799,11 @@ function makeUI(intro) {
     showAll: false,
     intro, // what Pip says as the tab opens; an html activity says it itself (the quiz adds it to its first question)
     say, award,
+    // a sound or effect a moment from now; cleared when the activity resets or closes, so it never plays in the next one
+    timers: new Set(),
+    later(fn, ms) { const h = setTimeout(() => { ui.timers.delete(h); fn(); }, ms); ui.timers.add(h); return h; },
+    // an in-activity reset ("Start over", "Get a new bean"...): drop pending effects and the lines Pip had queued for the old one
+    fresh() { for (const h of ui.timers) clearTimeout(h); ui.timers.clear(); App.sayQ.length = 0; },
     button(text, fn, cls = '') { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = text; b.onclick = e => { Sound.ensure(); if (inputLocked()) return nudge(e.clientX || b.getBoundingClientRect().left + 30, e.clientY || b.getBoundingClientRect().top + 10); fn(); }; $('#actions').appendChild(b); return b; },
     hint(text) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = text; $('#extra').appendChild(p); return p; },
     extraEl(tagName, cls) { const e = document.createElement(tagName); e.className = cls; $('#extra').appendChild(e); return e; }
@@ -4781,6 +4817,7 @@ function applyAccent(tp) { const st = document.documentElement.style; for (const
 // stop whatever is running: the activity, Pip mid-sentence, queued lines, the listen hold, sound loops
 function leaveActivity() {
   if (App.inst) { try { App.inst.destroy(); } catch (e) { console.error(e); } App.inst = null; }
+  if (App.ui) { App.ui.fresh(); App.ui = null; }
   Sound.buzz(false); Voice.stop(); App.sayQ.length = 0; stopListening();
 }
 function mount(a, lead = '') {
@@ -4791,7 +4828,7 @@ function mount(a, lead = '') {
   refresh();
   let intro = (lead ? lead + ' ' : '') + a.intro;
   if (!App.greeted) { App.greeted = true; const n = explorerName(); intro = `Hi${n ? ' ' + n : ''}! I'm <b>Pip</b>, a bean seed. ` + intro; }
-  App.inst = a.mount(host, makeUI(intro)) || {};
+  App.ui = makeUI(intro); App.inst = a.mount(host, App.ui) || {};
   if (!a.html) say(intro);
 }
 // The page opens before the first tap allows sound, so Pip's opening line is shown but not heard.

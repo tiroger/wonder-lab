@@ -27,7 +27,7 @@ const A_flower = {
     function slotOf(p) { return p.kind === 'petal' ? { x: 50 + p.slot * 38, y: 540, r: -6 + p.slot * 3, s: .3 } : { x: 640 + p.slot * 70, y: 540, r: 0, s: .5 }; }
     function pose(p) {
       if (p.removed) { const e = ease(clamp(p.fly, 0, 1)), sl = slotOf(p); return { x: lerp(p.rx, sl.x, e), y: lerp(p.ry, sl.y, e) - Math.sin(e * PI) * 60, r: lerp(p.ang, sl.r, e), s: lerp(1, sl.s, e) }; }
-      return { x: B[0] + p.dx, y: B[1] + p.dy, r: p.ang + (p === s.drag?.p ? Math.sin(st.t * 20) * 3 : 0), s: 1 };
+      return { x: B[0] + p.dx, y: B[1] + p.dy, r: p.ang + (p === s.drag?.p && !RM ? Math.sin(st.t * 20) * 3 : 0), s: 1 };
     }
     const pathOf = p => { const o = pose(p); return xf(p.kind === 'petal' ? PET : SEP, o.x, o.y, o.r, o.s); };
     function drawPiece(c, p, hl) {
@@ -126,7 +126,7 @@ const A_flower = {
       const orx = lerp(20, 60, fr), ory = lerp(28, 64, fr), oy = O[1] - fr * 22;
       c.save(); c.globalAlpha = 1 - fr * .85; if (hvGlow === 'pistil') glowOn(c); c.lineCap = 'round'; c.strokeStyle = '#8CC063'; c.lineWidth = 9; c.stroke(STYLE); c.shadowBlur = 0; c.strokeStyle = '#B8DF8C'; c.lineWidth = 4; c.stroke(STYLE);
       c.fillStyle = '#C8E06A'; c.strokeStyle = '#7FA23A'; c.lineWidth = 2.5; for (const [dx, dy] of [[-8, 0], [8, 0], [0, -8]]) { c.beginPath(); c.arc(STIG[0] + dx, STIG[1] + dy, 9, 0, TAU); c.fill(); c.stroke(); }
-      sparkle(c, STIG[0] + 6, STIG[1] - 12, 4 + Math.abs(Math.sin(t * 4)) * 3); c.restore();
+      sparkle(c, STIG[0] + 6, STIG[1] - 12, RM ? 6 : 4 + Math.abs(Math.sin(t * 4)) * 3); c.restore();
       c.save(); if (hvGlow === 'pistil') glowOn(c); const og = c.createRadialGradient(O[0] - 8, oy - 10, 4, O[0], oy, ory); og.addColorStop(0, mix('#CFEA92', '#FFB27A', fr)); og.addColorStop(1, mix('#8CC063', '#EF6F3A', fr));
       c.fillStyle = og; c.beginPath(); c.ellipse(O[0], oy, orx, ory, 0, 0, TAU); c.fill(); c.shadowBlur = 0; c.strokeStyle = mix('#5E8F34', '#B8451E', fr); c.lineWidth = 3; c.stroke(); c.restore();
       s.cut += ((s.cutOn ? 1 : 0) - s.cut) * Math.min(1, dt * 4);
@@ -156,14 +156,14 @@ const A_flower = {
       // the bee
       const b = s.bee;
       if (b) {
-        if (!b.drag && !b.done) { const hx = 700, hy = 120; b.x += (hx + Math.sin(t * 2) * 14 - b.x) * Math.min(1, dt * 3); b.y += (hy + Math.sin(t * 3) * 10 - b.y) * Math.min(1, dt * 3); }
+        if (!b.drag && !b.done) { const hx = 700, hy = 120; b.x += (hx + (RM ? 0 : Math.sin(t * 2) * 14) - b.x) * Math.min(1, dt * 3); b.y += (hy + (RM ? 0 : Math.sin(t * 3) * 10) - b.y) * Math.min(1, dt * 3); }
         if (b.done) { b.gone += dt; b.x += 160 * dt * (b.gone > .8 ? 1 : 0); b.y -= 60 * dt * (b.gone > .8 ? 1 : 0); }
         if (b.x < 900) { bee(c, b.x, b.y, t, 1.4, { pollen: b.pollen, flip: !b.done }); if (dist(st.p.x, st.p.y, b.x, b.y) < 42 && !b.done) st.cursor = 'grab'; }
         if (!b.pollen && !b.drag) label(c, 'Drag me!', b.x, b.y - 46, { size: 18, color: C.carrot });
       }
       if (left('petal') === 5 && t - s.lastAct > 5) label(c, 'Drag a petal away!', 400, 60, { size: 26, color: C.carrot });
     };
-    ui.button('Get a new flower', () => { reset(); Sound.pop(); ui.say(A_flower.intro); });
+    ui.button('Get a new flower', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_flower.intro); });
     const lb = ui.button('Show all labels', () => { ui.showAll = !ui.showAll; lb.setAttribute('aria-pressed', ui.showAll); Sound.fwip(); }); lb.setAttribute('aria-pressed', 'false'); ui.showAll = false;
     ui.hint('Real flowers have the same parts. Next time you see one, look for the stamens and the pistil!');
     reset();

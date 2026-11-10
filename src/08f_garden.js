@@ -31,7 +31,7 @@ const GARDEN = {
     const top = ellipse(0, -100, 16, 10); c.fillStyle = '#F2C95E'; c.fill(top); c.stroke(top);
     c.fillStyle = C.ink; c.beginPath(); c.ellipse(0, -30, 9, 6, 0, 0, TAU); c.fill();
     const k = poked(e, 2.4), n = k ? 3 : 1;
-    for (let i = 0; i < n; i++) { const a = t * (k ? 3 : 1.2) + i * 2.1, r = k ? 60 * Math.sin(PI * (1 - k)) + 26 : 46; bee(c, Math.cos(a) * r, -70 + Math.sin(a) * r * .5, t, .45, { flip: Math.sin(a) > 0 }); }
+    for (let i = 0; i < n; i++) { const a = (RM ? 1 : t * (k ? 3 : 1.2)) + i * 2.1, r = k ? 60 * Math.sin(PI * (1 - k)) + 26 : 46; bee(c, Math.cos(a) * r, -70 + Math.sin(a) * r * .5, t, .45, { flip: Math.sin(a) > 0 }); }
   } },
   pumpkins: { sound() { [3, 5, 7].forEach((n, i) => Sound.xylo(PENTA[n] / 2, i * .12)); }, draw(c, t, e) {
     c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.beginPath(); c.moveTo(-50, -10); c.bezierCurveTo(-20, -40, 20, 0, 50, -20); c.stroke();

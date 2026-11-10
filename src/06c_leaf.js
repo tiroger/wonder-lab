@@ -35,7 +35,7 @@ const A_leaf = {
     }
     function sunOut() { Sound.whoosh(); if (!found('sun')) { earn('sun', ...SUN); ui.say('Sunlight! It gives the leaf energy to make food.'); } }
     function water() {
-      if (st.t - s.pourT < 1.2) return; s.pourT = st.t; s.lastAct = st.t; Sound.splash(); setTimeout(() => Sound.slurp(), 600);
+      if (st.t - s.pourT < 1.2) { Sound.drip(); return; } s.pourT = st.t; s.lastAct = st.t; Sound.splash(); ui.later(() => Sound.slurp(), 600);
       s.water = Math.min(100, s.water + 45); for (let i = 0; i < 14; i++) s.drops.push({ u: 0, d: i * .12 });
       if (!found('water')) { earn('water', ...CAN); ui.say('Water goes into the roots, up the stem, and into the leaf.'); }
     }
@@ -47,7 +47,7 @@ const A_leaf = {
     st.onDown = (x, y) => {
       s.lastAct = st.t;
       // oxygen first (it floats over everything), then the cloud, the sun, the air, the can, the leaf
-      const o = s.o2.find(q => dist(x, y, q.x, q.y) < 26);
+      const o = s.o2.find(q => !q.pop && dist(x, y, q.x, q.y) < 26);   // a popped bubble is gone
       if (o) { o.pop = st.t; Sound.pop(); if (!found('oxygen')) { earn('oxygen', x, y); ui.say('That bubble is <b>oxygen</b>, O-two for short. The leaf lets it out into the air, and we breathe it in!'); } return; }
       if (dist(x, y, s.cloudX + 20, s.cloudY - 4) < 75) { s.drag = { dx: x - s.cloudX, dy: y - s.cloudY, x0: x, y0: y, moved: false }; Sound.fwip(); return; }
       if (dist(x, y, ...SUN) < 60) { Sound.grow(4); return; }
@@ -80,7 +80,7 @@ const A_leaf = {
       const stem = new Path2D(); stem.moveTo(...STEM[0]); stem.bezierCurveTo(...STEM[1], ...STEM[2], ...STEM[3]);
       c.save(); c.lineCap = 'round'; c.strokeStyle = C.leafDeep; c.lineWidth = 18; c.stroke(stem); c.strokeStyle = C.stem; c.lineWidth = 11; c.stroke(stem); c.restore();
       // the big leaf (it brightens while the factory runs)
-      c.save(); if (glow) { c.shadowColor = 'rgba(255,236,120,.9)'; c.shadowBlur = 20 + Math.sin(t * 4) * 6; }
+      c.save(); if (glow) { c.shadowColor = 'rgba(255,236,120,.9)'; c.shadowBlur = RM ? 22 : 20 + Math.sin(t * 4) * 6; }
       const g = c.createLinearGradient(...along(0), ...along(1)); g.addColorStop(0, running() ? '#5DBE55' : '#4FAE52'); g.addColorStop(1, running() ? '#9BE08A' : C.leafLight);
       c.fillStyle = g; c.fill(LEAFP); c.shadowBlur = 0; c.strokeStyle = C.leafDeep; c.lineWidth = 4; c.stroke(LEAFP);
       c.strokeStyle = 'rgba(47,125,62,.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(...along(.02)); c.lineTo(...along(.96));
@@ -165,7 +165,7 @@ const A_leaf = {
     magBtn = ui.button('Magnifying glass', () => { mag = !mag; magBtn.setAttribute('aria-pressed', mag); Sound.fwip(); });
     magBtn.setAttribute('aria-pressed', 'false');
     ui.button('Water', () => water());
-    ui.button('Start over', () => { reset(); Sound.pop(); ui.say(A_leaf.intro); });
+    ui.button('Start over', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_leaf.intro); });
     ui.hint("Try it: put a leafy plant in a sunny window and one in a dark closet for a week. Which one stays green?");
     reset();
     return { stage: st, state: () => s, geo: { sun: SUN, can: CAN, leaf: along(.5), cloud: () => [s.cloudX + 20, s.cloudY - 4] }, destroy() { st.destroy(); } };

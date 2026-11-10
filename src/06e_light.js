@@ -21,7 +21,7 @@ const A_light = {
     const T = ([lx, ly]) => { const k = tipK(), a = k * PI / 2, cx = CUP[0], cy = lerp(CUP[1], TABLE - 58, k); return [cx + lx * Math.cos(a) - ly * Math.sin(a), cy + lx * Math.sin(a) + ly * Math.cos(a)]; };
     const base = () => { const k = tipK(); return { stem: k * PI / 2, root: PI + k * PI / 2, at: T([0, -70]), rootAt: T([0, -58]) }; };
     function tip() {
-      if (s.tipped) return; s.tipped = true; s.tipT = st.t; s.stemA = PI / 2; s.rootA = PI * 1.5; Sound.boing(); Sound.crack();
+      if (s.tipped) { Sound.tap(2); return; } s.tipped = true; s.tipT = st.t; s.stemA = PI / 2; s.rootA = PI * 1.5; Sound.boing(); Sound.crack();
       ui.say('Whoa, the cup tipped over! Watch the stem and the roots.');
     }
     st.onDown = (x, y) => {
@@ -80,14 +80,15 @@ const A_light = {
     st.draw = (c, t, dt) => {
       // time-lapse: a day goes by every second and a bit, and the plant leans toward the light
       if (t - s.dayT > 1.3) { s.dayT = t; s.day++; }
-      const target = s.lampA, upT = s.tipped ? clamp(target, -1.2, 1.2) : target, rate = RM ? 99 : .55;
+      // tipped over, the stem feels which way is up (gravity) and turns up wherever the lamp is, leaning a little toward its light
+      const target = s.lampA, upT = s.tipped ? clamp(target * .4, -.5, .5) : target, rate = RM ? 99 : .55;
       s.stemA += clamp(upT - s.stemA, -rate * dt, rate * dt);
       s.rootA += clamp(PI - s.rootA, -rate * .8 * dt, rate * .8 * dt); // roots turn the short way round to point down
       // what the plant just did, said once
       if (!s.tipped && Math.abs(s.stemA) > .38 && !found('bend')) { s.bentSide = Math.sign(s.stemA); earn('bend', ...lampPos()); ui.say('The plant is bending toward the lamp! Stems grow toward light so the leaves can catch more of it.'); }
       if (!s.tipped && found('bend') && !s.bentSide && Math.abs(s.stemA) > .38) s.bentSide = Math.sign(s.stemA);
       if (!s.tipped && s.bentSide && Math.sign(s.stemA) === -s.bentSide && Math.abs(s.stemA) > .3 && !found('follow')) { earn('follow', ...lampPos()); ui.say('You moved the light, and the plant turned to follow it! Plants keep reaching for the light.'); }
-      if (s.tipped && s.stemA < PI / 2 - .5 && !found('up')) { earn('up', CUP[0] + 100, CUP[1] - 120); ui.say('The stem turned to grow up again! Stems can tell which way is up, and up is toward the light.', { queue: true }); }
+      if (s.tipped && s.stemA < PI / 2 - .5 && !found('up')) { earn('up', CUP[0] + 100, CUP[1] - 120); ui.say('The stem turned to grow up again! Stems can feel which way is up, even in the dark.', { queue: true }); }
       if (s.tipped && s.rootA < PI * 1.22 && !found('roots')) { earn('roots', CUP[0] - 60, CUP[1] + 40); ui.say('And the roots turned to grow down! Roots can feel <b>gravity</b>, the pull that makes a dropped ball fall. It tells them which way is down.', { queue: true }); }
       if (s.earnedHere && A_light.stars.every(q => Store.data.stars[q.id]) && !s.told.all) { s.told.all = true; ui.say('You found out that stems grow toward light, and roots follow gravity down!', { queue: true }); }
       // a dim room with a table
@@ -103,7 +104,7 @@ const A_light = {
       if (!found('bend') && idle) { const [lx, ly] = lampPos(); label(c, "Drag the lamp!", lx, ly - 64 - bob, { size: 20, color: C.carrot }); }
     };
     ui.button('Tip the cup', () => tip());
-    ui.button('New plant', () => { reset(); Sound.pop(); ui.say(A_light.intro); });
+    ui.button('New plant', () => { ui.fresh(); reset(); Sound.pop(); ui.say(A_light.intro); });
     ui.hint("Try it: put a plant near a window. After a few days, which way is it leaning? Turn it around and check again!");
     reset();
     return { stage: st, state: () => s, geo: { lamp: () => lampPos(), arcPoint: a => lampPos(a), cup: CUP }, destroy() { st.destroy(); } };
