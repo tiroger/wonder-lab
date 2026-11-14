@@ -27,7 +27,7 @@ const A_station = {
       vane: { ok: () => s.windSeen, tip: 'This is a <b>wind vane</b>. <b>Swipe across the sky</b> to make some wind!', star: 'A <b>wind vane</b> turns to point to where the wind is coming from. Swipe the other way and watch it turn!' },
       anemo: { ok: () => s.windSeen, tip: 'This is an <b>anemometer</b>. Its cups catch the wind. <b>Swipe across the sky</b> to make wind!', star: 'The cups are spinning! An <b>anemometer</b> measures how fast the wind blows. The faster they spin, the stronger the wind.' },
       gauge: { ok: () => s.rain > .2, tip: 'This is a <b>rain gauge</b>. <b>Drag the cloud</b> over it, then tap the cloud to make it rain!', star: 'Look how much rain it caught! A <b>rain gauge</b> measures how much rain fell.' },
-      baro: { ok: () => s.press < .5, tip: 'This is a <b>barometer</b>. It measures <b>air pressure</b>, the push of the air all around us. When a storm is coming, the needle drops. <b>Drag the storm cloud in</b> and see!', star: 'The needle dropped! Low air pressure often brings clouds and rain.' }
+      baro: { ok: () => s.press < .5, tip: 'This is a <b>barometer</b>. It measures <b>air pressure</b>, the push of the air all around us. When a storm is coming, the needle drops. <b>Drag the storm cloud in</b> and see!', star: 'The needle dropped! A <b>barometer</b> measures air pressure, the push of the air. Low air pressure often brings clouds and rain.' }
     };
     function readTool(k) {
       const r = READ[k]; Sound.tap({ thermo: 2, vane: 4, anemo: 5, gauge: 6, baro: 7 }[k]);

@@ -2,6 +2,7 @@
 const VOICE_PACKS = __VOICE_PACKS__; // filled in by build.py: { name: { file, map: { clipKey: [byteOffset, byteLength] } } }
 // the voices offered in Settings (recorded with voice/synth_openai.py); only packs that exist are shown
 const VOICE_CHOICES = [
+  { id: 'kid', name: 'Kid Pip', note: 'young and cheerful' },
   { id: 'marin', name: 'Marin', note: 'warm and natural' },
   { id: 'coral', name: 'Coral', note: 'bright and upbeat' },
   { id: 'nova', name: 'Nova', note: 'clear and friendly' },

@@ -188,7 +188,6 @@ function celebrate(id, cx, cy) {
   Sound.star(); Pip.wowUntil = Loop.t + 1.3;
   flyStar(cx, cy); App.fresh = id; refresh(); setTimeout(checkBadges, 1100);
 }
-const allBadges = topic => topic.activities.map(a => ({ ...a.badge, icon: a.icon, act: a })).concat([topic.master]);
 function hasBadge(a) { const need = a.badgeNeed || a.stars.length; return a.stars.filter(s => Store.data.stars[s.id]).length >= need; }
 function checkBadges() {
   const tp = App.topic; if (!tp) return; let changed = false;
@@ -220,10 +219,13 @@ function refresh() {
   for (const a of tp.activities) { const el = document.querySelector(`.tab[data-id="${a.id}"]`); if (!el) continue; const n = a.stars.filter(s => stars[s.id]).length; el.querySelector('.count').textContent = `${n} of ${a.stars.length} stars`; el.classList.toggle('done', hasBadge(a)); }
   if (App.act) $('#finds').innerHTML = App.act.stars.map(s => `<li class="${stars[s.id] ? 'got' : ''} ${App.fresh === s.id ? 'fresh' : ''}">${STAR_SVG(!!stars[s.id])}<span>${s.name}</span></li>`).join('');
   App.fresh = null;
+  // each badge shows its clue: how to earn it, or what it was for; tapping it, Pip reads it out (like in the Trophy Hall)
   const shelf = $('#shelf'); shelf.innerHTML = '';
-  for (const b of allBadges(tp)) {
-    const got = !!Store.data.badges[b.id], d = document.createElement('div'); d.className = 'badge' + (got ? '' : ' locked'); d.title = got ? b.desc : 'Locked: ' + b.desc;
-    d.innerHTML = `<div class="disc"><canvas width="108" height="108" aria-hidden="true"></canvas></div><b>${b.name}</b>`; shelf.appendChild(d); drawIcon(d.querySelector('canvas'), b.icon);
+  for (const b of hallBadges(tp)) {
+    const got = !!Store.data.badges[b.id], d = document.createElement('button'); d.type = 'button'; d.className = 'badge' + (got ? '' : ' locked') + (b.trophy ? ' trophy' : '');
+    const clue = got ? b.desc : plainText(b.how).replace(/^Not yet!\s*/, '');
+    d.innerHTML = `<span class="disc"><canvas width="108" height="108" aria-hidden="true"></canvas></span><span class="bt"><b>${b.name}</b><small>${got ? (b.trophy ? 'Won! ' : 'Earned! ') : 'How to earn: '}${clue}</small></span>`;
+    d.onclick = () => hallTap(d, b); shelf.appendChild(d); drawIcon(d.querySelector('canvas'), b.icon);
   }
 }
 function renderTabs() {

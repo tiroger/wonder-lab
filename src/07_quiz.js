@@ -65,7 +65,7 @@ function makeQuiz({ id, name, icon, badge, badgeNeed = 10, questions, prefix, in
           btn.classList.add('right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true);
           results[idx] = tries === 1 ? 1 : 0; confetti(cx, cy, 30, .6);
           // a new star celebrates once Pip has explained; the sparkle answers the tap right away
-          if (tries === 1) { if (ui.award(prefix + q.id, cx, cy)) Sound.sparkle(); else Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
+          if (tries === 1) { if (ui.award(prefix + q.id, cx, cy)) Sound.tap(7); else Sound.star(); ui.say(`Yes! ${q.why}`, { lock: true }); }
           else { Sound.boing(); ui.say(`You got it! ${q.why}`, { lock: true }); }
           const nb = document.createElement('button'); nb.className = 'btn go'; nb.textContent = idx < round.length - 1 ? 'Next question' : 'See my score';
           nb.onclick = () => { if (inputLocked()) { const r = nb.getBoundingClientRect(); return nudge(r.left + r.width / 2, r.top + 10); } Sound.pop(); idx++; idx < round.length ? show() : end(); }; box.querySelector('.q-foot').appendChild(nb); nb.focus();

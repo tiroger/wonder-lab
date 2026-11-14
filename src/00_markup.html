@@ -93,13 +93,17 @@ button,select,input{font:inherit;color:inherit}
 .cycle span.on{background:var(--leaf);color:#fff}
 .cycle i{font-style:normal;color:var(--ink-soft)}
 
-.shelf{display:flex;flex-wrap:wrap;gap:14px}
-.badge{display:flex;flex-direction:column;align-items:center;gap:5px;width:98px;text-align:center}
-.badge .disc{width:80px;height:80px;border-radius:50%;border:3px solid var(--ink);background:var(--sun-soft);display:grid;place-items:center;box-shadow:0 3px 0 var(--ink)}
-.badge .disc canvas{width:54px;height:54px}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.badge{display:flex;align-items:center;gap:12px;min-height:76px;padding:8px 10px;text-align:left;background:none;border:2px solid transparent;border-radius:16px;font:inherit;color:var(--ink);cursor:pointer}
+.badge:hover{background:var(--card-2);border-color:var(--ink)}
+.badge .disc{flex:none;width:64px;height:64px;border-radius:50%;border:3px solid var(--ink);background:var(--sun-soft);display:grid;place-items:center;box-shadow:0 3px 0 var(--ink)}
+.badge .disc canvas{width:44px;height:44px}
 .badge.locked .disc{background:#EEF1EA;border-style:dashed;box-shadow:none}
 .badge.locked canvas{filter:grayscale(1);opacity:.35}
-.badge b{font-family:var(--display);font-weight:600;font-size:14px;line-height:1.15}
+.badge.hop .disc{animation:bump .45s ease}
+.badge .bt{display:flex;flex-direction:column;gap:2px}
+.badge b{font-family:var(--display);font-weight:600;font-size:16px;line-height:1.15}
+.badge small{font-size:14px;line-height:1.35;color:var(--ink-soft)}
 .badge.locked b{color:var(--ink-soft)}
 
 .quiz-box{padding:clamp(16px,3vw,28px);display:flex;flex-direction:column;gap:16px;min-height:430px}
