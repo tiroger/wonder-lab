@@ -352,6 +352,46 @@ function scriptCoverage() {
   clouds.stars = await stars('weather.clouds.');
   report.clouds = clouds;
 
+  // ---------- Weather & Water: Cloud Names ----------
+  await tab('weather.names');
+  const ng2 = await page.evaluate(() => App.inst.geo), nkind = () => page.evaluate(() => App.inst.state().kind);
+  const names = { made: [] };
+  await tap(...ng2.bands.high); names.shapeFirst = (await page.evaluate(() => plainText(App.current))).includes('First, tap a shape') && !(await nkind());
+  await tap(...ng2.shapes.puffy); await tap(...ng2.bands.low); names.made.push(await nkind());
+  await tap(...ng2.shapes.layer); names.made.push(await nkind());
+  await tap(...ng2.shapes.wispy); names.wispLow = !names.made.includes(await nkind()) || (await page.evaluate(() => App.current)).includes('way up high');
+  await tap(...ng2.bands.high); names.made.push(await nkind());
+  await tap(...ng2.shapes.puffy); names.made.push(await nkind());
+  await tap(...ng2.shapes.layer); names.made.push(await nkind());
+  await tap(...ng2.bands.middle); names.made.push(await nkind());
+  await tap(...ng2.shapes.puffy); names.made.push(await nkind());
+  await tap(...ng2.rain); names.rainMiddle = (await page.evaluate(() => App.current)).includes('Rain clouds hang low');
+  await tap(...ng2.bands.low); names.made.push(await nkind());
+  await tap(...ng2.shapes.layer); names.made.push(await nkind());
+  // the jet: wait until it's on screen, then tap it
+  for (let i = 0; i < 40; i++) { const [px] = await page.evaluate(() => App.inst.geo.plane()); if (px > 120 && px < 640) break; await sleep(250); }
+  { const p = await page.evaluate(() => App.inst.geo.plane()); await page.mouse.click(...await at(p[0] + 6, p[1])); await sleep(300); }
+  names.stars = await stars('weather.names.');
+  report.names = names;
+
+  // ---------- Weather & Water: Cloud in a Bottle ----------
+  await tab('weather.bottle');
+  const bg = await page.evaluate(() => App.inst.geo), bst = () => page.evaluate(() => { const s = App.inst.state(); return { water: s.water, capped: s.capped, smoke: s.smoke, fog: s.fog }; });
+  const bottle = {};
+  const squeeze = async () => { await page.mouse.move(...await at(...bg.bottle)); await page.mouse.down(); await sleep(700); await page.mouse.up(); await sleep(900); };
+  await tap(...bg.bottle); bottle.waterFirst = (await page.evaluate(() => App.current)).includes('First, add the warm water');
+  await drag([bg.home.cup, [300, 250], bg.mouth], 6); await sleep(1700);
+  await drag([bg.home.cap, [560, 250], bg.mouth], 6);
+  bottle.ready = (await bst()).water === 1 && (await bst()).capped;
+  await tap(...bg.matches); bottle.plainFirst = !(await bst()).smoke && (await page.evaluate(() => App.current)).includes('without smoke');
+  await squeeze(); bottle.noSpecks = (await bst()).fog < .3 && (await stars('weather.bottle.')).includes('weather.bottle.specks');
+  await tap(...bg.matches); await sleep(2900);
+  await squeeze(); bottle.cloud = (await bst()).fog > .8;
+  await page.mouse.move(...await at(...bg.bottle)); await page.mouse.down(); await sleep(900); bottle.vanish = (await bst()).fog < .3; await page.mouse.up(); await sleep(900);
+  bottle.back = (await bst()).fog > .8;
+  bottle.stars = await stars('weather.bottle.');
+  report.bottle = bottle;
+
   // ---------- Weather & Water: Weather Station ----------
   await tab('weather.station');
   const sg = await page.evaluate(() => App.inst.geo), T = sg.tools;
@@ -368,7 +408,7 @@ function scriptCoverage() {
 
   // ---------- Weather & Water: Weather Quiz ----------
   await tab('weather.quiz');
-  for (let round = 0; round < 4; round++) {
+  for (let round = 0; round < 6; round++) {
     if (round && (await stars('weather.quiz.')).length === (await page.evaluate(() => WQUIZ.length))) break;
     if (round) { await page.click('.q-end .btn'); await sleep(300); }
     for (let q = 0; q < 8; q++) {
@@ -787,9 +827,12 @@ function scriptCoverage() {
     'Terrarium: rocks, soil, plant, water, lid, in that order, before any sunny days': report.jar.orderKept && report.jar.layers && report.jar.sunWaits && report.jar.closed,
     'Terrarium: the glass fogs, big drops form on the lid and fall like rain': report.jar.fog && report.jar.bigDrops && report.jar.wrapUp,
     'Cloud Maker: 5 stars (cumulus, stratus, cirrus, a storm, snow)': report.clouds.stars.length === 5 && report.clouds.cumulus && report.clouds.highLow && report.clouds.storm,
+    'Cloud Names: 5 stars; shape, height and rain make the right cloud names': report.names.stars.length === 5 && JSON.stringify(report.names.made) === JSON.stringify(['cumulus', 'stratus', 'cirrus', 'cirrocumulus', 'cirrostratus', 'altostratus', 'altocumulus', 'cumulonimbus', 'nimbostratus']),
+    'Cloud Names: pick a shape first; wisps only up high; rain clouds only low': report.names.shapeFirst && report.names.wispLow && report.names.rainMiddle,
+    'Cloud in a Bottle: 4 stars, in order: water, cap, no smoke first, then a cloud that squeezing makes vanish': report.bottle.stars.length === 4 && report.bottle.waterFirst && report.bottle.ready && report.bottle.plainFirst && report.bottle.noSpecks && report.bottle.cloud && report.bottle.vanish && report.bottle.back,
     'Weather Station: 5 stars, and a tool explains how to test it first': report.station.stars.length === 5 && report.station.hintFirst,
     'Weather Quiz: every question earns a star': /^(\d+) of \1$/.test(report.wquiz),
-    'Weather & Water: every badge and the Meteorologist trophy': report.weatherBadges.length === 6 && report.weatherBadges.includes('weather.b.master'),
+    'Weather & Water: every badge and the Meteorologist trophy': report.weatherBadges.length === 8 && report.weatherBadges.includes('weather.b.master'),
     'Every badge and trophy': report.badges.length === report.totals.badges,
     'Routing: each place has its own link': report.routing.start === '#/' && report.routing.entered === '#/plants/parts' && report.routing.tabHash === '#/plants/seed',
     'Routing: back returns to the previous activity': report.routing.back.hash === '#/plants/seed' && report.routing.back.act === 'seed' && report.routing.back.tab === 'seed',

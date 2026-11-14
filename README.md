@@ -25,6 +25,8 @@ You start on a map of the Lab's grounds. Each topic is a building along a windin
 - **Water Cycle:** warm a lake with the sun, drag the vapor up into a cloud, make it rain or snow, and follow the river home.
 - **Terrarium:** build a jar garden layer by layer, close the lid, and watch a tiny water cycle inside.
 - **Cloud Maker:** grow cumulus, stratus and cirrus clouds, overfill one into a thunderstorm, and make it snow.
+- **Cloud Names:** a cloud's name is a clue to its shape, its height and its rain. Build all nine, from cirrus to cumulonimbus, and spot a jet's contrail (from NASA GLOBE's *Do You Know That Clouds Have Names?*).
+- **Cloud in a Bottle:** the classic experiment: warm water, a puff of smoke, squeeze and let go to make a cloud, and squeeze again to make it vanish.
 - **Weather Station:** change the weather and read a thermometer, wind vane, anemometer, rain gauge and barometer.
 - **Weather Quiz:** stars for answers right on the first try.
 
