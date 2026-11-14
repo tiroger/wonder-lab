@@ -19,7 +19,7 @@ const A_clouds = {
     const freezing = () => s.temp < FREEZE, thY = v => lerp(TH.bot, TH.top, v);
     const LINES = {
       cumulus: 'A puffy cloud, like a cotton ball! This is a <b>cumulus</b> cloud. Cumulus clouds usually mean nice weather.',
-      stratus: 'A low, flat, grey blanket! This is a <b>stratus</b> cloud. Fog is a stratus cloud right on the ground.',
+      stratus: 'A low, flat, gray blanket! This is a <b>stratus</b> cloud. Fog is a stratus cloud right on the ground.',
       cirrus: 'Way up high, it\'s freezing, so this cloud is made of tiny bits of ice. Thin and wispy, like feathers! It\'s called <b>cirrus</b>.',
       storm: 'Whoa! All that vapor made the cloud grow super tall. It\'s a <b>cumulonimbus</b>, a thunderstorm cloud! Storm clouds bring heavy rain.'
     };

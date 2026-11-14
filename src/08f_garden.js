@@ -160,6 +160,24 @@ const GARDEN = {
     c.save(); c.translate(0, -134 - hop); c.fillStyle = C.ink; c.fillRect(-20, 0, 40, 6); c.fillRect(-12, -22, 24, 22); c.restore();
     if (k) { c.fillStyle = '#F4FAFF'; c.strokeStyle = 'rgba(36,54,40,.5)'; c.lineWidth = 1.5; for (let j = 0; j < 6; j++) { const x = -40 + j * 16, y = -160 + (1 - k) * 140 + (j % 2) * 12; c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fill(); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
   } },
+  weathervane: { sound() { Sound.whoosh(); Sound.tap(8); }, draw(c, t, e) {   // a rooster weather vane; tapped, it spins round in a gust
+    const k = poked(e, 1.8), a = (RM ? 0 : Math.sin(t * .7) * .25) + (k ? (1 - k) * TAU * 2 : 0), sq = Math.cos(a);
+    c.fillStyle = '#5F6B7D'; c.fillRect(-4, -120, 8, 120); c.strokeRect(-4, -120, 8, 120);
+    c.lineWidth = 3; c.beginPath(); c.moveTo(-30, -96); c.lineTo(30, -96); c.stroke(); label(c, "N", 0, -84, { size: 13, stroke: null }); c.lineWidth = 4;
+    c.save(); c.translate(0, -126); c.scale(sq || .05, 1);
+    c.fillStyle = C.sun; c.beginPath(); c.moveTo(-40, 0); c.lineTo(-24, -10); c.lineTo(-24, 10); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(-24, 0); c.lineTo(20, 0); c.stroke();
+    const rooster = new Path2D('M14 -4 Q10 -26 24 -30 L28 -38 L32 -30 Q42 -26 38 -14 L44 -10 L36 -8 Q40 4 26 4 Z'); c.fillStyle = '#E8A65A'; c.fill(rooster); c.stroke(rooster);
+    c.fillStyle = C.ink; c.beginPath(); c.arc(32, -22, 2.4, 0, TAU); c.fill(); c.restore();
+  } },
+  rainBoots: { sound() { Sound.splash(); Sound.hop(); }, draw(c, t, e) {   // yellow rain boots by a puddle; tapped, they jump in with a splash
+    const k = poked(e, 1.2), hop = Math.sin(PI * (1 - k)) * 30 * (k ? 1 : 0);
+    const pud = ellipse(0, -2, 52, 10); c.fillStyle = C.water; c.fill(pud); c.stroke(pud);
+    if (k && k < .5) { c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 3; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 34, -14, 10 + (1 - k) * 8, PI * 1.1, PI * 1.9); c.stroke(); } c.strokeStyle = C.ink; c.lineWidth = 4; }
+    for (const [x, tilt] of [[-16, -.06], [18, .06]]) {
+      c.save(); c.translate(x, -8 - hop); c.rotate(tilt); const boot = new Path2D('M-12 -70 L12 -70 L12 -14 Q30 -12 30 0 L-12 0 Z'); c.fillStyle = C.sun; c.fill(boot); c.stroke(boot);
+      c.fillStyle = C.sunDeep; c.fillRect(-12, -70, 24, 10); c.strokeRect(-12, -70, 24, 10); c.restore();
+    }
+  } },
   windmill: { tall: true, sound() { Sound.whoosh(); Sound.grow(3); }, draw(c, t, e) {   // the Weather & Water landmark: a windmill whose sails turn in the breeze
     const k = poked(e, 2.4), spin = (RM ? 0 : t * .8) + (k ? (1 - k) * 10 : 0);
     const tower = new Path2D('M-30 0 L-18 -170 L18 -170 L30 0 Z'); c.fillStyle = '#FFFDF5'; c.fill(tower); c.stroke(tower);

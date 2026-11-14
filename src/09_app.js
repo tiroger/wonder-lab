@@ -10,7 +10,7 @@ const TOPICS = [
       how: 'Not yet! Earn all the Plants and Seeds badges to win the <b>Botanist</b> trophy. A botanist is a scientist who studies plants.' } },
   { id: 'weather', name: 'Weather & Water', building: drawWeatherStation, landmark: 'windmill', pip: 'rainhat',
     accent: { ground: '#E3F2F9', dot: '#CBE5F1', tab: '#8FD0EE', stage: '#BFE6F4', bold: '#1D6E99', plate: '#1D6E99' },
-    activities: [A_wcycle, A_jar, A_clouds, A_station, A_wquiz],
+    activities: [A_wcycle, A_jar, A_clouds, A_cloudnames, A_bottle, A_station, A_wquiz],
     master: { id: 'weather.b.master', name: 'Meteorologist', icon: 'wtrophy', desc: 'You earned every weather badge! A meteorologist is a scientist who studies weather.',
       how: 'Not yet! Earn all the Weather and Water badges to win the <b>Meteorologist</b> trophy. A meteorologist is a scientist who studies weather.' } }
 ];
