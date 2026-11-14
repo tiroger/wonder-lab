@@ -1,7 +1,7 @@
 ---
 description: Re-record Pip's narration after any text change, check every clip, rebuild
 ---
-Pip's lines are pre-recorded with OpenAI (gpt-4o-mini-tts) in four voices; nothing falls back to a device voice. After text changes:
+Pip's lines are pre-recorded with OpenAI (gpt-4o-mini-tts) in five voices (`VOICES` in `voice/synth_openai.py`: the default `kid` voice is coral with a cartoon prompt, raised 3 semitones); nothing falls back to a device voice. After text changes:
 
 0. On a fresh checkout (or a new machine), `voice/clips/` is empty because it's git-ignored. Run `python3 voice/unpack.py` first: it rebuilds the clip cache from `voice/packs/`, so the next step records only new lines instead of all of them. Recording needs `ffmpeg`.
 1. `python3 voice/lines.py`: shows how many messages exist. Look at `git diff voice/lines.json` and make sure only the lines you meant to change moved. Canvas labels or aria text sneaking in is fine but worth trimming in `lines.py` filters if it's a lot.

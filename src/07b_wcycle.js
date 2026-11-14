@@ -5,6 +5,8 @@ const WC = { sky1: '#7EC4E8', sky2: '#DDF1FA', cloud: '#FFFFFF', storm: '#8C99AB
 Object.assign(Sound, {
   thunder() { this.noise(1.6, .14, 'lowpass', 160, 0, 1, 60); this.noise(.6, .08, 'lowpass', 420, .05, 1, 90); this.tone(55, 1.2, 'sine', .07, 0, .8); },
   steam() { this.noise(.9, .07, 'bandpass', 1200, 0, 2, 3200); this.tone(PENTA[2], .2, 'sine', .05, .05, 1.5); },
+  // a soft, warm chord for sunshine (no slides, no noise)
+  sunny() { [523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, .55, 'sine', .06 - i * .01, i * .06, 0, .08)); },
   snowfall() { for (let i = 0; i < 6; i++) this.tone(PENTA[5 + (i % 4)], .18, 'sine', .035, i * .14); }
 });
 // a puffy sticker cloud centered at (x, y): the ink goes on first, the fill on top, so only the outer edge shows

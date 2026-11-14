@@ -37,13 +37,13 @@ const A_jar = {
     }
     function watered() { s.pourT = null; s.pos.water = null; s.step++; s.wet = 1; Sound.drip(); ui.say('Now <b>put the lid on</b>, so no water can get out!'); }
     function sunnyDay() {
-      Sound.steam(); s.sunT = st.t;
+      Sound.sunny(); s.sunT = st.t;
       if (!closed()) { ui.say(NEXT[next()]); return; }
       if (st.t - s.dayT < (RM ? .3 : 2.2)) return;   // a day is still going by
       s.day++; s.dayT = st.t;
       if (s.day === 1) ui.say('The sun warms the jar. Water rises from the wet soil and from the leaves as <b>water vapor</b>.');
       else if (s.day === 2) ui.say('Another sunny day. Keep an eye on the lid!');
-      else { Sound.grow(s.day % 5); ui.say('Another day in the jar!'); }
+      else ui.say('Another day in the jar!');
     }
     function dayDone() {   // the vapor cools on the glass: fog first, then big drops under the lid
       s.fog = 1; if (s.day >= 2) s.bigDrops = 3;

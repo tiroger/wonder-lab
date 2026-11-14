@@ -285,6 +285,10 @@ function scriptCoverage() {
   const wst = () => page.evaluate(() => { const s = App.inst.state(); return { puff: s.puff && { x: s.puff.x, y: s.puff.y }, drops: s.drops, cloudX: s.cloudX, flow: !!s.flow, rainT: s.rainT }; });
   const wgeo = await page.evaluate(() => App.inst.geo);
   const wcycle = { theme: await page.evaluate(() => ({ crumb: document.querySelector('#crumbTopic').textContent, bold: getComputedStyle(document.documentElement).getPropertyValue('--bold').trim(), costume: App.topic.pip })) };
+  // the badge shelf shows how to earn each badge, and tapping a locked one has Pip read the clue
+  wcycle.shelf = await page.evaluate(() => ({ cards: document.querySelectorAll('#shelf .badge').length, clue: (document.querySelector('#shelf .badge.locked small') || {}).textContent || '' }));
+  await page.click('#shelf .badge.locked'); await sleep(250);
+  wcycle.shelf.said = await page.evaluate(() => plainText(App.current)); await page.evaluate(() => stopListening());
   const makePuff = async () => {   // tap the sun, then drag the vapor up into the cold air
     await tap(...wgeo.sun); await sleep(400); const p = (await wst()).puff; if (!p) return false;
     await drag([[p.x, p.y], [p.x + 40, 200], [p.x + 60, 110]], 6); await sleep(900); return true;
@@ -820,6 +824,7 @@ function scriptCoverage() {
     'Plant Needs: Pip tells how the guess did only after the plants are revealed': report.needs.notToldYet && report.needs.resultAfterReveal,
     'Plant Quiz: every question earns a star': report.quiz === `${report.totals.quiz} of ${report.totals.quiz}`,
     'Water Cycle: 5 stars, in the Weather & Water colors with Pip in his rain hat': report.wcycle.stars.length === 5 && report.wcycle.theme.crumb === 'Weather & Water' && report.wcycle.theme.bold === '#1D6E99' && report.wcycle.theme.costume === 'rainhat',
+    'Badge shelf: every badge shows a clue, and tapping a locked one has Pip say how to earn it': report.wcycle.shelf.cards === 8 && report.wcycle.shelf.clue.startsWith('How to earn: ') && report.wcycle.shelf.said.startsWith('Not yet!'),
     'Water Cycle: the sun makes vapor, and the vapor dragged up becomes a cloud': report.wcycle.evapCondense === 'weather.cycle.condense,weather.cycle.evap',
     'Water Cycle: one puff at a time, and a cloud needs three puffs before it rains': report.wcycle.onePuffAtATime && report.wcycle.notYet && report.wcycle.full && report.wcycle.noPuffWhenFull,
     'Water Cycle: rain runs down the river to the lake; over the mountain it snows': report.wcycle.rained && report.wcycle.collected && report.wcycle.snow && report.wcycle.wrapUp,

@@ -151,7 +151,7 @@ All styles live in `src/00_markup.html`. Reuse these before inventing new ones.
 - **Buttons (`.btn`):** Fredoka 17/600, 48 px tall, `--card-2`. Variants: `.go` (primary, `--leaf`, white text), `[aria-pressed=true]` (`--sky`), `.warn` (armed "Sure?" state, `#F7B9B9`), `:disabled` (45% opacity). Activity buttons sit in the Tools card (`ui.button`).
 - **Cards (`.card`):** a panel with an `h2`. Inside: hint paragraphs (`.hint`, 15 px soft) and extras (`ui.extraEl`), such as the life-cycle chips (`.cycle`).
 - **Star checklist (`.finds`):** a star icon and name per star. Not found is soft text with an empty star, found is ink with a gold star, and a newly found star spins in.
-- **Badge shelf (`.shelf`, `.badge`):** an 80 px disc with a 54 px icon canvas and the name below. Locked badges are dashed and grey (icon greyscale at 35%), and the title attribute explains how to earn one.
+- **Badge shelf (`.shelf`, `.badge`):** a grid of badge cards (250 px min), each a 64 px disc with a 44 px icon canvas beside the name and a clue: "How to earn: …" (the badge's `how` line without "Not yet!") while locked, "Earned! …" (its `desc`) once earned. Locked discs are dashed and grey (icon greyscale at 35%). Each card is a button: tapping it, Pip says the same line as in the Trophy Hall (`hallTap`).
 - **Badge popup (`.toast`):** centered and 360 px wide. Inside: a 120 px canvas with a spinning sunburst and the badge icon, a "New badge!" kicker in carrot, the name (30 px), the description, and a "Hooray!" button. It bounces in, closes by itself after 7 s, and queues behind any other popup.
 - **Settings (`dialog#settings`):**
   - 560 px wide, with a `--sun` header bar and sections separated by dashed lines.
@@ -251,7 +251,7 @@ Confetti colors: sun, petal, leaf, carrot, purple `#8D6CD9` and water, with abou
 
 - **Look:** a kidney-shaped bean (gradient `#F8E6AE` → `#E3C27A`, ink outline 3 px, white highlight) with a sprout of two leaves on top. Big white eyes with dark pupils and a glint, pink cheeks, a small smile, two little bean feet, and a soft ground shadow. Drawn by `drawPip` in a 108×108 box at 2×.
 - **States:** idle (bob, sway, blink, eyes follow the pointer), talking (mouth opens and closes, small bounce), wow (big pupils, O mouth, jump; after a star) and poked (wiggle; tap Pip to hear the line again).
-- **Voice:** recorded (four voices, chosen in Settings), warm and playful like a favorite teacher. No robotic device voice ever.
+- **Voice:** recorded, five voices chosen in Settings. The default, Kid Pip (Roger chose it on 2026-11-14), is OpenAI's coral read as a cheerful young cartoon character, raised 3 semitones so it sounds like a kid. The other four (marin, coral, nova, cedar) are warm and playful like a favorite teacher. No robotic device voice ever.
 - **Role:** the guide for every topic and the home page. A topic can give Pip a costume (section 15), but he stays the same character.
 
 ## 13. Writing and narration
