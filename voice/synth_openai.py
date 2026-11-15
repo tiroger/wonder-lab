@@ -10,12 +10,13 @@ MODEL = 'gpt-4o-mini-tts-2025-12-15'
 TEACHER = ("You are Pip, a friendly little bean seed who guides a curious 8-year-old through hands-on science activities. "
          "Speak warmly and naturally, like a favorite elementary school teacher reading to one child: a smiling voice, playful, "
          "with real wonder at the cool facts. Clear pronunciation, relaxed moderate pace, natural pauses. Friendly, not cartoonish or over the top.")
-CARTOON = ("You are Pip, a little bean seed: the star of a cartoon science show for kids. Voice: a bright, young, kid-like cartoon voice, "
+CARTOON = ("You are Pip, a little bean seed who guides kids through science activities. Voice: a bright, young, kid-like cartoon voice, "
            "like a cheerful 8-year-old hero of an animated show. Lighter and higher than a grown-up, bouncy and curious, with real excitement "
-           "and wonder on the fun parts and a big smile in the voice. Natural and playful, quick but always clear, never robotic or shouty.")
+           "and wonder on the fun parts and a big smile in the voice. Natural and playful, quick but always clear, never robotic or shouty. "
+           "Speech only: say exactly the words given, with no music, sound effects, beats, humming or background sounds.")
 # each pack: which OpenAI voice reads it, how, and how many semitones to raise it afterwards (keep in sync with VOICE_CHOICES in src/08_voice.js)
-# 'kid' is Pip's default since 2026-11: coral with the cartoon prompt, 3 semitones higher, so Pip sounds like a kid
-VOICES = {'kid': ('coral', CARTOON, 3), 'marin': ('marin', TEACHER, 0), 'coral': ('coral', TEACHER, 0), 'nova': ('nova', TEACHER, 0), 'cedar': ('cedar', TEACHER, 0)}
+# 'kid' is coral with the cartoon prompt, 3 semitones higher, so Pip sounds like a kid; Pip's default is cedar (first in VOICE_CHOICES)
+VOICES = {'cedar': ('cedar', TEACHER, 0), 'kid': ('coral', CARTOON, 3), 'marin': ('marin', TEACHER, 0), 'coral': ('coral', TEACHER, 0), 'nova': ('nova', TEACHER, 0)}
 KEY = re.search(r'(sk-[A-Za-z0-9_\-]+)', open('.env').read()).group(1)
 lines = json.load(open('voice/lines.json'))
 
