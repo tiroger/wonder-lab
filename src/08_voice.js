@@ -1,12 +1,12 @@
 /* ============ Pip's voice: recorded narration in several voices (whole messages, plus short pieces for dynamic lines) ============ */
 const VOICE_PACKS = __VOICE_PACKS__; // filled in by build.py: { name: { file, map: { clipKey: [byteOffset, byteLength] } } }
 // the voices offered in Settings (recorded with voice/synth_openai.py); only packs that exist are shown
-const VOICE_CHOICES = [
+const VOICE_CHOICES = [   // the first one is the default
+  { id: 'cedar', name: 'Cedar', note: 'calm and natural' },
   { id: 'kid', name: 'Kid Pip', note: 'young and cheerful' },
   { id: 'marin', name: 'Marin', note: 'warm and natural' },
   { id: 'coral', name: 'Coral', note: 'bright and upbeat' },
-  { id: 'nova', name: 'Nova', note: 'clear and friendly' },
-  { id: 'cedar', name: 'Cedar', note: 'calm, deeper voice' }
+  { id: 'nova', name: 'Nova', note: 'clear and friendly' }
 ].filter(v => VOICE_PACKS[v.id]);
 function plainText(h) { return h.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\([^)]*\)/g, '').replace(/&amp;/g, '&').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim(); }
 function splitSentences(t) { return (t.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || []).map(s => s.trim()).filter(Boolean); }

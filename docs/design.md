@@ -251,7 +251,7 @@ Confetti colors: sun, petal, leaf, carrot, purple `#8D6CD9` and water, with abou
 
 - **Look:** a kidney-shaped bean (gradient `#F8E6AE` → `#E3C27A`, ink outline 3 px, white highlight) with a sprout of two leaves on top. Big white eyes with dark pupils and a glint, pink cheeks, a small smile, two little bean feet, and a soft ground shadow. Drawn by `drawPip` in a 108×108 box at 2×.
 - **States:** idle (bob, sway, blink, eyes follow the pointer), talking (mouth opens and closes, small bounce), wow (big pupils, O mouth, jump; after a star) and poked (wiggle; tap Pip to hear the line again).
-- **Voice:** recorded, five voices chosen in Settings. The default, Kid Pip (Roger chose it on 2026-11-14), is OpenAI's coral read as a cheerful young cartoon character, raised 3 semitones so it sounds like a kid. The other four (marin, coral, nova, cedar) are warm and playful like a favorite teacher. No robotic device voice ever.
+- **Voice:** recorded, five voices chosen in Settings; the first in `VOICE_CHOICES` is the default. The default is Cedar, calm and natural (Roger's choice on 2026-11-14). Kid Pip is OpenAI's coral read as a cheerful young cartoon character, raised 3 semitones so it sounds like a kid; its prompt forbids music and sound effects, which the model otherwise added around short lines. Marin, Coral and Nova are warm and playful like a favorite teacher. No robotic device voice ever.
 - **Role:** the guide for every topic and the home page. A topic can give Pip a costume (section 15), but he stays the same character.
 
 ## 13. Writing and narration

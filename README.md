@@ -39,7 +39,7 @@ Parents and teachers sign in with an emailed one-time code (no passwords) to set
 ## How it's built
 
 - **Drawn and voiced in the browser:** every picture is drawn in code and every sound effect is synthesized, with no images and no libraries.
-- **Recorded narration:** Pip's lines are pre-recorded with AI text-to-speech in five voices. The default is a young, cheerful kid voice; grown-ups can pick a calmer one in Settings.
+- **Recorded narration:** Pip's lines are pre-recorded with AI text-to-speech in five voices. The default is Cedar, a calm, natural voice; kids and grown-ups can pick another one, including a young, cheerful kid voice, in Settings.
 - **Paced for a young kid:** Pip finishes explaining before the next tap counts.
 - **Tested by playing:** an automated playthrough runs every activity on each change.
 - **Ready for more topics:** a [design guide](docs/design.md) keeps the look consistent as new ones are added.
